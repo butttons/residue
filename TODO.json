@@ -13,7 +13,7 @@
     "title": "CLI package scaffold",
     "description": "Create packages/cli/ with: package.json (name: 'residue', bin: {'residue': './dist/index.js'}), tsconfig.json extending root, src/index.ts stub entry point. Use bun for runtime and build. Add build script using bun build to output dist/index.js. Add dev script. Include typescript and bun-types as dev deps.",
     "tags": ["setup", "cli"],
-    "isDone": false,
+    "isDone": true,
     "tests": ["packages/cli/package.json exists with bin field pointing to dist/index.js", "pnpm --filter cli build produces dist/index.js"],
     "dependencies": [1]
   },
@@ -22,7 +22,7 @@
     "title": "Worker package scaffold",
     "description": "Scaffold the worker using 'pnpm create cloudflare@latest' inside packages/ with the bare empty template. This generates the base wrangler.toml, package.json, tsconfig.json, and src/index.ts. Then customize: add hono + @hono/vite-dev-server as deps, add @cloudflare/workers-types as devDep, configure tsconfig for JSX (jsx: 'react-jsx', jsxImportSource: 'hono/jsx'), add D1 binding (DB) and R2 binding (BUCKET) to wrangler.toml, rename src/index.ts to src/index.tsx with a Hono app stub. Tailwind and vite config come in TODO 23.",
     "tags": ["setup", "worker"],
-    "isDone": false,
+    "isDone": true,
     "tests": ["packages/worker/package.json exists with hono dependency", "pnpm --filter worker dev starts without errors"],
     "dependencies": [1]
   },
