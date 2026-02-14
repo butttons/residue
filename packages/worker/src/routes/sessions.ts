@@ -36,7 +36,7 @@ sessions.post(
   zValidator("json", uploadUrlSchema, (result, c) => {
     if (!result.success) {
       return c.json(
-        { error: "Validation failed", details: result.error.flatten().fieldErrors },
+        { error: "Validation failed", details: result.error.issues },
         400
       );
     }
@@ -71,7 +71,7 @@ sessions.post(
   zValidator("json", postSessionsSchema, (result, c) => {
     if (!result.success) {
       return c.json(
-        { error: "Validation failed", details: result.error.flatten().fieldErrors },
+        { error: "Validation failed", details: result.error.issues },
         400
       );
     }
