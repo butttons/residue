@@ -76,7 +76,7 @@
     "title": "CLI: init command",
     "description": "Create packages/cli/src/commands/init.ts.\n\nBehavior:\n1. Check isGitRepo() — exit with error if not.\n2. Create .git/ai-sessions/ directory.\n3. Install post-commit hook: write '#!/bin/sh\\nresidue capture' to .git/hooks/post-commit. If file exists, check if 'residue capture' is already present — if not, append it. Make executable (chmod +x).\n4. Install pre-push hook: write '#!/bin/sh\\nresidue sync' to .git/hooks/pre-push. Same append logic. Make executable.\n5. Print summary of what was installed.\n6. Check for known adapters (look for ~/.claude/ for claude-code). Print detected adapters or warn if none found.",
     "tags": ["cli", "command"],
-    "isDone": false,
+    "isDone": true,
     "tests": ["packages/cli/test/commands/init.test.ts passes"],
     "dependencies": [4, 7]
   },
