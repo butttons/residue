@@ -1,0 +1,13 @@
+{
+  "name": "@residue/adapter-pi",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Residue adapter for pi coding agent — captures sessions and links them to git commits",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./index.ts"]
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  }
+}

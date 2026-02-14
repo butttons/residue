@@ -545,5 +545,22 @@
     "dependencies": [
       17
     ]
+  },
+  {
+    "id": 33,
+    "title": "Pi adapter extension",
+    "description": "Create packages/adapters/pi/ as a pi extension that hooks into pi's session lifecycle. On session_start: detect pi version, get session file path from ctx.sessionManager.getSessionFile(), call 'residue session-start --agent pi --data <path> --agent-version <version>', capture returned session ID. On session_switch: end old residue session and start new one. On session_shutdown: call 'residue session-end --id <session-id>'. Silently skip if residue is not on PATH or session is ephemeral. Package as a pi package with pi manifest in package.json.",
+    "tags": [
+      "adapter",
+      "pi"
+    ],
+    "isDone": true,
+    "tests": [
+      "packages/adapters/pi/test/adapter.test.ts passes"
+    ],
+    "dependencies": [
+      10,
+      11
+    ]
   }
 ]
