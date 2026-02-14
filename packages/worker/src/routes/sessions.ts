@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { upsertSession, insertCommit } from "../lib/db";
+import { upsertSession, insertCommit, getSessionById } from "../lib/db";
 
 const commitSchema = z.object({
   sha: z.string().min(1),
@@ -74,5 +74,35 @@ sessions.post(
     return c.json({ ok: true }, 200);
   }
 );
+
+sessions.get("/:id", async (c) => {
+  const id = c.req.param("id");
+
+  const session = await getSessionById({ db: c.env.DB, id });
+  if (!session) {
+    return c.json({ error: "Session not found" }, 404);
+  }
+
+  const r2Object = await c.env.BUCKET.get(session.r2_key);
+  if (!r2Object) {
+    return c.json({ error: "Session not found" }, 404);
+  }
+
+  const data = await r2Object.text();
+
+  return c.json(
+    {
+      session: {
+        id: session.id,
+        agent: session.agent,
+        agent_version: session.agent_version,
+        created_at: session.created_at,
+        ended_at: session.ended_at,
+      },
+      data,
+    },
+    200
+  );
+});
 
 export { sessions };
