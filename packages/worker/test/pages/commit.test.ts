@@ -1,7 +1,7 @@
 import { env, SELF } from "cloudflare:test";
 import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { DB } from "../../src/lib/db";
-import { applyMigrations } from "../utils";
+import { applyMigrations, basicAuthHeader } from "../utils";
 
 let db: DB;
 
@@ -61,7 +61,8 @@ async function seedFullCommit(opts: {
 describe("GET /app/:org/:repo/:sha (commit page)", () => {
   it("returns 404 for unknown commit", async () => {
     const res = await SELF.fetch(
-      "https://test.local/app/no-org/no-repo/no-sha"
+      "https://test.local/app/no-org/no-repo/no-sha",
+      { headers: basicAuthHeader() }
     );
     expect(res.status).toBe(404);
     const html = await res.text();
@@ -78,7 +79,8 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
     });
 
     const res = await SELF.fetch(
-      "https://test.local/app/c-org/c-repo/abc123def456"
+      "https://test.local/app/c-org/c-repo/abc123def456",
+      { headers: basicAuthHeader() }
     );
     expect(res.status).toBe(200);
     const html = await res.text();
@@ -96,7 +98,8 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
     });
 
     const res = await SELF.fetch(
-      "https://test.local/app/c-org/c-repo/conv-sha"
+      "https://test.local/app/c-org/c-repo/conv-sha",
+      { headers: basicAuthHeader() }
     );
     const html = await res.text();
     // Should contain mapped messages from PI_SESSION_DATA
@@ -115,7 +118,8 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
     });
 
     const res = await SELF.fetch(
-      "https://test.local/app/bc-org/bc-repo/bc-sha-123"
+      "https://test.local/app/bc-org/bc-repo/bc-sha-123",
+      { headers: basicAuthHeader() }
     );
     const html = await res.text();
     expect(html).toContain('href="/app"');
@@ -134,7 +138,8 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
     });
 
     const res = await SELF.fetch(
-      "https://test.local/app/a-org/a-repo/agent-sha"
+      "https://test.local/app/a-org/a-repo/agent-sha",
+      { headers: basicAuthHeader() }
     );
     const html = await res.text();
     expect(html).toContain("pi");
@@ -173,7 +178,8 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 
     // View the second commit — should show "continues from first-sha"
     const res = await SELF.fetch(
-      "https://test.local/app/m-org/m-repo/second-sha"
+      "https://test.local/app/m-org/m-repo/second-sha",
+      { headers: basicAuthHeader() }
     );
     const html = await res.text();
     expect(html).toContain("Continues from");
@@ -181,7 +187,8 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 
     // View the first commit — should show "continues in second-sha"
     const res2 = await SELF.fetch(
-      "https://test.local/app/m-org/m-repo/first-sha"
+      "https://test.local/app/m-org/m-repo/first-sha",
+      { headers: basicAuthHeader() }
     );
     const html2 = await res2.text();
     expect(html2).toContain("Continues in");
@@ -208,7 +215,8 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
     });
 
     const res = await SELF.fetch(
-      "https://test.local/app/n-org/n-repo/no-r2-sha"
+      "https://test.local/app/n-org/n-repo/no-r2-sha",
+      { headers: basicAuthHeader() }
     );
     expect(res.status).toBe(200);
     const html = await res.text();

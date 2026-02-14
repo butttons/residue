@@ -1,3 +1,5 @@
+import { env } from "cloudflare:test";
+
 const migrations = import.meta.glob("../migrations/*.sql", {
   query: "?raw",
   import: "default",
@@ -12,4 +14,9 @@ export async function applyMigrations(db: D1Database): Promise<void> {
       await db.prepare(stmt).run();
     }
   }
+}
+
+export function basicAuthHeader(): Record<string, string> {
+  const encoded = btoa(`${env.ADMIN_USERNAME}:${env.ADMIN_PASSWORD}`);
+  return { Authorization: `Basic ${encoded}` };
 }

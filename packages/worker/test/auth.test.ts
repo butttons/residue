@@ -1,6 +1,6 @@
 import { env, SELF } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
-import { applyMigrations } from "./utils";
+import { applyMigrations, basicAuthHeader } from "./utils";
 
 beforeAll(async () => {
   await applyMigrations(env.DB);
@@ -45,8 +45,15 @@ describe("auth middleware", () => {
     expect(res.status).not.toBe(401);
   });
 
-  it("does not require auth for non-api routes", async () => {
-    const res = await SELF.fetch("https://test.local/app");
+  it("does not require bearer auth for non-api routes", async () => {
+    const res = await SELF.fetch("https://test.local/app", {
+      headers: basicAuthHeader(),
+    });
     expect(res.status).toBe(200);
+  });
+
+  it("returns 401 for app routes without basic auth", async () => {
+    const res = await SELF.fetch("https://test.local/app");
+    expect(res.status).toBe(401);
   });
 });

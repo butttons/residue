@@ -1,7 +1,7 @@
 import { env, SELF } from "cloudflare:test";
 import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { DB } from "../../src/lib/db";
-import { applyMigrations } from "../utils";
+import { applyMigrations, basicAuthHeader } from "../utils";
 
 let db: DB;
 
@@ -47,7 +47,7 @@ async function seedCommit(opts: {
 
 describe("GET /app/:org/:repo (repo page)", () => {
   it("returns 404 for unknown repo", async () => {
-    const res = await SELF.fetch("https://test.local/app/no-org/no-repo");
+    const res = await SELF.fetch("https://test.local/app/no-org/no-repo", { headers: basicAuthHeader() });
     expect(res.status).toBe(404);
     const html = await res.text();
     expect(html).toContain("No data found");
@@ -65,7 +65,7 @@ describe("GET /app/:org/:repo (repo page)", () => {
       committedAt: 1700000000,
     });
 
-    const res = await SELF.fetch("https://test.local/app/t-org/t-repo");
+    const res = await SELF.fetch("https://test.local/app/t-org/t-repo", { headers: basicAuthHeader() });
     expect(res.status).toBe(200);
     const html = await res.text();
     expect(html).toContain("abc123d"); // short SHA
@@ -85,7 +85,7 @@ describe("GET /app/:org/:repo (repo page)", () => {
       committedAt: 1700000000,
     });
 
-    const res = await SELF.fetch("https://test.local/app/b-org/b-repo");
+    const res = await SELF.fetch("https://test.local/app/b-org/b-repo", { headers: basicAuthHeader() });
     const html = await res.text();
     expect(html).toContain("claude-code");
   });
@@ -102,7 +102,7 @@ describe("GET /app/:org/:repo (repo page)", () => {
       committedAt: 1700000000,
     });
 
-    const res = await SELF.fetch("https://test.local/app/l-org/l-repo");
+    const res = await SELF.fetch("https://test.local/app/l-org/l-repo", { headers: basicAuthHeader() });
     const html = await res.text();
     expect(html).toContain('href="/app/l-org/l-repo/linksha123"');
   });
@@ -119,7 +119,7 @@ describe("GET /app/:org/:repo (repo page)", () => {
       committedAt: 1700000000,
     });
 
-    const res = await SELF.fetch("https://test.local/app/bc-org/bc-repo");
+    const res = await SELF.fetch("https://test.local/app/bc-org/bc-repo", { headers: basicAuthHeader() });
     const html = await res.text();
     expect(html).toContain('href="/app"');
     expect(html).toContain('href="/app/bc-org"');
@@ -147,7 +147,7 @@ describe("GET /app/:org/:repo (repo page)", () => {
       committedAt: 1700003600,
     });
 
-    const res = await SELF.fetch("https://test.local/app/o-org/o-repo");
+    const res = await SELF.fetch("https://test.local/app/o-org/o-repo", { headers: basicAuthHeader() });
     const html = await res.text();
     const newerIdx = html.indexOf("newer-sh");
     const olderIdx = html.indexOf("older-sh");
