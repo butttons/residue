@@ -426,6 +426,20 @@ pnpm --filter worker deploy
 cd packages/worker && pnpm exec wrangler d1 migrations apply DB --local
 ```
 
+### Tmux / Tmuxinator
+
+A `.tmuxinator.yml` config lives at the project root. It starts the wrangler dev server.
+
+```bash
+# Start the dev session (from project root)
+tmuxinator local
+
+# Read the tmux pane output programmatically
+tmux capture-pane -t residue -p
+```
+
+The tmux session is named `residue`. Use `tmux capture-pane -t residue -p` to read the worker's stdout/stderr without switching terminals.
+
 ## Coding Conventions
 
 - **No emojis.** Never use emojis anywhere — code, comments, logs, commit messages. Hard requirement.

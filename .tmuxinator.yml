@@ -1,0 +1,8 @@
+name: residue
+root: /Users/yash/Work/residue-dev
+
+windows:
+  - worker:
+      root: /Users/yash/Work/residue-dev/packages/worker
+      panes:
+        - pnpm dev
