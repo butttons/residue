@@ -38,6 +38,7 @@ packages/
   cli/              -> "residue" npm package
   worker/           -> Cloudflare Worker (Hono + JSX)
   adapters/
+    claude-code/    -> Claude Code adapter (hooks system)
     pi/             -> pi coding agent adapter
 ```
 
@@ -52,10 +53,10 @@ The worker is a Cloudflare Worker that stores session data in R2 and commit meta
 ```bash
 cd packages/worker
 pnpm install
-pnpm run deploy
+bash setup.sh
 ```
 
-After deploying, note your worker URL and auth token.
+The setup script creates D1 + R2 resources, generates an auth token, and deploys. See [`packages/worker/README.md`](packages/worker/README.md) for manual setup or configuration details.
 
 ### 2. Install the CLI
 
@@ -79,6 +80,14 @@ residue init
 This installs `post-commit` and `pre-push` git hooks that call `residue capture` and `residue sync`.
 
 ### 5. Install an adapter
+
+**Claude Code:**
+
+```bash
+bun run packages/adapters/claude-code/install.ts
+```
+
+Adds `SessionStart` and `SessionEnd` hooks to `~/.claude/settings.json`. See [`packages/adapters/claude-code/README.md`](packages/adapters/claude-code/README.md) for details.
 
 **Pi coding agent:**
 

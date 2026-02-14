@@ -498,7 +498,7 @@
       "worker",
       "deployment"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/worker/deploy script is documented and wrangler.toml is valid"
     ],
