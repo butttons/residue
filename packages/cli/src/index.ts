@@ -3,6 +3,7 @@
 import { Command } from "commander";
 import { login } from "@/commands/login";
 import { init } from "@/commands/init";
+import { setup } from "@/commands/setup";
 import { sessionStart } from "@/commands/session-start";
 import { sessionEnd } from "@/commands/session-end";
 import { capture } from "@/commands/capture";
@@ -30,6 +31,12 @@ program
   .command("init")
   .description("Install git hooks in current repo")
   .action(wrapCommand(() => init()));
+
+program
+  .command("setup")
+  .description("Configure an agent adapter for this project")
+  .argument("<agent>", "Agent to set up (claude-code, pi)")
+  .action(wrapCommand((agent: string) => setup({ agent })));
 
 const session = program
   .command("session")

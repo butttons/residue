@@ -649,7 +649,7 @@
     "title": "Add residue setup command with claude-code and pi subcommands",
     "description": "Add 'residue setup <agent>' command. For claude-code: create .claude/settings.json in project root with SessionStart (matcher: startup) and SessionEnd hooks that call 'residue hook claude-code'. If .claude/settings.json already exists, merge hooks into it without clobbering existing config. For pi: copy the pi extension source to .pi/agent/extensions/residue.ts in the project, creating directories as needed. Both subcommands should be idempotent.",
     "tags": ["cli", "command"],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/cli/test/commands/setup.test.ts passes"
     ],
