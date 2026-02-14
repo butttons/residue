@@ -49,7 +49,7 @@
     "title": "CLI: Pending queue management",
     "description": "Create packages/cli/src/lib/pending.ts. Manages .git/ai-sessions/pending.json.\n\nType: PendingSession = {id: string, agent: string, agent_version: string, status: 'open' | 'ended', data_path: string, commits: string[]}.\n\nFunctions:\n- getPendingPath() → string: returns .git/ai-sessions/pending.json, creating dir if needed.\n- readPending() → PendingSession[]: reads file, returns [] if missing.\n- writePending(sessions: PendingSession[]) → void: atomic write.\n- addSession(session: PendingSession) → void: appends to list.\n- updateSession(id: string, updates: Partial<PendingSession>) → void: finds by ID, merges updates.\n- removeSession(id: string) → void: filters out by ID.\n- getSession(id: string) → PendingSession | undefined: find by ID.",
     "tags": ["cli", "core"],
-    "isDone": false,
+    "isDone": true,
     "tests": ["packages/cli/test/pending.test.ts passes"],
     "dependencies": [2]
   },
@@ -58,7 +58,7 @@
     "title": "CLI: Entry point + command router",
     "description": "Create packages/cli/src/index.ts as the main CLI entry point with #!/usr/bin/env bun shebang.\n\nParse process.argv to determine the command name (argv[2]). Route to the appropriate command module in src/commands/. Supported commands: login, init, session-start, session-end, capture, sync, push.\n\nOn no command or --help: print usage summary listing all commands with descriptions.\nOn unknown command: print error + usage.\n\nEach command module at src/commands/<name>.ts exports an async run(args: string[]) function. The router passes remaining args (argv.slice(3)) to the command.",
     "tags": ["cli", "core"],
-    "isDone": false,
+    "isDone": true,
     "tests": ["running 'bun packages/cli/src/index.ts' prints usage info", "running 'bun packages/cli/src/index.ts --help' prints usage info"],
     "dependencies": [2]
   },
