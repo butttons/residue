@@ -671,7 +671,7 @@
     "title": "Clean up old adapter packages",
     "description": "Remove packages/adapters/claude-code/hooks.sh, install.ts, uninstall.ts. Keep only the test file (rewritten for the new hook command in TODO 40). Remove packages/adapters/claude-code/test/install.test.ts. Update packages/adapters/pi to just be the source file that gets copied by 'residue setup pi' (keep index.ts, remove test since it tests the extension API directly and is not affected by this refactor). Update AGENTS.md to reflect the new setup flow.",
     "tags": ["cleanup"],
-    "isDone": false,
+    "isDone": true,
     "tests": [],
     "dependencies": [39, 40]
   }
