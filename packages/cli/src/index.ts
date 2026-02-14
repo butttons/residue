@@ -6,6 +6,7 @@ import { registerInit } from "@/commands/init";
 import { registerSessionStart } from "@/commands/session-start";
 import { registerSessionEnd } from "@/commands/session-end";
 import { registerCapture } from "@/commands/capture";
+import { registerSync } from "@/commands/sync";
 
 program
   .name("residue")
@@ -17,5 +18,6 @@ registerInit(program);
 registerSessionStart(program);
 registerSessionEnd(program);
 registerCapture(program);
+registerSync(program);
 
 program.parse();
