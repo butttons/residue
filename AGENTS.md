@@ -421,6 +421,9 @@ pnpm --filter worker build
 
 # Deploy worker
 pnpm --filter worker deploy
+
+# Apply D1 migrations locally (required before running worker tests)
+cd packages/worker && pnpm exec wrangler d1 migrations apply DB --local
 ```
 
 ## Coding Conventions

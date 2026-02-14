@@ -241,7 +241,7 @@
       "worker",
       "database"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/worker/test/db.test.ts passes"
     ],
