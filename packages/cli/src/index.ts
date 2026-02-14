@@ -4,6 +4,7 @@ import { program } from "commander";
 import { registerLogin } from "@/commands/login";
 import { registerInit } from "@/commands/init";
 import { registerSessionStart } from "@/commands/session-start";
+import { registerSessionEnd } from "@/commands/session-end";
 
 program
   .name("residue")
@@ -13,5 +14,6 @@ program
 registerLogin(program);
 registerInit(program);
 registerSessionStart(program);
+registerSessionEnd(program);
 
 program.parse();

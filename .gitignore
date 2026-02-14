@@ -5,3 +5,6 @@ dist/
 *.tgz
 .turbo
 .DS_Store
+
+# dora code context index
+.dora/

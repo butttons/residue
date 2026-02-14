@@ -3,270 +3,515 @@
     "id": 1,
     "title": "Monorepo root setup",
     "description": "Create root package.json with workspace scripts (dev, build, deploy filters for each package). Runtime is bun across the entire monorepo. Create base tsconfig.json with strict mode, ESNext target, module resolution. Update pnpm-workspace.yaml to include 'packages/*' and 'packages/adapters/*'. Update .gitignore for dist/, .wrangler/, .env, *.tgz, .turbo, etc.",
-    "tags": ["setup", "monorepo"],
+    "tags": [
+      "setup",
+      "monorepo"
+    ],
     "isDone": true,
-    "tests": ["pnpm install runs without errors from the root"],
+    "tests": [
+      "pnpm install runs without errors from the root"
+    ],
     "dependencies": []
   },
   {
     "id": 2,
     "title": "CLI package scaffold",
     "description": "Create packages/cli/ with: package.json (name: 'residue', bin: {'residue': './dist/index.js'}), tsconfig.json extending root, src/index.ts stub entry point. Use bun for runtime and build. Add build script using bun build to output dist/index.js. Add dev script. Include typescript and bun-types as dev deps.",
-    "tags": ["setup", "cli"],
+    "tags": [
+      "setup",
+      "cli"
+    ],
     "isDone": true,
-    "tests": ["packages/cli/package.json exists with bin field pointing to dist/index.js", "pnpm --filter cli build produces dist/index.js"],
-    "dependencies": [1]
+    "tests": [
+      "packages/cli/package.json exists with bin field pointing to dist/index.js",
+      "pnpm --filter cli build produces dist/index.js"
+    ],
+    "dependencies": [
+      1
+    ]
   },
   {
     "id": 3,
     "title": "Worker package scaffold",
     "description": "Scaffold the worker using 'pnpm create cloudflare@latest' inside packages/ with the bare empty template. This generates the base wrangler.toml, package.json, tsconfig.json, and src/index.ts. Then customize: add hono + @hono/vite-dev-server as deps, add @cloudflare/workers-types as devDep, configure tsconfig for JSX (jsx: 'react-jsx', jsxImportSource: 'hono/jsx'), add D1 binding (DB) and R2 binding (BUCKET) to wrangler.toml, rename src/index.ts to src/index.tsx with a Hono app stub. Tailwind and vite config come in TODO 23.",
-    "tags": ["setup", "worker"],
+    "tags": [
+      "setup",
+      "worker"
+    ],
     "isDone": true,
-    "tests": ["packages/worker/package.json exists with hono dependency", "pnpm --filter worker dev starts without errors"],
-    "dependencies": [1]
+    "tests": [
+      "packages/worker/package.json exists with hono dependency",
+      "pnpm --filter worker dev starts without errors"
+    ],
+    "dependencies": [
+      1
+    ]
   },
   {
     "id": 4,
     "title": "CLI: Git utilities",
     "description": "Create packages/cli/src/lib/git.ts with:\n- parseRemote(remoteUrl: string) → {org, repo}: handles both SSH (git@github.com:org/repo.git) and HTTPS (https://github.com/org/repo.git) formats. Strips .git suffix.\n- getRemoteUrl() → string: runs 'git remote get-url origin'.\n- getCurrentSha() → string: runs 'git rev-parse HEAD'.\n- getCommitMeta(sha: string) → {message, author, committed_at}: runs git log with format string for the given SHA.\n- isGitRepo() → boolean: checks if .git/ exists.\nAll shell commands use Bun.spawn or Bun.$.",
-    "tags": ["cli", "core"],
+    "tags": [
+      "cli",
+      "core"
+    ],
     "isDone": true,
-    "tests": ["packages/cli/test/git.test.ts passes"],
-    "dependencies": [2]
+    "tests": [
+      "packages/cli/test/git.test.ts passes"
+    ],
+    "dependencies": [
+      2
+    ]
   },
   {
     "id": 5,
     "title": "CLI: Config management",
     "description": "Create packages/cli/src/lib/config.ts. Manages ~/.residue/config (JSON file).\n- getConfigDir() → string: returns ~/.residue/, creates it if missing.\n- getConfigPath() → string: returns ~/.residue/config.\n- readConfig() → {worker_url: string, token: string} | null: reads and parses, returns null if file doesn't exist.\n- writeConfig(config: {worker_url: string, token: string}) → void: writes JSON, creates dir if needed.\n- configExists() → boolean.\nType: ResidueConfig = {worker_url: string, token: string}.",
-    "tags": ["cli", "core"],
+    "tags": [
+      "cli",
+      "core"
+    ],
     "isDone": true,
-    "tests": ["packages/cli/test/config.test.ts passes"],
-    "dependencies": [2]
+    "tests": [
+      "packages/cli/test/config.test.ts passes"
+    ],
+    "dependencies": [
+      2
+    ]
   },
   {
     "id": 6,
     "title": "CLI: Pending queue management",
     "description": "Create packages/cli/src/lib/pending.ts. Manages .git/ai-sessions/pending.json.\n\nType: PendingSession = {id: string, agent: string, agent_version: string, status: 'open' | 'ended', data_path: string, commits: string[]}.\n\nFunctions:\n- getPendingPath() → string: returns .git/ai-sessions/pending.json, creating dir if needed.\n- readPending() → PendingSession[]: reads file, returns [] if missing.\n- writePending(sessions: PendingSession[]) → void: atomic write.\n- addSession(session: PendingSession) → void: appends to list.\n- updateSession(id: string, updates: Partial<PendingSession>) → void: finds by ID, merges updates.\n- removeSession(id: string) → void: filters out by ID.\n- getSession(id: string) → PendingSession | undefined: find by ID.",
-    "tags": ["cli", "core"],
+    "tags": [
+      "cli",
+      "core"
+    ],
     "isDone": true,
-    "tests": ["packages/cli/test/pending.test.ts passes"],
-    "dependencies": [2]
+    "tests": [
+      "packages/cli/test/pending.test.ts passes"
+    ],
+    "dependencies": [
+      2
+    ]
   },
   {
     "id": 7,
     "title": "CLI: Entry point + command router",
     "description": "Create packages/cli/src/index.ts as the main CLI entry point with #!/usr/bin/env bun shebang.\n\nParse process.argv to determine the command name (argv[2]). Route to the appropriate command module in src/commands/. Supported commands: login, init, session-start, session-end, capture, sync, push.\n\nOn no command or --help: print usage summary listing all commands with descriptions.\nOn unknown command: print error + usage.\n\nEach command module at src/commands/<name>.ts exports an async run(args: string[]) function. The router passes remaining args (argv.slice(3)) to the command.",
-    "tags": ["cli", "core"],
+    "tags": [
+      "cli",
+      "core"
+    ],
     "isDone": true,
-    "tests": ["running 'bun packages/cli/src/index.ts' prints usage info", "running 'bun packages/cli/src/index.ts --help' prints usage info"],
-    "dependencies": [2]
+    "tests": [
+      "running 'bun packages/cli/src/index.ts' prints usage info",
+      "running 'bun packages/cli/src/index.ts --help' prints usage info"
+    ],
+    "dependencies": [
+      2
+    ]
   },
   {
     "id": 8,
     "title": "CLI: login command",
     "description": "Create packages/cli/src/commands/login.ts.\n\nFlags: --url <worker_url>, --token <auth_token>.\n\nBehavior:\n1. Parse --url and --token from args.\n2. If either is missing, print error with usage and exit 1.\n3. Validate URL format (must start with http:// or https://).\n4. Strip trailing slash from URL.\n5. Save {worker_url, token} via config.writeConfig().\n6. Print success: 'Logged in to <url>'.\n\nNo interactive prompts — flags only for scriptability.",
-    "tags": ["cli", "command"],
+    "tags": [
+      "cli",
+      "command"
+    ],
     "isDone": true,
-    "tests": ["packages/cli/test/commands/login.test.ts passes"],
-    "dependencies": [5, 7]
+    "tests": [
+      "packages/cli/test/commands/login.test.ts passes"
+    ],
+    "dependencies": [
+      5,
+      7
+    ]
   },
   {
     "id": 9,
     "title": "CLI: init command",
     "description": "Create packages/cli/src/commands/init.ts.\n\nBehavior:\n1. Check isGitRepo() — exit with error if not.\n2. Create .git/ai-sessions/ directory.\n3. Install post-commit hook: write '#!/bin/sh\\nresidue capture' to .git/hooks/post-commit. If file exists, check if 'residue capture' is already present — if not, append it. Make executable (chmod +x).\n4. Install pre-push hook: write '#!/bin/sh\\nresidue sync' to .git/hooks/pre-push. Same append logic. Make executable.\n5. Print summary of what was installed.\n6. Check for known adapters (look for ~/.claude/ for claude-code). Print detected adapters or warn if none found.",
-    "tags": ["cli", "command"],
+    "tags": [
+      "cli",
+      "command"
+    ],
     "isDone": true,
-    "tests": ["packages/cli/test/commands/init.test.ts passes"],
-    "dependencies": [4, 7]
+    "tests": [
+      "packages/cli/test/commands/init.test.ts passes"
+    ],
+    "dependencies": [
+      4,
+      7
+    ]
   },
   {
     "id": 10,
     "title": "CLI: session-start command",
     "description": "Create packages/cli/src/commands/session-start.ts.\n\nFlags: --agent <name>, --agent-version <semver>, --data <path-to-raw-session-file>.\n\nBehavior:\n1. Parse flags. --agent and --data are required; --agent-version defaults to 'unknown'.\n2. Validate data_path exists (or will exist — just store the path).\n3. Generate a UUID v4 session ID.\n4. Create PendingSession: {id, agent, agent_version, status: 'open', data_path, commits: []}.\n5. Add to pending queue via pending.addSession().\n6. Write ONLY the session ID to stdout (so the adapter can capture it). No other output to stdout.\n7. Log any status messages to stderr.",
-    "tags": ["cli", "command"],
+    "tags": [
+      "cli",
+      "command"
+    ],
     "isDone": true,
-    "tests": ["packages/cli/test/commands/session-start.test.ts passes"],
-    "dependencies": [6, 7]
+    "tests": [
+      "packages/cli/test/commands/session-start.test.ts passes"
+    ],
+    "dependencies": [
+      6,
+      7
+    ]
   },
   {
     "id": 11,
     "title": "CLI: session-end command",
     "description": "Create packages/cli/src/commands/session-end.ts.\n\nFlags: --id <session-id>.\n\nBehavior:\n1. Parse --id from args. Required.\n2. Find session in pending queue via pending.getSession(id).\n3. If not found: print error to stderr, exit 1.\n4. Update session status to 'ended' via pending.updateSession(id, {status: 'ended'}).\n5. Print confirmation to stderr: 'Session <id> ended'.",
-    "tags": ["cli", "command"],
-    "isDone": false,
-    "tests": ["packages/cli/test/commands/session-end.test.ts passes"],
-    "dependencies": [6, 7]
+    "tags": [
+      "cli",
+      "command"
+    ],
+    "isDone": true,
+    "tests": [
+      "packages/cli/test/commands/session-end.test.ts passes"
+    ],
+    "dependencies": [
+      6,
+      7
+    ]
   },
   {
     "id": 12,
     "title": "CLI: capture command",
     "description": "Create packages/cli/src/commands/capture.ts.\n\nCalled by the post-commit git hook. Must be silent on success.\n\nBehavior:\n1. Get current commit SHA via git.getCurrentSha().\n2. Read all pending sessions.\n3. For each session (both open and ended): if SHA not already in commits array, append it.\n4. Write updated pending queue.\n5. Exit 0 silently on success.\n6. On error: log to stderr but still exit 0 (never block a commit).",
-    "tags": ["cli", "command"],
+    "tags": [
+      "cli",
+      "command"
+    ],
     "isDone": false,
-    "tests": ["packages/cli/test/commands/capture.test.ts passes"],
-    "dependencies": [4, 6, 7]
+    "tests": [
+      "packages/cli/test/commands/capture.test.ts passes"
+    ],
+    "dependencies": [
+      4,
+      6,
+      7
+    ]
   },
   {
     "id": 13,
     "title": "CLI: sync command",
     "description": "Create packages/cli/src/commands/sync.ts.\n\nCalled by pre-push hook or manually via 'residue push'.\n\nBehavior:\n1. Read global config. If not configured, log warning to stderr and exit 0.\n2. Read pending queue. If empty, exit 0.\n3. Parse git remote URL to get org + repo.\n4. For each session with commits:\n   a. Read raw session data from data_path (if file missing, log warning, skip).\n   b. For each commit SHA, get commit metadata via git.getCommitMeta().\n   c. Build POST body per AGENTS.md spec.\n   d. POST to {worker_url}/api/sessions with Bearer token auth.\n   e. On success: if status is 'ended', remove from pending. If 'open', keep.\n   f. On failure: log warning, keep session for retry.\n5. Write updated pending queue.\n6. Never exit non-zero (don't block git push).",
-    "tags": ["cli", "command"],
+    "tags": [
+      "cli",
+      "command"
+    ],
     "isDone": false,
-    "tests": ["packages/cli/test/commands/sync.test.ts passes"],
-    "dependencies": [4, 5, 6, 7]
+    "tests": [
+      "packages/cli/test/commands/sync.test.ts passes"
+    ],
+    "dependencies": [
+      4,
+      5,
+      6,
+      7
+    ]
   },
   {
     "id": 14,
     "title": "CLI: push command (alias for sync)",
     "description": "Create packages/cli/src/commands/push.ts.\n\nSimply imports and calls the sync command's run function. This is the user-facing manual trigger for uploading sessions without doing a git push.",
-    "tags": ["cli", "command"],
+    "tags": [
+      "cli",
+      "command"
+    ],
     "isDone": false,
-    "tests": ["packages/cli/test/commands/push.test.ts passes"],
-    "dependencies": [13]
+    "tests": [
+      "packages/cli/test/commands/push.test.ts passes"
+    ],
+    "dependencies": [
+      13
+    ]
   },
   {
     "id": 15,
     "title": "Worker: D1 schema + migrations",
     "description": "Create packages/worker/migrations/0001_init.sql with the full schema:\n\nCREATE TABLE sessions (id TEXT PRIMARY KEY, agent TEXT NOT NULL, agent_version TEXT, created_at INTEGER NOT NULL, ended_at INTEGER, r2_key TEXT NOT NULL).\n\nCREATE TABLE commits (commit_sha TEXT NOT NULL, repo TEXT NOT NULL, org TEXT NOT NULL, session_id TEXT NOT NULL, message TEXT, author TEXT, committed_at INTEGER, created_at INTEGER NOT NULL, FOREIGN KEY (session_id) REFERENCES sessions(id)).\n\nIndexes: idx_commits_unique (commit_sha, session_id) UNIQUE, idx_commits_repo (org, repo), idx_commits_sha (commit_sha), idx_commits_session (session_id).\n\nCreate packages/worker/src/lib/db.ts with typed helper functions for common queries: upsertSession(), insertCommit(), getSessionById(), getCommitsByRepo(), getCommitsBySha(), getOrgList(), getReposByOrg().",
-    "tags": ["worker", "database"],
+    "tags": [
+      "worker",
+      "database"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/db.test.ts passes"],
-    "dependencies": [3]
+    "tests": [
+      "packages/worker/test/db.test.ts passes"
+    ],
+    "dependencies": [
+      3
+    ]
   },
   {
     "id": 16,
     "title": "Worker: Auth middleware",
     "description": "Create packages/worker/src/middleware/auth.ts.\n\nHono middleware function that:\n1. Reads Authorization header.\n2. Expects format: 'Bearer <token>'.\n3. Compares token against c.env.AUTH_TOKEN.\n4. If missing or mismatched: return 401 JSON response {error: 'Unauthorized'}.\n5. If valid: call next().\n\nApply this middleware to the /api/* route group only. UI routes (/, /:org, etc.) are public and unauthenticated.",
-    "tags": ["worker", "api"],
+    "tags": [
+      "worker",
+      "api"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/auth.test.ts passes"],
-    "dependencies": [3]
+    "tests": [
+      "packages/worker/test/auth.test.ts passes"
+    ],
+    "dependencies": [
+      3
+    ]
   },
   {
     "id": 17,
     "title": "Worker: POST /api/sessions",
     "description": "Create the POST /api/sessions API route.\n\nRequest body: {session: {id, agent, agent_version, status, data}, commits: [{sha, org, repo, message, author, committed_at}]}.\n\nBehavior:\n1. Validate required fields (session.id, session.agent, session.data, commits array).\n2. Write raw session data string to R2 at key 'sessions/<session.id>.json'.\n3. Upsert session row in D1: INSERT OR REPLACE. Set created_at to now if new. Set ended_at if status is 'ended'.\n4. For each commit: INSERT INTO commits with ON CONFLICT (commit_sha, session_id) DO NOTHING.\n5. Return 200 {ok: true}.\n6. Return 400 on validation errors, 500 on storage errors.",
-    "tags": ["worker", "api"],
+    "tags": [
+      "worker",
+      "api"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/api/sessions-post.test.ts passes"],
-    "dependencies": [15, 16]
+    "tests": [
+      "packages/worker/test/api/sessions-post.test.ts passes"
+    ],
+    "dependencies": [
+      15,
+      16
+    ]
   },
   {
     "id": 18,
     "title": "Worker: GET /api/sessions/:id",
     "description": "Create the GET /api/sessions/:id API route.\n\nBehavior:\n1. Query D1 for session metadata by ID.\n2. If not found: return 404 {error: 'Session not found'}.\n3. Fetch raw session data from R2 at 'sessions/<id>.json'.\n4. If R2 object missing: return 404.\n5. Return 200 with {session: {id, agent, agent_version, created_at, ended_at}, data: <raw string>}.",
-    "tags": ["worker", "api"],
+    "tags": [
+      "worker",
+      "api"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/api/sessions-get.test.ts passes"],
-    "dependencies": [15, 16]
+    "tests": [
+      "packages/worker/test/api/sessions-get.test.ts passes"
+    ],
+    "dependencies": [
+      15,
+      16
+    ]
   },
   {
     "id": 19,
     "title": "Worker: GET /api/repos/:org/:repo",
     "description": "Create the GET /api/repos/:org/:repo API route.\n\nBehavior:\n1. Query D1 commits table WHERE org = :org AND repo = :repo, ORDER BY committed_at DESC.\n2. Support cursor-based pagination: ?cursor=<committed_at_of_last_item>, LIMIT 50.\n3. Join with sessions table to get agent name for each commit's sessions.\n4. Group by commit SHA: each commit has {sha, message, author, committed_at, sessions: [{id, agent}]}.\n5. Return {commits: [...], next_cursor: <string> | null}.",
-    "tags": ["worker", "api"],
+    "tags": [
+      "worker",
+      "api"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/api/repos.test.ts passes"],
-    "dependencies": [15, 16]
+    "tests": [
+      "packages/worker/test/api/repos.test.ts passes"
+    ],
+    "dependencies": [
+      15,
+      16
+    ]
   },
   {
     "id": 20,
     "title": "Worker: GET /api/repos/:org/:repo/:sha",
     "description": "Create the GET /api/repos/:org/:repo/:sha API route.\n\nBehavior:\n1. Query D1 commits table for the given SHA (and org/repo for safety).\n2. If no results: return 404.\n3. Get commit metadata (message, author, committed_at) from the first row.\n4. Get all session IDs linked to this SHA.\n5. For each session, query sessions table for metadata (agent, agent_version, etc.).\n6. Return {commit: {sha, message, author, committed_at}, sessions: [{id, agent, agent_version, created_at, ended_at}]}.\n\nDoes NOT return raw session data (fetched separately via GET /api/sessions/:id).",
-    "tags": ["worker", "api"],
+    "tags": [
+      "worker",
+      "api"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/api/repos-sha.test.ts passes"],
-    "dependencies": [15, 16]
+    "tests": [
+      "packages/worker/test/api/repos-sha.test.ts passes"
+    ],
+    "dependencies": [
+      15,
+      16
+    ]
   },
   {
     "id": 21,
     "title": "Worker: Common message types + mapper registry",
     "description": "Create packages/worker/src/types.ts:\n\ntype ToolCall = {name: string, input: string, output: string}.\ntype Message = {role: string, content: string, timestamp?: string, tool_calls?: ToolCall[]}.\ntype Mapper = (raw: string) => Message[].\n\nCreate packages/worker/src/mappers/index.ts:\nExport a registry: Record<string, Mapper> mapping agent names to mapper functions. Initially has 'claude-code' key (pointing to placeholder until mapper is built). Export a getMapper(agent: string) → Mapper | null function.",
-    "tags": ["worker", "types"],
+    "tags": [
+      "worker",
+      "types"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/types.test.ts passes"],
-    "dependencies": [3]
+    "tests": [
+      "packages/worker/test/types.test.ts passes"
+    ],
+    "dependencies": [
+      3
+    ]
   },
   {
     "id": 22,
     "title": "Worker: Claude Code mapper",
     "description": "Create packages/worker/src/mappers/claude-code.ts.\n\nPure function: (raw: string) => Message[].\n\nClaude Code stores sessions as JSON (array of message objects). Each message has type/role. Parse the raw data and map:\n- 'human'/'user' type → Message with role 'human'\n- 'assistant' type → Message with role 'assistant'. If content blocks include tool_use, extract name + input into tool_calls array.\n- 'tool_result' type → match back to the preceding tool_use by tool_use_id and fill in the output field.\n\nHandle edge cases: empty sessions, malformed JSON (return empty array), missing fields.\n\nRegister in the mapper registry.",
-    "tags": ["worker", "mapper"],
+    "tags": [
+      "worker",
+      "mapper"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/mappers/claude-code.test.ts passes"],
-    "dependencies": [21]
+    "tests": [
+      "packages/worker/test/mappers/claude-code.test.ts passes"
+    ],
+    "dependencies": [
+      21
+    ]
   },
   {
     "id": 23,
     "title": "Worker: Tailwind + layout foundation",
     "description": "Set up Tailwind CSS in the worker package:\n1. Install tailwindcss, postcss, autoprefixer.\n2. Create tailwind.config.ts scanning src/**/*.tsx.\n3. Create global CSS file with @tailwind directives + custom font imports (JetBrains Mono from Google Fonts, IBM Plex Mono fallback, system monospace).\n4. Configure vite to process CSS with Tailwind.\n\nCreate packages/worker/src/components/Layout.tsx:\n- Accepts {title, children} props.\n- Renders full HTML document: <!DOCTYPE html>, <html> with dark class, <head> with meta, fonts, inlined/linked CSS, <body> with zinc-950 bg.\n- Dark mode default. Light mode via class toggle.\n- Responsive container: max-w-4xl mx-auto px-4.\n- Include Phosphor Icons via CDN script tag.",
-    "tags": ["worker", "ui"],
+    "tags": [
+      "worker",
+      "ui"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/components/layout.test.ts passes"],
-    "dependencies": [3]
+    "tests": [
+      "packages/worker/test/components/layout.test.ts passes"
+    ],
+    "dependencies": [
+      3
+    ]
   },
   {
     "id": 24,
     "title": "Worker: Conversation renderer component",
     "description": "Create packages/worker/src/components/Conversation.tsx.\n\nProps: {messages: Message[], continuesFrom?: {sha: string, url: string}, continuesIn?: {sha: string, url: string}}.\n\nRenders:\n- Each message with a role label: emerald-400 for 'human', violet-400 for 'assistant', amber-400 for 'tool'.\n- Content as HTML (pre-rendered markdown — or raw text with whitespace preserved).\n- Code blocks: darker bg than surface (zinc-950 in dark mode), rounded-md, p-3, overflow-x-auto, monospace.\n- Tool calls: <details> element, collapsed by default. Summary shows tool name with CaretRight icon. Expanded shows input + output in subdued zinc-500 text.\n- Tight spacing: gap-2 between messages.\n- Continuation links at top/bottom: 'Continues from <sha>' with ArrowUp, 'Continues in <sha>' with ArrowDown, in zinc-400 secondary text.",
-    "tags": ["worker", "ui"],
+    "tags": [
+      "worker",
+      "ui"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/components/conversation.test.ts passes"],
-    "dependencies": [21, 23]
+    "tests": [
+      "packages/worker/test/components/conversation.test.ts passes"
+    ],
+    "dependencies": [
+      21,
+      23
+    ]
   },
   {
     "id": 25,
     "title": "Worker: Home page (/)",
     "description": "Create GET / UI route in the Hono app.\n\nQuery D1: SELECT DISTINCT org, COUNT(DISTINCT repo) as repo_count, MAX(committed_at) as last_activity FROM commits GROUP BY org ORDER BY last_activity DESC.\n\nRender with Layout:\n- Page title: 'residue'\n- List of org cards/rows. Each shows: org name (link to /:org), repo count, relative last activity time.\n- Empty state: 'No sessions uploaded yet. Run residue init in a repo to get started.'\n- Minimal styling: zinc-900 surface cards with zinc-800 borders.",
-    "tags": ["worker", "ui", "page"],
+    "tags": [
+      "worker",
+      "ui",
+      "page"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/pages/home.test.ts passes"],
-    "dependencies": [15, 23]
+    "tests": [
+      "packages/worker/test/pages/home.test.ts passes"
+    ],
+    "dependencies": [
+      15,
+      23
+    ]
   },
   {
     "id": 26,
     "title": "Worker: Org page (/:org)",
     "description": "Create GET /:org UI route.\n\nQuery D1: SELECT DISTINCT repo, COUNT(DISTINCT session_id) as session_count, COUNT(DISTINCT commit_sha) as commit_count, MAX(committed_at) as last_activity FROM commits WHERE org = :org GROUP BY repo ORDER BY last_activity DESC.\n\nRender with Layout:\n- Breadcrumb: residue > :org\n- List of repo cards. Each shows: repo name (link to /:org/:repo), session count, commit count, relative last activity.\n- 404 if org has no data.",
-    "tags": ["worker", "ui", "page"],
+    "tags": [
+      "worker",
+      "ui",
+      "page"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/pages/org.test.ts passes"],
-    "dependencies": [15, 23]
+    "tests": [
+      "packages/worker/test/pages/org.test.ts passes"
+    ],
+    "dependencies": [
+      15,
+      23
+    ]
   },
   {
     "id": 27,
     "title": "Worker: Repo commit log page (/:org/:repo)",
     "description": "Create GET /:org/:repo UI route.\n\nQuery D1: get commits for this org/repo ordered by committed_at DESC, joined with sessions for agent info. Paginated (50 per page, ?cursor= support).\n\nRender with Layout:\n- Breadcrumb: residue > :org > :repo\n- Vertical timeline: each commit as a row with subtle left border (blue-500 dot indicator).\n- Commit entry: short SHA (first 7 chars, blue-500 accent, links to /:org/:repo/:sha), commit message (zinc-100), author + relative time (zinc-400), agent badges as small pills (zinc-800 bg, zinc-300 text).\n- Session continuation: if same session appears in adjacent commits, show thin connecting line.\n- Pagination: 'Load more' link at bottom if next_cursor exists.\n- 404 if repo has no data.",
-    "tags": ["worker", "ui", "page"],
+    "tags": [
+      "worker",
+      "ui",
+      "page"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/pages/repo.test.ts passes"],
-    "dependencies": [15, 23, 24]
+    "tests": [
+      "packages/worker/test/pages/repo.test.ts passes"
+    ],
+    "dependencies": [
+      15,
+      23,
+      24
+    ]
   },
   {
     "id": 28,
     "title": "Worker: Commit permalink page (/:org/:repo/:sha)",
     "description": "Create GET /:org/:repo/:sha UI route.\n\nBehavior:\n1. Query D1 for commit metadata + all sessions linked to this SHA.\n2. For each session: fetch raw data from R2, look up agent name, pick the right mapper, transform to Message[].\n3. Determine session continuation: query D1 for other commits sharing the same session IDs.\n\nRender with Layout:\n- Breadcrumb: residue > :org > :repo > :sha\n- Commit header: full SHA, message, author, formatted timestamp.\n- For each session: render Conversation component with mapped messages + continuation links.\n- Multiple sessions separated by gap-4 with agent label headers.\n- 404 if SHA not found.",
-    "tags": ["worker", "ui", "page"],
+    "tags": [
+      "worker",
+      "ui",
+      "page"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/test/pages/commit.test.ts passes"],
-    "dependencies": [18, 22, 23, 24]
+    "tests": [
+      "packages/worker/test/pages/commit.test.ts passes"
+    ],
+    "dependencies": [
+      18,
+      22,
+      23,
+      24
+    ]
   },
   {
     "id": 29,
     "title": "Claude Code adapter",
     "description": "Create packages/adapters/claude-code/ with package.json (name: '@residue/adapter-claude-code').\n\nImplement as a Claude Code hook that integrates via Claude Code's hooks system (SubcommandHookConfig in ~/.claude/settings.json or project .claude/settings.json):\n\n- PreToolUse or custom hook on session start: run 'residue session-start --agent claude-code --version <detected-version> --data <path-to-session-file>'. Capture session ID from stdout.\n- On session stop: run 'residue session-end --id <session-id>'.\n\nThe adapter needs to:\n1. Detect the Claude Code session file path (~/.claude/projects/<project-hash>/sessions/<session>.jsonl or similar).\n2. Detect Claude Code version.\n3. Provide install instructions or an install script that adds the hook config.\n\nInclude README with setup instructions.",
-    "tags": ["adapter", "claude-code"],
+    "tags": [
+      "adapter",
+      "claude-code"
+    ],
     "isDone": false,
-    "tests": ["packages/adapters/claude-code/test/adapter.test.ts passes"],
-    "dependencies": [10, 11]
+    "tests": [
+      "packages/adapters/claude-code/test/adapter.test.ts passes"
+    ],
+    "dependencies": [
+      10,
+      11
+    ]
   },
   {
     "id": 30,
     "title": "Worker: Deployment config + Deploy to Cloudflare",
     "description": "Finalize deployment setup:\n1. Ensure wrangler.toml has correct D1 database_name + database_id placeholder, R2 bucket_name, AUTH_TOKEN as secret.\n2. Create packages/worker/setup.sh script that: runs wrangler d1 create, runs wrangler d1 execute with migration, runs wrangler r2 bucket create, generates a random auth token, sets it via wrangler secret put.\n3. Add 'Deploy to Cloudflare Workers' button to the worker README that forks and deploys.\n4. Document: after deploy, user gets worker URL + auth token → run 'residue login --url <url> --token <token>'.\n5. Ensure 'pnpm --filter worker deploy' runs wrangler deploy successfully.",
-    "tags": ["worker", "deployment"],
+    "tags": [
+      "worker",
+      "deployment"
+    ],
     "isDone": false,
-    "tests": ["packages/worker/deploy script is documented and wrangler.toml is valid"],
-    "dependencies": [15, 17, 18, 19, 20, 25, 26, 27, 28]
+    "tests": [
+      "packages/worker/deploy script is documented and wrangler.toml is valid"
+    ],
+    "dependencies": [
+      15,
+      17,
+      18,
+      19,
+      20,
+      25,
+      26,
+      27,
+      28
+    ]
   }
 ]
