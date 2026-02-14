@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile, chmod, stat } from "fs/promises";
 import { join } from "path";
 
 const POST_COMMIT_LINE = "residue capture";
-const PRE_PUSH_LINE = "residue sync";
+const PRE_PUSH_LINE = 'residue sync --remote-url "$2"';
 
 function installHook(opts: {
   hooksDir: string;

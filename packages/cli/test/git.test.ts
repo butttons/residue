@@ -3,6 +3,7 @@ import {
   parseRemote,
   getRemoteUrl,
   getCurrentSha,
+  getCurrentBranch,
   getCommitMeta,
   isGitRepo,
 } from "@/lib/git";
@@ -56,6 +57,18 @@ describe("getRemoteUrl", () => {
     } else {
       expect(result._unsafeUnwrapErr()).toContain("Failed");
     }
+  });
+});
+
+describe("getCurrentBranch", () => {
+  test("returns a non-empty branch name", async () => {
+    const result = await getCurrentBranch();
+    expect(result.isOk()).toBe(true);
+    const branch = result._unsafeUnwrap();
+    expect(typeof branch).toBe("string");
+    expect(branch.length).toBeGreaterThan(0);
+    // Should not be a full ref like refs/heads/main
+    expect(branch).not.toContain("refs/");
   });
 });
 

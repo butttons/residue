@@ -35,6 +35,7 @@ async function seedCommit(opts: {
   message: string;
   author: string;
   committedAt: number;
+  branch?: string;
 }) {
   await db.insertCommit({
     commitSha: opts.sha,
@@ -44,6 +45,7 @@ async function seedCommit(opts: {
     message: opts.message,
     author: opts.author,
     committedAt: opts.committedAt,
+    branch: opts.branch ?? null,
   });
 }
 

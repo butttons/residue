@@ -21,6 +21,7 @@ function makeBody(overrides?: Record<string, unknown>) {
         message: "fix auth redirect",
         author: "jane",
         committed_at: 1700000000,
+        branch: "main",
       },
     ],
     ...overrides,
@@ -128,6 +129,37 @@ describe("POST /api/sessions", () => {
     expect(commits[0].committed_at).toBe(1700000000);
   });
 
+  it("stores branch in commits table", async () => {
+    const res = await postSession(makeBody());
+    expect(res.status).toBe(200);
+
+    const commits = await db.getCommitsBySha("abc123");
+    expect(commits).toHaveLength(1);
+    expect(commits[0].branch).toBe("main");
+  });
+
+  it("accepts commits without branch field", async () => {
+    const payload = makeBody({
+      commits: [
+        {
+          sha: "no-branch-sha",
+          org: "my-org",
+          repo: "my-repo",
+          message: "no branch",
+          author: "jane",
+          committed_at: 1700000000,
+        },
+      ],
+    });
+
+    const res = await postSession(payload);
+    expect(res.status).toBe(200);
+
+    const commits = await db.getCommitsBySha("no-branch-sha");
+    expect(commits).toHaveLength(1);
+    expect(commits[0].branch).toBeNull();
+  });
+
   it("handles multiple commits for one session", async () => {
     const payload = makeBody({
       commits: [
@@ -138,6 +170,7 @@ describe("POST /api/sessions", () => {
           message: "first commit",
           author: "jane",
           committed_at: 1700000000,
+          branch: "feature-x",
         },
         {
           sha: "def456",
@@ -146,6 +179,7 @@ describe("POST /api/sessions", () => {
           message: "second commit",
           author: "jane",
           committed_at: 1700003600,
+          branch: "feature-x",
         },
       ],
     });

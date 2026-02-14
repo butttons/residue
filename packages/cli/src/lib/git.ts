@@ -33,6 +33,24 @@ export function getRemoteUrl(): ResultAsync<string, string> {
   );
 }
 
+export function getCurrentBranch(): ResultAsync<string, string> {
+  return ResultAsync.fromPromise(
+    (async () => {
+      const proc = Bun.spawn(["git", "rev-parse", "--abbrev-ref", "HEAD"], {
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const exitCode = await proc.exited;
+      if (exitCode !== 0) {
+        throw new Error("Failed to get current branch");
+      }
+      const text = await new Response(proc.stdout).text();
+      return text.trim();
+    })(),
+    (e) => (e instanceof Error ? e.message : "Failed to get current branch")
+  );
+}
+
 export function getCurrentSha(): ResultAsync<string, string> {
   return ResultAsync.fromPromise(
     (async () => {

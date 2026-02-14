@@ -61,7 +61,8 @@ program
 program
   .command("sync")
   .description("Upload pending sessions to worker (called by pre-push hook)")
-  .action(wrapHookCommand(() => sync()));
+  .option("--remote-url <url>", "Remote URL (passed by pre-push hook)")
+  .action(wrapHookCommand((opts: { remoteUrl?: string }) => sync({ remoteUrl: opts.remoteUrl })));
 
 program
   .command("push")

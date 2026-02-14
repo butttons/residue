@@ -82,7 +82,7 @@ Agent Plugin                    Git Hooks
 | Command           | Description                                                                                  |
 | ----------------- | -------------------------------------------------------------------------------------------- |
 | `residue capture` | Called by post-commit hook. Tags all pending sessions with the current commit SHA            |
-| `residue sync`    | Called by pre-push hook. Uploads all unsynced session data to the worker, clears local state |
+| `residue sync`    | Called by pre-push hook. Accepts `--remote-url` to derive org/repo from the pushed remote. Uploads all unsynced session data to the worker, clears local state |
 
 **Hook-invoked (agent plugins):**
 
@@ -122,7 +122,7 @@ Pending queue: `.git/ai-sessions/pending.json`
     "agent_version": "1.2.3",
     "status": "open",
     "data_path": "/path/to/raw/session/log",
-    "commits": ["abc123"]
+    "commits": [{"sha": "abc123", "branch": "feature-auth"}]
   }
 ]
 ```
@@ -130,13 +130,14 @@ Pending queue: `.git/ai-sessions/pending.json`
 **`residue capture` behavior:**
 
 - Reads pending.json
-- For every session (both `open` and `ended`), appends the current commit SHA to its `commits` array
+- Gets the current commit SHA and branch name
+- For every session (both `open` and `ended`), appends `{sha, branch}` to its `commits` array (if not already tagged)
 - Writes updated pending.json
 
 **`residue sync` behavior:**
 
 - Reads pending.json
-- Parses git remote to extract org + repo
+- Derives org + repo from `--remote-url` if provided (passed by pre-push hook), otherwise falls back to `git remote get-url origin`
 - For each session:
   - Reads raw session data directly from `data_path` (no local copies)
   - Reads commit metadata (message, author, timestamp) from git log for each associated SHA
@@ -159,8 +160,10 @@ residue capture
 
 ```bash
 #!/bin/sh
-residue sync
+residue sync --remote-url "$2"
 ```
+
+The `$2` argument is the remote URL passed by git to the pre-push hook. This ensures org/repo are derived from the actual remote being pushed to, not hardcoded to `origin`. For manual `residue push`, it falls back to `origin`.
 
 ## Worker (`packages/worker`)
 
@@ -201,6 +204,7 @@ CREATE TABLE commits (
   author TEXT,
   committed_at INTEGER,
   created_at INTEGER NOT NULL,
+  branch TEXT,
   FOREIGN KEY (session_id) REFERENCES sessions(id)
 );
 
@@ -208,6 +212,7 @@ CREATE UNIQUE INDEX idx_commits_unique ON commits(commit_sha, session_id);
 CREATE INDEX idx_commits_repo ON commits(org, repo);
 CREATE INDEX idx_commits_sha ON commits(commit_sha);
 CREATE INDEX idx_commits_session ON commits(session_id);
+CREATE INDEX idx_commits_branch ON commits(org, repo, branch);
 ```
 
 A session is stored once. Multiple commits can reference the same session. Org and repo live on the commits table since they come from the git remote.
@@ -245,7 +250,8 @@ GET    /api/repos/:org/:repo/:sha   → Get sessions for a specific commit
       "repo": "my-app",
       "message": "fix auth redirect",
       "author": "jane",
-      "committed_at": 1700000000
+      "committed_at": 1700000000,
+      "branch": "feature-auth"
     },
     {
       "sha": "def456",
@@ -253,7 +259,8 @@ GET    /api/repos/:org/:repo/:sha   → Get sessions for a specific commit
       "repo": "my-app",
       "message": "add rate limiting",
       "author": "jane",
-      "committed_at": 1700003600
+      "committed_at": 1700003600,
+      "branch": "feature-auth"
     }
   ]
 }

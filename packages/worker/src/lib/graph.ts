@@ -23,6 +23,7 @@ type GraphCommit = {
   message: string | null;
   author: string | null;
   committedAt: number | null;
+  branch: string | null;
   sessions: SessionInfo[];
 };
 
@@ -52,6 +53,7 @@ const computeGraph = (rows: CommitWithSessionRow[]): GraphData => {
       message: string | null;
       author: string | null;
       committedAt: number | null;
+      branch: string | null;
       sessionIds: Set<string>;
     }
   >();
@@ -71,6 +73,7 @@ const computeGraph = (rows: CommitWithSessionRow[]): GraphData => {
         message: row.message,
         author: row.author,
         committedAt: row.committed_at,
+        branch: row.branch,
         sessionIds: new Set(),
       });
     } else {
@@ -192,6 +195,7 @@ const computeGraph = (rows: CommitWithSessionRow[]): GraphData => {
       message: commitInfo.message,
       author: commitInfo.author,
       committedAt: commitInfo.committedAt,
+      branch: commitInfo.branch,
       sessions,
     };
   });

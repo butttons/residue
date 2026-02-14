@@ -172,6 +172,12 @@ const CommitGraph: FC<CommitGraphProps> = ({ data, org, repo }) => {
                   >
                     {commit.sha.slice(0, 7)}
                   </a>
+                  {commit.branch && (
+                    <span class="text-xs px-1.5 py-0.5 rounded bg-zinc-800/60 text-zinc-400 font-mono">
+                      <i class="ph ph-git-branch text-[10px] mr-0.5" />
+                      {commit.branch}
+                    </span>
+                  )}
                   {agentCounts.map((ac) => (
                     <span class="text-xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
                       {ac.agent}

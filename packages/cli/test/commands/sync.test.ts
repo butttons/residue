@@ -160,6 +160,8 @@ describe("sync command", () => {
       expect(body.commits).toHaveLength(1);
       expect(body.commits[0].org).toBe("my-org");
       expect(body.commits[0].repo).toBe("my-repo");
+      expect(typeof body.commits[0].branch).toBe("string");
+      expect((body.commits[0].branch as string).length).toBeGreaterThan(0);
 
       // Ended session removed from pending
       const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
@@ -192,6 +194,73 @@ describe("sync command", () => {
       const sessions = (await readPending(pendingPath))._unsafeUnwrap();
       expect(sessions).toHaveLength(1);
       expect(sessions[0].status).toBe("open");
+    } finally {
+      mock.stop();
+    }
+  });
+
+  test("uses --remote-url for org/repo inference when provided", async () => {
+    const mock = createMockServer();
+
+    try {
+      await setupConfig({ workerUrl: mock.workerUrl, token: "t" });
+
+      const dataPath = join(tempDir, "session-data.jsonl");
+      await writeFile(dataPath, "data");
+
+      const startProc = cli(["session", "start", "--agent", "claude-code", "--data", dataPath]);
+      await startProc.exited;
+
+      const captureProc = cli(["capture"]);
+      await captureProc.exited;
+
+      const endProc = cli(["session", "end", "--id", (await new Response(startProc.stdout).text()).trim()]);
+      await endProc.exited;
+
+      // Sync with a different remote URL (not origin)
+      const syncProc = cli(["sync", "--remote-url", "git@github.com:other-org/other-repo.git"]);
+      const exitCode = await syncProc.exited;
+
+      expect(exitCode).toBe(0);
+      expect(mock.requests).toHaveLength(1);
+
+      const body = mock.requests[0].body as { commits: Array<{ org: string; repo: string; branch: string }> };
+      expect(body.commits[0].org).toBe("other-org");
+      expect(body.commits[0].repo).toBe("other-repo");
+      expect(typeof body.commits[0].branch).toBe("string");
+    } finally {
+      mock.stop();
+    }
+  });
+
+  test("falls back to origin when --remote-url is empty", async () => {
+    const mock = createMockServer();
+
+    try {
+      await setupConfig({ workerUrl: mock.workerUrl, token: "t" });
+
+      const dataPath = join(tempDir, "session-data.jsonl");
+      await writeFile(dataPath, "data");
+
+      const startProc = cli(["session", "start", "--agent", "claude-code", "--data", dataPath]);
+      await startProc.exited;
+
+      const captureProc = cli(["capture"]);
+      await captureProc.exited;
+
+      const endProc = cli(["session", "end", "--id", (await new Response(startProc.stdout).text()).trim()]);
+      await endProc.exited;
+
+      // Sync with empty remote URL (should fall back to origin)
+      const syncProc = cli(["sync", "--remote-url", ""]);
+      const exitCode = await syncProc.exited;
+
+      expect(exitCode).toBe(0);
+      expect(mock.requests).toHaveLength(1);
+
+      const body = mock.requests[0].body as { commits: Array<{ org: string; repo: string }> };
+      expect(body.commits[0].org).toBe("my-org");
+      expect(body.commits[0].repo).toBe("my-repo");
     } finally {
       mock.stop();
     }

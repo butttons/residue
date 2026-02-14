@@ -46,7 +46,7 @@ describe("init command", () => {
     expect(postCommit).toContain("residue capture");
 
     const prePush = await readFile(join(tempDir, ".git/hooks/pre-push"), "utf-8");
-    expect(prePush).toContain("residue sync");
+    expect(prePush).toContain('residue sync --remote-url "$2"');
 
     // ai-sessions dir should exist
     const lsProc = Bun.spawn(["ls", join(tempDir, ".git/ai-sessions")], {

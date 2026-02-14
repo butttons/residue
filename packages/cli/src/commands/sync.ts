@@ -1,7 +1,7 @@
 import { readConfig } from "@/lib/config";
 import { getRemoteUrl, parseRemote, getCommitMeta } from "@/lib/git";
 import { getGitDir, getPendingPath, readPending, writePending } from "@/lib/pending";
-import type { PendingSession } from "@/lib/pending";
+import type { PendingSession, CommitRef } from "@/lib/pending";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
 
 type CommitPayload = {
@@ -11,6 +11,7 @@ type CommitPayload = {
   message: string;
   author: string;
   committed_at: number;
+  branch: string;
 };
 
 function postSession(opts: {
@@ -58,26 +59,27 @@ function readSessionData(dataPath: string): ResultAsync<string | null, string> {
 }
 
 function buildCommitMeta(opts: {
-  shas: string[];
+  commitRefs: CommitRef[];
   org: string;
   repo: string;
 }): ResultAsync<CommitPayload[], string> {
   return ResultAsync.fromSafePromise(
     (async () => {
       const commits: CommitPayload[] = [];
-      for (const sha of opts.shas) {
-        const metaResult = await getCommitMeta(sha);
+      for (const ref of opts.commitRefs) {
+        const metaResult = await getCommitMeta(ref.sha);
         if (metaResult.isErr()) {
           console.error(`Warning: ${metaResult.error}`);
           continue;
         }
         commits.push({
-          sha,
+          sha: ref.sha,
           org: opts.org,
           repo: opts.repo,
           message: metaResult.value.message,
           author: metaResult.value.author,
           committed_at: metaResult.value.committed_at,
+          branch: ref.branch,
         });
       }
       return commits;
@@ -116,7 +118,7 @@ function syncSessions(opts: {
         }
 
         const commitsResult = await buildCommitMeta({
-          shas: session.commits,
+          commitRefs: session.commits,
           org: opts.org,
           repo: opts.repo,
         });
@@ -157,7 +159,18 @@ function syncSessions(opts: {
   );
 }
 
-export function sync(): ResultAsync<void, string> {
+function resolveRemote(remoteUrl?: string): ResultAsync<{ org: string; repo: string }, string> {
+  if (remoteUrl && remoteUrl.length > 0) {
+    const result = parseRemote(remoteUrl);
+    if (result.isOk()) {
+      return okAsync(result.value);
+    }
+    // Fall through to origin if provided URL is unparseable
+  }
+  return getRemoteUrl().andThen(parseRemote);
+}
+
+export function sync(opts?: { remoteUrl?: string }): ResultAsync<void, string> {
   return readConfig().andThen((config) => {
     if (!config) {
       return errAsync("Not configured. Run 'residue login' first.");
@@ -171,8 +184,7 @@ export function sync(): ResultAsync<void, string> {
             return okAsync(undefined);
           }
 
-          return getRemoteUrl()
-            .andThen(parseRemote)
+          return resolveRemote(opts?.remoteUrl)
             .andThen(({ org, repo }) =>
               syncSessions({
                 sessions,

@@ -39,6 +39,7 @@ type GroupedCommit = {
   message: string | null;
   author: string | null;
   committed_at: number | null;
+  branch: string | null;
   sessions: { id: string; agent: string }[];
 };
 
@@ -83,6 +84,7 @@ const groupCommits = (rows: CommitWithSessionRow[]): GroupedCommit[] => {
         message: row.message,
         author: row.author,
         committed_at: row.committed_at,
+        branch: row.branch,
         sessions: [{ id: row.session_id, agent: row.agent }],
       });
     }
@@ -371,6 +373,12 @@ pages.get("/:org/:repo/:sha", async (c) => {
           </a>
         </div>
         <div class="flex items-center gap-2 mb-2 flex-wrap">
+          {first.branch && (
+            <span class="text-xs px-1.5 py-0.5 rounded bg-zinc-800/60 text-zinc-400 font-mono">
+              <i class="ph ph-git-branch text-[10px] mr-0.5" />
+              {first.branch}
+            </span>
+          )}
           <AgentBadges sessions={[...uniqueSessions.values()].map((s) => ({ id: s.id, agent: s.agent }))} />
         </div>
         <p class="text-zinc-100">{first.message}</p>

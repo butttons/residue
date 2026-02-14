@@ -6,13 +6,18 @@ import { ok, err, errAsync, Result, ResultAsync } from "neverthrow";
 import { join } from "path";
 import { mkdir } from "fs/promises";
 
+export type CommitRef = {
+  sha: string;
+  branch: string;
+};
+
 export type PendingSession = {
   id: string;
   agent: string;
   agent_version: string;
   status: "open" | "ended";
   data_path: string;
-  commits: string[];
+  commits: CommitRef[];
 };
 
 /**
@@ -55,6 +60,25 @@ export function getPendingPath(gitDir: string): ResultAsync<string, string> {
 /**
  * Read pending sessions from disk. Returns [] if file doesn't exist.
  */
+/**
+ * Migrate old format where commits was string[] to CommitRef[].
+ */
+function migratePending(sessions: PendingSession[]): PendingSession[] {
+  for (const session of sessions) {
+    if (session.commits.length > 0 && typeof session.commits[0] === "string") {
+      session.commits = (session.commits as unknown as string[]).map((sha) => ({
+        sha,
+        branch: "unknown",
+      }));
+    }
+  }
+  return sessions;
+}
+
+/**
+ * Read pending sessions from disk. Returns [] if file doesn't exist.
+ * Handles backward compat: old format had commits as string[] (just SHAs).
+ */
 export function readPending(pendingPath: string): ResultAsync<PendingSession[], string> {
   return ResultAsync.fromPromise(
     (async () => {
@@ -62,7 +86,8 @@ export function readPending(pendingPath: string): ResultAsync<PendingSession[], 
       const isExists = await file.exists();
       if (!isExists) return [];
       const text = await file.text();
-      return JSON.parse(text) as PendingSession[];
+      const sessions = JSON.parse(text) as PendingSession[];
+      return migratePending(sessions);
     })(),
     (e) => (e instanceof Error ? e.message : "Failed to read pending queue")
   );

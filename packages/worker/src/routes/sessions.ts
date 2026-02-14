@@ -12,6 +12,7 @@ const commitSchema = z.object({
   message: z.string(),
   author: z.string(),
   committed_at: z.number(),
+  branch: z.string().optional(),
 });
 
 const postSessionsSchema = z.object({
@@ -107,6 +108,7 @@ sessions.post(
           message: commit.message,
           author: commit.author,
           committedAt: commit.committed_at,
+          branch: commit.branch ?? null,
         });
       }
     } catch {

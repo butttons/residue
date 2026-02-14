@@ -55,6 +55,7 @@ async function seedFullCommit(opts: {
     message: opts.message ?? "test commit",
     author: "jane",
     committedAt: 1700000000,
+    branch: null,
   });
 }
 
@@ -165,6 +166,7 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
       message: "first",
       author: "jane",
       committedAt: 1700000000,
+      branch: null,
     });
     await db.insertCommit({
       commitSha: "second-sha",
@@ -174,6 +176,7 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
       message: "second",
       author: "jane",
       committedAt: 1700001000,
+      branch: null,
     });
 
     // View the second commit — should show "continues from first-sha"
@@ -212,6 +215,7 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
       message: "test",
       author: "jane",
       committedAt: 1700000000,
+      branch: null,
     });
 
     const res = await SELF.fetch(

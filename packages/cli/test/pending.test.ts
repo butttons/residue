@@ -135,12 +135,31 @@ describe("updateSession", () => {
     const result = await updateSession({
       path: pendingPath,
       id: "s1",
-      updates: { commits: ["abc123"] },
+      updates: { commits: [{ sha: "abc123", branch: "main" }] },
     });
     expect(result.isOk()).toBe(true);
 
     const sessions = (await readPending(pendingPath))._unsafeUnwrap();
-    expect(sessions[0].commits).toEqual(["abc123"]);
+    expect(sessions[0].commits).toEqual([{ sha: "abc123", branch: "main" }]);
+  });
+
+  test("migrates old string[] commits format on read", async () => {
+    // Write old format directly to simulate pre-migration data
+    const oldSession = {
+      id: "old-1",
+      agent: "claude-code",
+      agent_version: "1.0.0",
+      status: "open",
+      data_path: "/tmp/test.jsonl",
+      commits: ["sha1", "sha2"],
+    };
+    await Bun.write(pendingPath, JSON.stringify([oldSession]));
+
+    const sessions = (await readPending(pendingPath))._unsafeUnwrap();
+    expect(sessions[0].commits).toEqual([
+      { sha: "sha1", branch: "unknown" },
+      { sha: "sha2", branch: "unknown" },
+    ]);
   });
 
   test("returns error for non-existent session", async () => {

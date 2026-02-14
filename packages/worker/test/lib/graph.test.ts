@@ -9,6 +9,7 @@ const row = (opts: {
   message?: string;
   author?: string;
   committedAt?: number;
+  branch?: string;
 }): CommitWithSessionRow => ({
   commit_sha: opts.sha,
   session_id: opts.sessionId,
@@ -16,6 +17,7 @@ const row = (opts: {
   message: opts.message ?? `commit ${opts.sha}`,
   author: opts.author ?? "dev",
   committed_at: opts.committedAt ?? null,
+  branch: opts.branch ?? null,
 });
 
 describe("computeGraph", () => {

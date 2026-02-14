@@ -32,6 +32,7 @@ async function seedData(org: string, repo: string) {
     message: "test commit",
     author: "jane",
     committedAt: 1700000000,
+    branch: null,
   });
 }
 

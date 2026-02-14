@@ -66,7 +66,8 @@ describe("capture command", () => {
     const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
     const sessions = (await readPending(pendingPath))._unsafeUnwrap();
     expect(sessions).toHaveLength(1);
-    expect(sessions[0].commits).toContain(sha);
+    expect(sessions[0].commits.some((c) => c.sha === sha)).toBe(true);
+    expect(sessions[0].commits[0].branch).toBeDefined();
   });
 
   test("does not duplicate SHA on repeated capture", async () => {
@@ -83,11 +84,11 @@ describe("capture command", () => {
     const sessions = (await readPending(pendingPath))._unsafeUnwrap();
     // Should have exactly 1 SHA (the initial commit), not duplicated
     const sha = await gitExec(["rev-parse", "HEAD"]);
-    const count = sessions[0].commits.filter((c: string) => c === sha).length;
+    const count = sessions[0].commits.filter((c) => c.sha === sha).length;
     expect(count).toBe(1);
   });
 
-  test("only tags open sessions, skips ended", async () => {
+  test("tags both open and ended sessions", async () => {
     // Create two sessions
     const s1 = cli(["session", "start", "--agent", "claude-code", "--data", "/tmp/s1.jsonl"]);
     await s1.exited;
@@ -113,12 +114,27 @@ describe("capture command", () => {
     const sessions = (await readPending(pendingPath))._unsafeUnwrap();
 
     expect(sessions).toHaveLength(2);
-    // Ended session should NOT get the new SHA
+    // Both ended and open sessions should get the new SHA
     const ended = sessions.find((s: { id: string }) => s.id === id1);
-    expect(ended!.commits).not.toContain(sha);
-    // Open session should get the new SHA
+    expect(ended!.commits.some((c) => c.sha === sha)).toBe(true);
     const open = sessions.find((s: { id: string }) => s.id !== id1);
-    expect(open!.commits).toContain(sha);
+    expect(open!.commits.some((c) => c.sha === sha)).toBe(true);
+  });
+
+  test("records branch name with commit SHA", async () => {
+    const startProc = cli(["session", "start", "--agent", "claude-code", "--data", "/tmp/s.jsonl"]);
+    await startProc.exited;
+
+    const captureProc = cli(["capture"]);
+    await captureProc.exited;
+
+    const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
+    const sessions = (await readPending(pendingPath))._unsafeUnwrap();
+    // Default branch in test repos is typically master or main
+    const branch = sessions[0].commits[0].branch;
+    expect(typeof branch).toBe("string");
+    expect(branch.length).toBeGreaterThan(0);
+    expect(branch).not.toBe("unknown");
   });
 
   test("exits 0 even with no pending sessions", async () => {

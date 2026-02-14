@@ -33,6 +33,7 @@ async function seedRepo(org: string, repo: string, sessions = 1) {
       message: `commit ${i}`,
       author: "jane",
       committedAt: 1700000000 + i * 100,
+      branch: null,
     });
   }
 }

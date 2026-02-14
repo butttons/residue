@@ -25,6 +25,7 @@ repos.get("/:org/:repo", async (c) => {
       message: string | null;
       author: string | null;
       committed_at: number | null;
+      branch: string | null;
       sessions: { id: string; agent: string }[];
     }
   >();
@@ -42,6 +43,7 @@ repos.get("/:org/:repo", async (c) => {
         message: row.message,
         author: row.author,
         committed_at: row.committed_at,
+        branch: row.branch,
         sessions: [{ id: row.session_id, agent: row.agent }],
       });
     }
@@ -85,6 +87,7 @@ repos.get("/:org/:repo/:sha", async (c) => {
         message: first.message,
         author: first.author,
         committed_at: first.committed_at,
+        branch: first.branch,
       },
       sessions,
     },

@@ -14,6 +14,7 @@ type InsertCommitParams = {
   message: string;
   author: string;
   committedAt: number;
+  branch: string | null;
 };
 
 type SessionRow = {
@@ -34,6 +35,7 @@ type CommitRow = {
   author: string | null;
   committed_at: number | null;
   created_at: number;
+  branch: string | null;
 };
 
 type OrgListItem = {
@@ -54,6 +56,7 @@ type SessionCommitRow = {
   committed_at: number | null;
   org: string;
   repo: string;
+  branch: string | null;
 };
 
 type CommitWithSessionRow = {
@@ -63,6 +66,7 @@ type CommitWithSessionRow = {
   committed_at: number | null;
   session_id: string;
   agent: string;
+  branch: string | null;
 };
 
 type CommitShaDetailRow = {
@@ -75,6 +79,7 @@ type CommitShaDetailRow = {
   agent_version: string | null;
   session_created_at: number;
   session_ended_at: number | null;
+  branch: string | null;
 };
 
 export type {
@@ -111,8 +116,8 @@ export class DB {
 
     await this.db
       .prepare(
-        `INSERT INTO commits (commit_sha, repo, org, session_id, message, author, committed_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO commits (commit_sha, repo, org, session_id, message, author, committed_at, created_at, branch)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(commit_sha, session_id) DO NOTHING`
       )
       .bind(
@@ -123,7 +128,8 @@ export class DB {
         params.message,
         params.author,
         params.committedAt,
-        now
+        now,
+        params.branch
       )
       .run();
   }
@@ -169,7 +175,7 @@ export class DB {
     let bindings: unknown[];
 
     if (opts.cursor !== undefined) {
-      query = `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.session_id, s.agent
+      query = `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.session_id, s.agent, c.branch
                FROM commits c
                JOIN sessions s ON c.session_id = s.id
                WHERE c.org = ? AND c.repo = ? AND c.committed_at < ?
@@ -177,7 +183,7 @@ export class DB {
                LIMIT ?`;
       bindings = [opts.org, opts.repo, opts.cursor, limit];
     } else {
-      query = `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.session_id, s.agent
+      query = `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.session_id, s.agent, c.branch
                FROM commits c
                JOIN sessions s ON c.session_id = s.id
                WHERE c.org = ? AND c.repo = ?
@@ -210,7 +216,7 @@ export class DB {
   }): Promise<CommitShaDetailRow[]> {
     const result = await this.db
       .prepare(
-        `SELECT c.commit_sha, c.message, c.author, c.committed_at,
+        `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.branch,
                 s.id as session_id, s.agent, s.agent_version,
                 s.created_at as session_created_at, s.ended_at as session_ended_at
          FROM commits c
@@ -265,7 +271,7 @@ export class DB {
     if (opts.cursor !== undefined) {
       const result = await this.db
         .prepare(
-          `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.session_id, s.agent
+          `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.session_id, s.agent, c.branch
            FROM commits c
            JOIN sessions s ON c.session_id = s.id
            WHERE c.org = ? AND c.repo = ? AND c.commit_sha IN (
@@ -284,7 +290,7 @@ export class DB {
 
     const result = await this.db
       .prepare(
-        `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.session_id, s.agent
+        `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.session_id, s.agent, c.branch
          FROM commits c
          JOIN sessions s ON c.session_id = s.id
          WHERE c.org = ? AND c.repo = ? AND c.commit_sha IN (
@@ -304,7 +310,7 @@ export class DB {
   async getSessionCommits(sessionId: string): Promise<SessionCommitRow[]> {
     const result = await this.db
       .prepare(
-        `SELECT commit_sha, committed_at, org, repo
+        `SELECT commit_sha, committed_at, org, repo, branch
          FROM commits
          WHERE session_id = ?
          ORDER BY committed_at ASC`

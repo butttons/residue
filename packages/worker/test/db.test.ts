@@ -71,6 +71,7 @@ describe("db helpers", () => {
       message: "test commit",
       author: "jane",
       committedAt: 1700000000,
+      branch: null,
     });
 
     const commits = await db.getCommitsBySha("abc123");
@@ -97,6 +98,7 @@ describe("db helpers", () => {
       message: "test",
       author: "jane",
       committedAt: 1700000000,
+      branch: null as string | null,
     };
 
     await db.insertCommit(commitParams);
@@ -123,6 +125,7 @@ describe("db helpers", () => {
       message: "first",
       author: "jane",
       committedAt: 1700000000,
+      branch: null,
     });
 
     await db.insertCommit({
@@ -133,6 +136,7 @@ describe("db helpers", () => {
       message: "other",
       author: "jane",
       committedAt: 1700000000,
+      branch: null,
     });
 
     const commits = await db.getCommitsByRepo({
@@ -160,6 +164,7 @@ describe("db helpers", () => {
       message: "m",
       author: "j",
       committedAt: 1700000000,
+      branch: null,
     });
 
     await db.insertCommit({
@@ -170,6 +175,7 @@ describe("db helpers", () => {
       message: "m",
       author: "j",
       committedAt: 1700000000,
+      branch: null,
     });
 
     const orgs = await db.getOrgList();
@@ -195,10 +201,10 @@ describe("db helpers", () => {
     });
 
     // Commit 1 has 2 sessions, commit 2 has 1, commit 3 has 1
-    await db.insertCommit({ commitSha: "c1", repo: "r", org: "o", sessionId: "sA", message: "m1", author: "j", committedAt: 300 });
-    await db.insertCommit({ commitSha: "c1", repo: "r", org: "o", sessionId: "sB", message: "m1", author: "j", committedAt: 300 });
-    await db.insertCommit({ commitSha: "c2", repo: "r", org: "o", sessionId: "sA", message: "m2", author: "j", committedAt: 200 });
-    await db.insertCommit({ commitSha: "c3", repo: "r", org: "o", sessionId: "sB", message: "m3", author: "j", committedAt: 100 });
+    await db.insertCommit({ commitSha: "c1", repo: "r", org: "o", sessionId: "sA", message: "m1", author: "j", committedAt: 300, branch: null });
+    await db.insertCommit({ commitSha: "c1", repo: "r", org: "o", sessionId: "sB", message: "m1", author: "j", committedAt: 300, branch: null });
+    await db.insertCommit({ commitSha: "c2", repo: "r", org: "o", sessionId: "sA", message: "m2", author: "j", committedAt: 200, branch: null });
+    await db.insertCommit({ commitSha: "c3", repo: "r", org: "o", sessionId: "sB", message: "m3", author: "j", committedAt: 100, branch: null });
 
     // Limit to 2 unique commits: should get c1 (2 rows) and c2 (1 row) = 3 rows total
     const rows = await db.getCommitGraphData({ org: "o", repo: "r", limit: 2 });
@@ -219,9 +225,9 @@ describe("db helpers", () => {
       r2Key: "sessions/s1.json",
     });
 
-    await db.insertCommit({ commitSha: "c1", repo: "r", org: "o", sessionId: "s1", message: "m1", author: "j", committedAt: 300 });
-    await db.insertCommit({ commitSha: "c2", repo: "r", org: "o", sessionId: "s1", message: "m2", author: "j", committedAt: 200 });
-    await db.insertCommit({ commitSha: "c3", repo: "r", org: "o", sessionId: "s1", message: "m3", author: "j", committedAt: 100 });
+    await db.insertCommit({ commitSha: "c1", repo: "r", org: "o", sessionId: "s1", message: "m1", author: "j", committedAt: 300, branch: null });
+    await db.insertCommit({ commitSha: "c2", repo: "r", org: "o", sessionId: "s1", message: "m2", author: "j", committedAt: 200, branch: null });
+    await db.insertCommit({ commitSha: "c3", repo: "r", org: "o", sessionId: "s1", message: "m3", author: "j", committedAt: 100, branch: null });
 
     // Page 1: limit 2, no cursor
     const page1 = await db.getCommitGraphData({ org: "o", repo: "r", limit: 2 });
@@ -251,6 +257,7 @@ describe("db helpers", () => {
       message: "m",
       author: "j",
       committedAt: 1700000000,
+      branch: null,
     });
 
     const repos = await db.getReposByOrg("my-org");
