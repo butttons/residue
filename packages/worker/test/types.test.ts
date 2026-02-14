@@ -10,16 +10,18 @@ describe("common message types", () => {
     expect(tc.output).toBe("contents");
   });
 
-  it("Message with tool_calls is valid", () => {
+  it("Message with tool_calls and model is valid", () => {
     const msg: Message = {
       role: "assistant",
       content: "hello",
       timestamp: "2025-01-01T00:00:00Z",
+      model: "claude-sonnet-4-5",
       tool_calls: [{ name: "bash", input: "ls", output: "file.txt" }],
     };
     expect(msg.role).toBe("assistant");
     expect(msg.content).toBe("hello");
     expect(msg.timestamp).toBe("2025-01-01T00:00:00Z");
+    expect(msg.model).toBe("claude-sonnet-4-5");
     expect(msg.tool_calls).toHaveLength(1);
     expect(msg.tool_calls![0].name).toBe("bash");
   });

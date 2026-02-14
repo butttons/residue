@@ -513,5 +513,21 @@
       27,
       28
     ]
+  },
+  {
+    "id": 31,
+    "title": "Worker: Pi coding agent mapper",
+    "description": "Create packages/worker/src/mappers/pi.ts.\n\nPure function: (raw: string) => Message[].\n\nPi stores sessions as JSONL with a tree structure. Each line is a JSON object with a type field. Entries have id/parentId forming a tree.\n\nParsing steps:\n1. Split raw into lines, parse each as JSON\n2. First line is session header (type=session), skip it\n3. Filter to message entries (type=message)\n4. Build tree, find leaf (last entry with no children), walk from leaf to root for the active branch\n5. Reverse to get chronological order\n6. Map message entries:\n   - user role: Message with role \"human\", extract text from content blocks or string content\n   - assistant role: Message with role \"assistant\", join text blocks for content, extract toolCall blocks into tool_calls array (name + JSON.stringify(arguments) as input), set model from assistant message model field\n   - toolResult role: match back to preceding assistant tool_use by toolCallId, fill in the output field on the matching tool_call\n7. Skip non-message entries (thinking_level_change, model_change, compaction, branch_summary, custom, label, session_info)\n\nHandle edge cases: empty sessions, malformed JSON lines (skip them), missing fields.\n\nRegister in the mapper registry as \"pi\".",
+    "tags": [
+      "worker",
+      "mapper"
+    ],
+    "isDone": true,
+    "tests": [
+      "packages/worker/test/mappers/pi.test.ts passes"
+    ],
+    "dependencies": [
+      21
+    ]
   }
 ]

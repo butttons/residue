@@ -8,6 +8,7 @@ type Message = {
   role: string;
   content: string;
   timestamp?: string;
+  model?: string;
   tool_calls?: ToolCall[];
 };
 
