@@ -40,7 +40,7 @@
     "title": "CLI: Config management",
     "description": "Create packages/cli/src/lib/config.ts. Manages ~/.residue/config (JSON file).\n- getConfigDir() → string: returns ~/.residue/, creates it if missing.\n- getConfigPath() → string: returns ~/.residue/config.\n- readConfig() → {worker_url: string, token: string} | null: reads and parses, returns null if file doesn't exist.\n- writeConfig(config: {worker_url: string, token: string}) → void: writes JSON, creates dir if needed.\n- configExists() → boolean.\nType: ResidueConfig = {worker_url: string, token: string}.",
     "tags": ["cli", "core"],
-    "isDone": false,
+    "isDone": true,
     "tests": ["packages/cli/test/config.test.ts passes"],
     "dependencies": [2]
   },
