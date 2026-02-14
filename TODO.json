@@ -481,7 +481,7 @@
       "adapter",
       "claude-code"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/adapters/claude-code/test/adapter.test.ts passes"
     ],

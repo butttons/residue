@@ -8,6 +8,12 @@ importers:
 
   .: {}
 
+  packages/adapters/claude-code:
+    devDependencies:
+      '@types/bun':
+        specifier: '*'
+        version: 1.3.9
+
   packages/adapters/pi:
     devDependencies:
       '@mariozechner/pi-coding-agent':

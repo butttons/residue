@@ -1,0 +1,13 @@
+{
+  "name": "@residue/adapter-claude-code",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Residue adapter for Claude Code — captures sessions and links them to git commits",
+  "scripts": {
+    "test": "bun test",
+    "install-hooks": "bun run install.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "*"
+  }
+}
