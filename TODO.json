@@ -257,7 +257,7 @@
       "worker",
       "api"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/worker/test/auth.test.ts passes"
     ],
