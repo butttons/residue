@@ -11,3 +11,4 @@ dist/
 .playwright
 .playwright-cli
 .tmp-build
+.residue/
