@@ -1,6 +1,6 @@
 import { env, SELF } from "cloudflare:test";
 import { describe, it, expect, beforeAll, beforeEach } from "vitest";
-import { getSessionById, getCommitsBySha } from "../../src/lib/db";
+import { DB } from "../../src/lib/db";
 import { applyMigrations } from "../utils";
 
 const AUTH_HEADER = { Authorization: `Bearer ${env.AUTH_TOKEN}` };
@@ -36,8 +36,11 @@ async function postSession(body: unknown) {
   });
 }
 
+let db: DB;
+
 beforeAll(async () => {
   await applyMigrations(env.DB);
+  db = new DB(env.DB);
 });
 
 beforeEach(async () => {
@@ -119,7 +122,7 @@ describe("POST /api/sessions", () => {
     expect(body.ok).toBe(true);
 
     // Verify D1 session
-    const session = await getSessionById({ db: env.DB, id: "test-session-1" });
+    const session = await db.getSessionById("test-session-1");
     expect(session).not.toBeNull();
     expect(session!.agent).toBe("claude-code");
     expect(session!.agent_version).toBe("1.2.3");
@@ -127,7 +130,7 @@ describe("POST /api/sessions", () => {
     expect(session!.r2_key).toBe("sessions/test-session-1.json");
 
     // Verify D1 commits
-    const commits = await getCommitsBySha({ db: env.DB, sha: "abc123" });
+    const commits = await db.getCommitsBySha("abc123");
     expect(commits).toHaveLength(1);
     expect(commits[0].org).toBe("my-org");
     expect(commits[0].repo).toBe("my-repo");
@@ -167,10 +170,10 @@ describe("POST /api/sessions", () => {
     const res = await postSession(payload);
     expect(res.status).toBe(200);
 
-    const commits1 = await getCommitsBySha({ db: env.DB, sha: "abc123" });
+    const commits1 = await db.getCommitsBySha("abc123");
     expect(commits1).toHaveLength(1);
 
-    const commits2 = await getCommitsBySha({ db: env.DB, sha: "def456" });
+    const commits2 = await db.getCommitsBySha("def456");
     expect(commits2).toHaveLength(1);
   });
 
@@ -178,7 +181,7 @@ describe("POST /api/sessions", () => {
     const res = await postSession(makeBody({ commits: [] }));
     expect(res.status).toBe(200);
 
-    const session = await getSessionById({ db: env.DB, id: "test-session-1" });
+    const session = await db.getSessionById("test-session-1");
     expect(session).not.toBeNull();
   });
 
@@ -189,7 +192,7 @@ describe("POST /api/sessions", () => {
     const res = await postSession(payload);
     expect(res.status).toBe(200);
 
-    const session = await getSessionById({ db: env.DB, id: "test-session-1" });
+    const session = await db.getSessionById("test-session-1");
     expect(session).not.toBeNull();
     expect(session!.ended_at).toBeNull();
   });
@@ -215,7 +218,7 @@ describe("POST /api/sessions", () => {
     expect(r2Data).toBe('{"messages": ["v1", "v2"]}');
 
     // D1 should have ended_at set
-    const session = await getSessionById({ db: env.DB, id: "test-session-1" });
+    const session = await db.getSessionById("test-session-1");
     expect(session!.ended_at).not.toBeNull();
   });
 
@@ -226,7 +229,7 @@ describe("POST /api/sessions", () => {
 
     expect(res.status).toBe(200);
 
-    const commits = await getCommitsBySha({ db: env.DB, sha: "abc123" });
+    const commits = await db.getCommitsBySha("abc123");
     expect(commits).toHaveLength(1);
   });
 
@@ -237,7 +240,7 @@ describe("POST /api/sessions", () => {
     const res = await postSession(payload);
     expect(res.status).toBe(200);
 
-    const session = await getSessionById({ db: env.DB, id: "test-session-1" });
+    const session = await db.getSessionById("test-session-1");
     expect(session!.agent_version).toBe("unknown");
   });
 });
