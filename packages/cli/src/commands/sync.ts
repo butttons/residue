@@ -59,6 +59,7 @@ async function postMetadata(opts: {
     agent: string;
     agent_version: string;
     status: string;
+    data?: string;
   };
   commits: Array<{
     sha: string;
@@ -161,31 +162,6 @@ export async function runSync(): Promise<void> {
 
     const data = await file.text();
 
-    // Get signed upload URL
-    const uploadUrlResult = await getUploadUrl({
-      workerUrl: config.worker_url,
-      token: config.token,
-      sessionId: session.id,
-    });
-
-    if (!uploadUrlResult.isOk) {
-      console.error(`Warning: Failed to get upload URL for session ${session.id}: ${uploadUrlResult.error}`);
-      remaining.push(session);
-      continue;
-    }
-
-    // Upload raw data directly to R2
-    const uploadResult = await uploadToR2({
-      url: uploadUrlResult.url,
-      data,
-    });
-
-    if (!uploadResult.isOk) {
-      console.error(`Warning: Upload failed for session ${session.id}: ${uploadResult.error}`);
-      remaining.push(session);
-      continue;
-    }
-
     // Build commit metadata
     const commits = [];
     for (const sha of session.commits) {
@@ -205,7 +181,7 @@ export async function runSync(): Promise<void> {
       });
     }
 
-    // POST metadata to worker
+    // POST metadata + data to worker
     const metadataResult = await postMetadata({
       workerUrl: config.worker_url,
       token: config.token,
@@ -214,6 +190,7 @@ export async function runSync(): Promise<void> {
         agent: session.agent,
         agent_version: session.agent_version,
         status: session.status,
+        data,
       },
       commits,
     });

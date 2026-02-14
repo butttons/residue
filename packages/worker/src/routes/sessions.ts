@@ -20,6 +20,7 @@ const postSessionsSchema = z.object({
     agent: z.string().min(1),
     agent_version: z.string().optional(),
     status: z.enum(["open", "ended"]).optional(),
+    data: z.string().optional(),
   }),
   commits: z.array(commitSchema),
 });
@@ -78,6 +79,13 @@ sessions.post(
   async (c) => {
     const { session, commits } = c.req.valid("json");
     const r2Key = `sessions/${session.id}.json`;
+
+    // Write raw session data to R2 if provided inline
+    if (session.data) {
+      await c.env.BUCKET.put(r2Key, session.data, {
+        httpMetadata: { contentType: "application/json" },
+      });
+    }
 
     try {
       const db = new DB(c.env.DB);

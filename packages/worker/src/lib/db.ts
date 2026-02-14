@@ -39,12 +39,21 @@ type CommitRow = {
 type OrgListItem = {
   org: string;
   repo_count: number;
+  last_activity: number | null;
 };
 
 type RepoListItem = {
   repo: string;
   session_count: number;
-  last_activity: number;
+  commit_count: number;
+  last_activity: number | null;
+};
+
+type SessionCommitRow = {
+  commit_sha: string;
+  committed_at: number | null;
+  org: string;
+  repo: string;
 };
 
 type CommitWithSessionRow = {
@@ -75,6 +84,7 @@ export type {
   CommitShaDetailRow,
   OrgListItem,
   RepoListItem,
+  SessionCommitRow,
 };
 
 export class DB {
@@ -216,10 +226,10 @@ export class DB {
   async getOrgList(): Promise<OrgListItem[]> {
     const result = await this.db
       .prepare(
-        `SELECT org, COUNT(DISTINCT repo) as repo_count
+        `SELECT org, COUNT(DISTINCT repo) as repo_count, MAX(committed_at) as last_activity
          FROM commits
          GROUP BY org
-         ORDER BY org`
+         ORDER BY last_activity DESC`
       )
       .all<OrgListItem>();
 
@@ -231,7 +241,8 @@ export class DB {
       .prepare(
         `SELECT repo,
                 COUNT(DISTINCT session_id) as session_count,
-                MAX(created_at) as last_activity
+                COUNT(DISTINCT commit_sha) as commit_count,
+                MAX(committed_at) as last_activity
          FROM commits
          WHERE org = ?
          GROUP BY repo
@@ -239,6 +250,20 @@ export class DB {
       )
       .bind(org)
       .all<RepoListItem>();
+
+    return result.results;
+  }
+
+  async getSessionCommits(sessionId: string): Promise<SessionCommitRow[]> {
+    const result = await this.db
+      .prepare(
+        `SELECT commit_sha, committed_at, org, repo
+         FROM commits
+         WHERE session_id = ?
+         ORDER BY committed_at ASC`
+      )
+      .bind(sessionId)
+      .all<SessionCommitRow>();
 
     return result.results;
   }

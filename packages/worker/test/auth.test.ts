@@ -1,5 +1,10 @@
 import { env, SELF } from "cloudflare:test";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
+import { applyMigrations } from "./utils";
+
+beforeAll(async () => {
+  await applyMigrations(env.DB);
+});
 
 describe("auth middleware", () => {
   it("returns 401 when no Authorization header is provided", async () => {
@@ -41,7 +46,7 @@ describe("auth middleware", () => {
   });
 
   it("does not require auth for non-api routes", async () => {
-    const res = await SELF.fetch("https://test.local/");
+    const res = await SELF.fetch("https://test.local/app");
     expect(res.status).toBe(200);
   });
 });

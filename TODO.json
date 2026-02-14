@@ -373,7 +373,7 @@
       "worker",
       "ui"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/worker/test/components/layout.test.ts passes"
     ],
@@ -389,7 +389,7 @@
       "worker",
       "ui"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/worker/test/components/conversation.test.ts passes"
     ],
@@ -407,7 +407,7 @@
       "ui",
       "page"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/worker/test/pages/home.test.ts passes"
     ],
@@ -425,7 +425,7 @@
       "ui",
       "page"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/worker/test/pages/org.test.ts passes"
     ],
@@ -443,7 +443,7 @@
       "ui",
       "page"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/worker/test/pages/repo.test.ts passes"
     ],
@@ -462,7 +462,7 @@
       "ui",
       "page"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/worker/test/pages/commit.test.ts passes"
     ],
