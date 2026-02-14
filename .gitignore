@@ -9,4 +9,5 @@ dist/
 # dora code context index
 .dora/
 .playwright
+.playwright-cli
 .tmp-build

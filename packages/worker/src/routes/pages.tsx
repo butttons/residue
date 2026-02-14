@@ -40,6 +40,29 @@ type GroupedCommit = {
   sessions: { id: string; agent: string }[];
 };
 
+type AgentCount = { agent: string; count: number };
+
+const getAgentCounts = (sessions: { id: string; agent: string }[]): AgentCount[] => {
+  const map = new Map<string, number>();
+  for (const s of sessions) {
+    map.set(s.agent, (map.get(s.agent) ?? 0) + 1);
+  }
+  return [...map.entries()].map(([agent, count]) => ({ agent, count }));
+};
+
+const AgentBadges: FC<{ sessions: { id: string; agent: string }[] }> = ({ sessions }) => {
+  const counts = getAgentCounts(sessions);
+  return (
+    <>
+      {counts.map((ac) => (
+        <span class="text-xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+          {ac.agent}{ac.count > 1 ? ` x${ac.count}` : ""}
+        </span>
+      ))}
+    </>
+  );
+};
+
 const groupCommits = (rows: CommitWithSessionRow[]): GroupedCommit[] => {
   const map = new Map<string, GroupedCommit>();
 
@@ -228,20 +251,16 @@ pages.get("/:org/:repo", async (c) => {
                 >
                   {commit.sha.slice(0, 7)}
                 </a>
+                <AgentBadges sessions={commit.sessions} />
                 <a
                   href={`https://github.com/${org}/${repo}/commit/${commit.sha}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-zinc-500 hover:text-zinc-300 transition-colors"
+                  class="ml-auto text-zinc-500 hover:text-zinc-200 transition-colors flex items-center gap-1"
                   title="View on GitHub"
                 >
-                  <i class="ph ph-github-logo text-sm" />
+                  <i class="ph ph-github-logo text-base" />
                 </a>
-                {commit.sessions.map((s) => (
-                  <span class="text-xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
-                    {s.agent}
-                  </span>
-                ))}
               </div>
               <p class="text-zinc-100 text-sm">{commit.message}</p>
               <p class="text-zinc-500 text-xs mt-1">
@@ -355,7 +374,12 @@ pages.get("/:org/:repo/:sha", async (c) => {
         // If continuation lookup fails, skip it
       }
 
-      return { ...session, messages, continuesFrom, continuesIn };
+      // Extract stats from messages
+      const messageCount = messages.length;
+      const toolCallCount = messages.reduce((sum, m) => sum + (m.tool_calls?.length ?? 0), 0);
+      const models = [...new Set(messages.filter((m) => m.model).map((m) => m.model as string))];
+
+      return { ...session, messages, continuesFrom, continuesIn, messageCount, toolCallCount, models };
     })
   );
 
@@ -372,58 +396,108 @@ pages.get("/:org/:repo/:sha", async (c) => {
 
       {/* Commit header */}
       <div class="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-6">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-blue-500 font-mono text-sm">{sha}</span>
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="text-blue-500 font-mono text-sm truncate">{sha.slice(0, 12)}<span class="hidden sm:inline">{sha.slice(12)}</span></span>
           <a
             href={`https://github.com/${org}/${repo}/commit/${sha}`}
             target="_blank"
             rel="noopener noreferrer"
-            class="text-zinc-500 hover:text-zinc-300 transition-colors"
+            class="flex-shrink-0 text-zinc-400 hover:text-zinc-100 transition-colors flex items-center gap-1.5 text-sm"
             title="View on GitHub"
           >
-            <i class="ph ph-github-logo text-sm" />
+            <i class="ph ph-github-logo text-base" />
+            <span class="hidden sm:inline">View on GitHub</span>
           </a>
         </div>
+        <div class="flex items-center gap-2 mb-2 flex-wrap">
+          <AgentBadges sessions={[...uniqueSessions.values()].map((s) => ({ id: s.id, agent: s.agent }))} />
+        </div>
         <p class="text-zinc-100">{first.message}</p>
-        <p class="text-zinc-500 text-xs mt-2">
-          {first.author}
-          {first.committed_at
-            ? ` · ${formatTimestamp(first.committed_at)}`
-            : ""}
-        </p>
+        <div class="flex items-center gap-x-4 gap-y-1 mt-2 text-xs text-zinc-500 flex-wrap">
+          <span>{first.author}</span>
+          {first.committed_at && <span>{formatTimestamp(first.committed_at)}</span>}
+          <span>{sessionsData.length} {sessionsData.length === 1 ? "session" : "sessions"}</span>
+          <span>{sessionsData.reduce((s, d) => s + d.messageCount, 0)} messages</span>
+          <span>{sessionsData.reduce((s, d) => s + d.toolCallCount, 0)} tool calls</span>
+          {sessionsData.flatMap((d) => d.models).length > 0 && (
+            <span>{[...new Set(sessionsData.flatMap((d) => d.models))].join(", ")}</span>
+          )}
+        </div>
       </div>
 
-      {/* Sessions */}
-      <div class="flex flex-col gap-6">
-        {sessionsData.map((session) => (
-          <div>
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
-                {session.agent}
+      {/* Sessions - tabbed if multiple */}
+      {sessionsData.length === 1 ? (
+        <div>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+              {sessionsData[0].agent}
+            </span>
+            {sessionsData[0].agent_version && (
+              <span class="text-xs text-zinc-500">
+                v{sessionsData[0].agent_version}
               </span>
-              {session.agent_version && (
-                <span class="text-xs text-zinc-500">
-                  v{session.agent_version}
-                </span>
-              )}
-              <span class="text-xs text-zinc-600 font-mono">
-                {session.id.slice(0, 8)}
-              </span>
-            </div>
-            {session.messages.length === 0 ? (
-              <p class="text-zinc-500 text-sm">
-                No conversation data available.
-              </p>
-            ) : (
-              <Conversation
-                messages={session.messages}
-                continuesFrom={session.continuesFrom}
-                continuesIn={session.continuesIn}
-              />
             )}
+            <span class="text-xs text-zinc-600 font-mono">
+              {sessionsData[0].id.slice(0, 8)}
+            </span>
           </div>
-        ))}
-      </div>
+          {sessionsData[0].messages.length === 0 ? (
+            <p class="text-zinc-500 text-sm">No conversation data available.</p>
+          ) : (
+            <Conversation
+              messages={sessionsData[0].messages}
+              continuesFrom={sessionsData[0].continuesFrom}
+              continuesIn={sessionsData[0].continuesIn}
+            />
+          )}
+        </div>
+      ) : (
+        <div>
+          {/* Tab bar */}
+          <div class="flex border-b border-zinc-800 mb-6 pb-0 gap-0 overflow-x-auto">
+            {sessionsData.map((session, i) => (
+              <button
+                class={`session-tab px-3 py-1.5 text-xs whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
+                  i === 0
+                    ? "border-blue-500 text-zinc-100"
+                    : "border-transparent text-zinc-500 hover:text-zinc-300"
+                }`}
+                data-tab-index={i}
+                onclick={`
+                  document.querySelectorAll('.session-tab').forEach(t => {
+                    t.classList.remove('border-blue-500', 'text-zinc-100');
+                    t.classList.add('border-transparent', 'text-zinc-500');
+                  });
+                  this.classList.remove('border-transparent', 'text-zinc-500');
+                  this.classList.add('border-blue-500', 'text-zinc-100');
+                  document.querySelectorAll('.session-panel').forEach(p => p.classList.add('hidden'));
+                  document.getElementById('session-panel-${i}').classList.remove('hidden');
+                `}
+              >
+                {session.agent} <span class="text-zinc-600">{session.id.slice(0, 8)}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Tab panels */}
+          {sessionsData.map((session, i) => (
+            <div
+              id={`session-panel-${i}`}
+              class={`session-panel ${i !== 0 ? "hidden" : ""}`}
+            >
+              {session.messages.length === 0 ? (
+                <p class="text-zinc-500 text-sm">No conversation data available.</p>
+              ) : (
+                <Conversation
+                  messages={session.messages}
+                  continuesFrom={session.continuesFrom}
+                  continuesIn={session.continuesIn}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </Layout>
   );
 });
