@@ -31,7 +31,7 @@
     "title": "CLI: Git utilities",
     "description": "Create packages/cli/src/lib/git.ts with:\n- parseRemote(remoteUrl: string) → {org, repo}: handles both SSH (git@github.com:org/repo.git) and HTTPS (https://github.com/org/repo.git) formats. Strips .git suffix.\n- getRemoteUrl() → string: runs 'git remote get-url origin'.\n- getCurrentSha() → string: runs 'git rev-parse HEAD'.\n- getCommitMeta(sha: string) → {message, author, committed_at}: runs git log with format string for the given SHA.\n- isGitRepo() → boolean: checks if .git/ exists.\nAll shell commands use Bun.spawn or Bun.$.",
     "tags": ["cli", "core"],
-    "isDone": false,
+    "isDone": true,
     "tests": ["packages/cli/test/git.test.ts passes"],
     "dependencies": [2]
   },
