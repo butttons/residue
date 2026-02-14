@@ -1,13 +1,13 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { join } from "path";
 import { mkdtemp, rm, readFile, writeFile, chmod, mkdir } from "fs/promises";
+import { existsSync } from "fs";
 import { tmpdir } from "os";
 
 let tempDir: string;
 
 beforeEach(async () => {
   tempDir = await mkdtemp(join(tmpdir(), "residue-init-test-"));
-  // Init a bare git repo so init command works
   const proc = Bun.spawn(["git", "init", tempDir], {
     stdout: "pipe",
     stderr: "pipe",
@@ -32,7 +32,7 @@ function cli(args: string[], cwd: string) {
 }
 
 describe("init command", () => {
-  test("creates hooks and ai-sessions dir", async () => {
+  test("creates hooks and .residue dir", async () => {
     const proc = cli(["init"], tempDir);
     const exitCode = await proc.exited;
     const stdout = await new Response(proc.stdout).text();
@@ -48,16 +48,40 @@ describe("init command", () => {
     const prePush = await readFile(join(tempDir, ".git/hooks/pre-push"), "utf-8");
     expect(prePush).toContain('residue sync --remote-url "$2"');
 
-    // ai-sessions dir should exist
-    const lsProc = Bun.spawn(["ls", join(tempDir, ".git/ai-sessions")], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    expect(await lsProc.exited).toBe(0);
+    // .residue dir should exist
+    expect(existsSync(join(tempDir, ".residue"))).toBe(true);
+  });
+
+  test("adds .residue/ to .gitignore", async () => {
+    const proc = cli(["init"], tempDir);
+    await proc.exited;
+
+    const gitignore = await readFile(join(tempDir, ".gitignore"), "utf-8");
+    expect(gitignore).toContain(".residue/");
+  });
+
+  test("does not duplicate .residue/ in .gitignore on re-init", async () => {
+    await cli(["init"], tempDir).exited;
+    await cli(["init"], tempDir).exited;
+
+    const gitignore = await readFile(join(tempDir, ".gitignore"), "utf-8");
+    const count = gitignore.split(".residue/").length - 1;
+    expect(count).toBe(1);
+  });
+
+  test("appends to existing .gitignore without clobbering", async () => {
+    await writeFile(join(tempDir, ".gitignore"), "node_modules/\ndist/\n");
+
+    const proc = cli(["init"], tempDir);
+    await proc.exited;
+
+    const gitignore = await readFile(join(tempDir, ".gitignore"), "utf-8");
+    expect(gitignore).toContain("node_modules/");
+    expect(gitignore).toContain("dist/");
+    expect(gitignore).toContain(".residue/");
   });
 
   test("appends to existing hooks without duplicating", async () => {
-    // Create existing post-commit hook
     const hooksDir = join(tempDir, ".git/hooks");
     await mkdir(hooksDir, { recursive: true });
     await writeFile(join(hooksDir, "post-commit"), "#!/bin/sh\necho existing\n");

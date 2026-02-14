@@ -638,7 +638,7 @@
     "title": "Update init command: .residue/ dir + .gitignore",
     "description": "Update residue init to: create .residue/ directory instead of .git/ai-sessions/, add .residue/ to .gitignore if not already present. Keep git hook installation (post-commit, pre-push) as-is. Remove the adapter detection logic at the end (no longer relevant). Update init tests accordingly.",
     "tags": ["cli", "refactor"],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/cli/test/commands/init.test.ts passes"
     ],
