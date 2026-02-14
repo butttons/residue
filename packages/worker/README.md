@@ -55,6 +55,10 @@ wrangler r2 bucket create residue-sessions
 # Set auth token
 echo "your-secret-token" | wrangler secret put AUTH_TOKEN
 
+# Set Basic Auth credentials for the UI
+wrangler secret put ADMIN_USERNAME
+wrangler secret put ADMIN_PASSWORD
+
 # Deploy
 wrangler deploy
 ```
@@ -80,6 +84,8 @@ Create a `.dev.vars` file for local development:
 
 ```
 AUTH_TOKEN=your-local-dev-token
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin
 ```
 
 ## API
@@ -119,7 +125,7 @@ All API routes require `Authorization: Bearer <token>` header.
 
 ## UI
 
-The UI is served under `/app` with 4 pages:
+The UI is protected by HTTP Basic Auth using `ADMIN_USERNAME` and `ADMIN_PASSWORD` secrets. It is served under `/app` with 4 pages:
 
 | Route | Page |
 |-------|------|
@@ -151,3 +157,5 @@ Adding a new agent means writing one mapper function -- no storage schema change
 ### Secrets
 
 - `AUTH_TOKEN` -- bearer token for API authentication (set via `wrangler secret put`)
+- `ADMIN_USERNAME` -- username for Basic Auth on the `/app` UI (set via `wrangler secret put`)
+- `ADMIN_PASSWORD` -- password for Basic Auth on the `/app` UI (set via `wrangler secret put`)

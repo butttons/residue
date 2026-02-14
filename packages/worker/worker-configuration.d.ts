@@ -13,6 +13,8 @@ declare namespace Cloudflare {
 		R2_SECRET_ACCESS_KEY: string;
 		R2_ACCOUNT_ID: string;
 		R2_BUCKET_NAME: string;
+		ADMIN_USERNAME: string;
+		ADMIN_PASSWORD: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { basicAuth } from "hono/basic-auth";
 import { authMiddleware } from "./middleware/auth";
 import { sessions } from "./routes/sessions";
 import { repos } from "./routes/repos";
@@ -7,6 +8,17 @@ import { pages } from "./routes/pages";
 const app = new Hono<{ Bindings: Env }>();
 
 app.use("/api/*", authMiddleware);
+
+app.use(
+  "/app/*",
+  basicAuth({
+    verifyUser: (username, password, c) => {
+      return (
+        username === c.env.ADMIN_USERNAME && password === c.env.ADMIN_PASSWORD
+      );
+    },
+  })
+);
 
 app.route("/api/sessions", sessions);
 app.route("/api/repos", repos);
