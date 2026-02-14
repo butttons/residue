@@ -5,7 +5,7 @@ import {
   getCurrentSha,
   getCommitMeta,
   isGitRepo,
-} from "../src/lib/git";
+} from "@/lib/git";
 
 describe("parseRemote", () => {
   test("parses SSH remote URL", () => {

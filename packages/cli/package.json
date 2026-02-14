@@ -16,6 +16,7 @@
     "typescript": "^5.7.0"
   },
   "dependencies": {
+    "commander": "^14.0.3",
     "neverthrow": "^8.2.0"
   }
 }

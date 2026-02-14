@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { join } from "path";
 import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
-import { readConfig } from "../../src/lib/config";
+import { readConfig } from "@/lib/config";
 
 let originalHome: string;
 let tempHome: string;

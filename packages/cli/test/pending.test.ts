@@ -8,7 +8,7 @@ import {
   getSession,
   getPendingPath,
   type PendingSession,
-} from "../src/lib/pending";
+} from "@/lib/pending";
 import { join } from "path";
 import { mkdtemp, rm, mkdir } from "fs/promises";
 import { tmpdir } from "os";

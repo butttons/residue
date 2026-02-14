@@ -83,9 +83,9 @@
   {
     "id": 10,
     "title": "CLI: session-start command",
-    "description": "Create packages/cli/src/commands/session-start.ts.\n\nFlags: --agent <name>, --version <semver>, --data <path-to-raw-session-file>.\n\nBehavior:\n1. Parse flags. --agent and --data are required; --version defaults to 'unknown'.\n2. Validate data_path exists (or will exist — just store the path).\n3. Generate a UUID v4 session ID.\n4. Create PendingSession: {id, agent, agent_version, status: 'open', data_path, commits: []}.\n5. Add to pending queue via pending.addSession().\n6. Write ONLY the session ID to stdout (so the adapter can capture it). No other output to stdout.\n7. Log any status messages to stderr.",
+    "description": "Create packages/cli/src/commands/session-start.ts.\n\nFlags: --agent <name>, --agent-version <semver>, --data <path-to-raw-session-file>.\n\nBehavior:\n1. Parse flags. --agent and --data are required; --agent-version defaults to 'unknown'.\n2. Validate data_path exists (or will exist — just store the path).\n3. Generate a UUID v4 session ID.\n4. Create PendingSession: {id, agent, agent_version, status: 'open', data_path, commits: []}.\n5. Add to pending queue via pending.addSession().\n6. Write ONLY the session ID to stdout (so the adapter can capture it). No other output to stdout.\n7. Log any status messages to stderr.",
     "tags": ["cli", "command"],
-    "isDone": false,
+    "isDone": true,
     "tests": ["packages/cli/test/commands/session-start.test.ts passes"],
     "dependencies": [6, 7]
   },

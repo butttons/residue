@@ -10,6 +10,9 @@ importers:
 
   packages/cli:
     dependencies:
+      commander:
+        specifier: ^14.0.3
+        version: 14.0.3
       neverthrow:
         specifier: ^8.2.0
         version: 8.2.0
@@ -617,6 +620,10 @@ packages:
 
   cjs-module-lexer@1.4.3:
     resolution: {integrity: sha512-9z8TZaGM1pfswYeXrUpzPrkx8UnWYdhJclsiYMm6x/w5+nN+8Tf/LnAgfLGQCm59qAOxU8WwHEq2vNwF6i4j+Q==}
+
+  commander@14.0.3:
+    resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
+    engines: {node: '>=20'}
 
   cookie@1.1.1:
     resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
@@ -1316,6 +1323,8 @@ snapshots:
   check-error@2.1.3: {}
 
   cjs-module-lexer@1.4.3: {}
+
+  commander@14.0.3: {}
 
   cookie@1.1.1: {}
 

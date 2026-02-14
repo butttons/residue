@@ -430,6 +430,7 @@ pnpm --filter worker deploy
 - **Boolean naming.** Boolean variables and properties must be prefixed with `is` or `has`.
 - **Single object params.** Functions with 2+ parameters must use a single object parameter. Single-primitive-param functions are fine as-is.
 - **No `any`.** Never use `any` in TypeScript. If absolutely unavoidable, add an inline comment explaining why.
+- **Path aliases.** Use `@/*` path alias (mapped to `src/*`) for all imports. Never use relative `../` paths.
 
 ```ts
 // Good

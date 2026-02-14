@@ -6,7 +6,7 @@ import {
   writeConfig,
   configExists,
   type ResidueConfig,
-} from "../src/lib/config";
+} from "@/lib/config";
 import { join } from "path";
 import { homedir } from "os";
 import { mkdtemp, rm } from "fs/promises";
