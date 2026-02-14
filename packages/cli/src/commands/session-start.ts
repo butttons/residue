@@ -1,4 +1,4 @@
-import { getGitDir, getPendingPath, addSession } from "@/lib/pending";
+import { getProjectRoot, getPendingPath, addSession } from "@/lib/pending";
 import type { ResultAsync } from "neverthrow";
 
 export function sessionStart(opts: {
@@ -8,7 +8,7 @@ export function sessionStart(opts: {
 }): ResultAsync<void, string> {
   const id = crypto.randomUUID();
 
-  return getGitDir()
+  return getProjectRoot()
     .andThen(getPendingPath)
     .andThen((pendingPath) =>
       addSession({

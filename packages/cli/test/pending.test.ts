@@ -18,9 +18,9 @@ let pendingPath: string;
 
 beforeEach(async () => {
   tempDir = await mkdtemp(join(tmpdir(), "residue-pending-test-"));
-  const sessionsDir = join(tempDir, "ai-sessions");
-  await mkdir(sessionsDir, { recursive: true });
-  pendingPath = join(sessionsDir, "pending.json");
+  const residueDir = join(tempDir, ".residue");
+  await mkdir(residueDir, { recursive: true });
+  pendingPath = join(residueDir, "pending.json");
 });
 
 afterEach(async () => {
@@ -40,14 +40,14 @@ function makeSession(overrides: Partial<PendingSession> = {}): PendingSession {
 }
 
 describe("getPendingPath", () => {
-  test("returns path and creates ai-sessions dir", async () => {
-    const freshDir = join(tempDir, "fresh-git");
+  test("returns path and creates .residue dir", async () => {
+    const freshDir = join(tempDir, "fresh-project");
     const result = await getPendingPath(freshDir);
     expect(result.isOk()).toBe(true);
     const path = result._unsafeUnwrap();
-    expect(path).toBe(join(freshDir, "ai-sessions", "pending.json"));
+    expect(path).toBe(join(freshDir, ".residue", "pending.json"));
 
-    const proc = Bun.spawn(["ls", join(freshDir, "ai-sessions")], {
+    const proc = Bun.spawn(["ls", join(freshDir, ".residue")], {
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -144,7 +144,6 @@ describe("updateSession", () => {
   });
 
   test("migrates old string[] commits format on read", async () => {
-    // Write old format directly to simulate pre-migration data
     const oldSession = {
       id: "old-1",
       agent: "claude-code",

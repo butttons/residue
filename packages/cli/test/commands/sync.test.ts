@@ -164,7 +164,7 @@ describe("sync command", () => {
       expect((body.commits[0].branch as string).length).toBeGreaterThan(0);
 
       // Ended session removed from pending
-      const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
+      const pendingPath = join(tempDir, ".residue/pending.json");
       const sessions = (await readPending(pendingPath))._unsafeUnwrap();
       expect(sessions).toHaveLength(0);
     } finally {
@@ -190,7 +190,7 @@ describe("sync command", () => {
       const syncProc = cli(["sync"]);
       await syncProc.exited;
 
-      const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
+      const pendingPath = join(tempDir, ".residue/pending.json");
       const sessions = (await readPending(pendingPath))._unsafeUnwrap();
       expect(sessions).toHaveLength(1);
       expect(sessions[0].status).toBe("open");
@@ -299,7 +299,7 @@ describe("sync command", () => {
       expect(exitCode).toBe(0);
       expect(stderr).toContain("Upload failed");
 
-      const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
+      const pendingPath = join(tempDir, ".residue/pending.json");
       const sessions = (await readPending(pendingPath))._unsafeUnwrap();
       expect(sessions).toHaveLength(1);
     } finally {

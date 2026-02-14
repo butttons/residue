@@ -1,6 +1,6 @@
 import { readConfig } from "@/lib/config";
 import { getRemoteUrl, parseRemote, getCommitMeta } from "@/lib/git";
-import { getGitDir, getPendingPath, readPending, writePending } from "@/lib/pending";
+import { getProjectRoot, getPendingPath, readPending, writePending } from "@/lib/pending";
 import type { PendingSession, CommitRef } from "@/lib/pending";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
 
@@ -165,7 +165,6 @@ function resolveRemote(remoteUrl?: string): ResultAsync<{ org: string; repo: str
     if (result.isOk()) {
       return okAsync(result.value);
     }
-    // Fall through to origin if provided URL is unparseable
   }
   return getRemoteUrl().andThen(parseRemote);
 }
@@ -176,7 +175,7 @@ export function sync(opts?: { remoteUrl?: string }): ResultAsync<void, string> {
       return errAsync("Not configured. Run 'residue login' first.");
     }
 
-    return getGitDir()
+    return getProjectRoot()
       .andThen(getPendingPath)
       .andThen((pendingPath) =>
         readPending(pendingPath).andThen((sessions) => {

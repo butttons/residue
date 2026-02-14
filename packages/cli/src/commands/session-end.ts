@@ -1,8 +1,8 @@
-import { getGitDir, getPendingPath, getSession, updateSession } from "@/lib/pending";
+import { getProjectRoot, getPendingPath, getSession, updateSession } from "@/lib/pending";
 import { errAsync, type ResultAsync } from "neverthrow";
 
 export function sessionEnd(opts: { id: string }): ResultAsync<void, string> {
-  return getGitDir()
+  return getProjectRoot()
     .andThen(getPendingPath)
     .andThen((pendingPath) =>
       getSession({ path: pendingPath, id: opts.id }).andThen((session) => {

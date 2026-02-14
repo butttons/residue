@@ -2,11 +2,12 @@ name: residue
 root: <%= ENV['PWD'] %>
 
 windows:
-  - worker:
-      root: <%= ENV['PWD'] %>/packages/worker
+  - dev:
+      layout: even-horizontal
       panes:
-        - pnpm dev
-  - docs:
-      root: <%= ENV['PWD'] %>/docs
-      panes:
-        - pnpm dev
+        - worker:
+            - cd packages/worker
+            - pnpm dev
+        - docs:
+            - cd docs
+            - pnpm dev

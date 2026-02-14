@@ -36,12 +36,10 @@ describe("session-start command", () => {
     const stderr = await new Response(proc.stderr).text();
 
     expect(exitCode).toBe(0);
-    // stdout should be a UUID only
     expect(stdout.trim()).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(stderr).toContain("Session started");
 
-    // Check pending queue
-    const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
+    const pendingPath = join(tempDir, ".residue/pending.json");
     const sessions = (await readPending(pendingPath))._unsafeUnwrap();
     expect(sessions).toHaveLength(1);
     expect(sessions[0].agent).toBe("claude-code");
@@ -55,7 +53,7 @@ describe("session-start command", () => {
     const proc = cli(["session", "start", "--agent", "claude-code", "--data", "/tmp/s.jsonl", "--agent-version", "1.2.3"]);
     await proc.exited;
 
-    const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
+    const pendingPath = join(tempDir, ".residue/pending.json");
     const sessions = (await readPending(pendingPath))._unsafeUnwrap();
     expect(sessions[0].agent_version).toBe("1.2.3");
   });

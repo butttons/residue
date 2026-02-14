@@ -1,6 +1,6 @@
 /**
  * Pending queue management for the residue CLI.
- * Manages .git/ai-sessions/pending.json.
+ * Manages .residue/pending.json in the project root.
  */
 import { ok, err, errAsync, Result, ResultAsync } from "neverthrow";
 import { join } from "path";
@@ -21,13 +21,12 @@ export type PendingSession = {
 };
 
 /**
- * Get the git directory for the current repo.
- * Runs `git rev-parse --git-dir` to find .git (works in worktrees too).
+ * Get the project root via git rev-parse --show-toplevel.
  */
-export function getGitDir(): ResultAsync<string, string> {
+export function getProjectRoot(): ResultAsync<string, string> {
   return ResultAsync.fromPromise(
     (async () => {
-      const proc = Bun.spawn(["git", "rev-parse", "--git-dir"], {
+      const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
         stdout: "pipe",
         stderr: "pipe",
       });
@@ -38,28 +37,34 @@ export function getGitDir(): ResultAsync<string, string> {
       const text = await new Response(proc.stdout).text();
       return text.trim();
     })(),
-    (e) => (e instanceof Error ? e.message : "Failed to get git directory")
+    (e) => (e instanceof Error ? e.message : "Failed to get project root")
   );
 }
 
 /**
- * Get the path to .git/ai-sessions/pending.json, creating the directory if needed.
+ * Get the .residue directory path, creating it if needed.
  */
-export function getPendingPath(gitDir: string): ResultAsync<string, string> {
-  const sessionsDir = join(gitDir, "ai-sessions");
+export function getResidueDir(projectRoot: string): ResultAsync<string, string> {
+  const residueDir = join(projectRoot, ".residue");
   return ResultAsync.fromPromise(
     (async () => {
-      await mkdir(sessionsDir, { recursive: true });
-      return join(sessionsDir, "pending.json");
+      await mkdir(residueDir, { recursive: true });
+      return residueDir;
     })(),
     (e) =>
-      e instanceof Error ? e.message : "Failed to create ai-sessions directory"
+      e instanceof Error ? e.message : "Failed to create .residue directory"
   );
 }
 
 /**
- * Read pending sessions from disk. Returns [] if file doesn't exist.
+ * Get the path to .residue/pending.json, creating the directory if needed.
  */
+export function getPendingPath(projectRoot: string): ResultAsync<string, string> {
+  return getResidueDir(projectRoot).map((residueDir) =>
+    join(residueDir, "pending.json")
+  );
+}
+
 /**
  * Migrate old format where commits was string[] to CommitRef[].
  */

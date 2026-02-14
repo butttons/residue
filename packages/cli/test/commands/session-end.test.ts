@@ -30,12 +30,10 @@ function cli(args: string[]) {
 
 describe("session-end command", () => {
   test("marks an open session as ended", async () => {
-    // First create a session
     const startProc = cli(["session", "start", "--agent", "claude-code", "--data", "/tmp/session.jsonl"]);
     await startProc.exited;
     const sessionId = (await new Response(startProc.stdout).text()).trim();
 
-    // End the session
     const endProc = cli(["session", "end", "--id", sessionId]);
     const exitCode = await endProc.exited;
     const stderr = await new Response(endProc.stderr).text();
@@ -43,8 +41,7 @@ describe("session-end command", () => {
     expect(exitCode).toBe(0);
     expect(stderr).toContain(`Session ${sessionId} ended`);
 
-    // Verify status changed
-    const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
+    const pendingPath = join(tempDir, ".residue/pending.json");
     const sessions = (await readPending(pendingPath))._unsafeUnwrap();
     expect(sessions).toHaveLength(1);
     expect(sessions[0].status).toBe("ended");

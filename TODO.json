@@ -617,5 +617,62 @@
       34,
       35
     ]
+  },
+  {
+    "id": 37,
+    "title": "Move pending state from .git/ai-sessions/ to .residue/",
+    "description": "All project-local residue state should live in a .residue/ folder at the project root (gitignored), not inside .git/. Change pending.ts: replace getGitDir() with getProjectRoot() (git rev-parse --show-toplevel), replace getPendingPath to use .residue/pending.json, add getResidueDir() helper. Update all consumers (session-start, session-end, capture, sync) to use getProjectRoot + getPendingPath instead of getGitDir + getPendingPath. Update all tests to expect .residue/pending.json instead of .git/ai-sessions/pending.json.",
+    "tags": ["cli", "refactor"],
+    "isDone": true,
+    "tests": [
+      "packages/cli/test/pending.test.ts passes",
+      "packages/cli/test/commands/session-start.test.ts passes",
+      "packages/cli/test/commands/session-end.test.ts passes",
+      "packages/cli/test/commands/capture.test.ts passes",
+      "packages/cli/test/commands/sync.test.ts passes"
+    ],
+    "dependencies": []
+  },
+  {
+    "id": 38,
+    "title": "Update init command: .residue/ dir + .gitignore",
+    "description": "Update residue init to: create .residue/ directory instead of .git/ai-sessions/, add .residue/ to .gitignore if not already present. Keep git hook installation (post-commit, pre-push) as-is. Remove the adapter detection logic at the end (no longer relevant). Update init tests accordingly.",
+    "tags": ["cli", "refactor"],
+    "isDone": false,
+    "tests": [
+      "packages/cli/test/commands/init.test.ts passes"
+    ],
+    "dependencies": [37]
+  },
+  {
+    "id": 39,
+    "title": "Add residue setup command with claude-code and pi subcommands",
+    "description": "Add 'residue setup <agent>' command. For claude-code: create .claude/settings.json in project root with SessionStart (matcher: startup) and SessionEnd hooks that call 'residue hook claude-code'. If .claude/settings.json already exists, merge hooks into it without clobbering existing config. For pi: copy the pi extension source to .pi/agent/extensions/residue.ts in the project, creating directories as needed. Both subcommands should be idempotent.",
+    "tags": ["cli", "command"],
+    "isDone": false,
+    "tests": [
+      "packages/cli/test/commands/setup.test.ts passes"
+    ],
+    "dependencies": [37]
+  },
+  {
+    "id": 40,
+    "title": "Add residue hook claude-code command",
+    "description": "Add 'residue hook claude-code' command that reads Claude Code hook JSON from stdin. Checks hook_event_name field. On SessionStart (source=startup): extracts transcript_path and session_id from stdin JSON, detects claude version via 'claude --version', calls session-start logic, saves mapping of claude session_id to residue session_id in .residue/hooks/<claude-session-id>.state. On SessionEnd: reads claude session_id from stdin, looks up residue session ID from state file, calls session-end logic, removes state file. Skips gracefully on resume/compact/clear, missing transcript_path, or missing state. Must exit 0 always (never block Claude Code).",
+    "tags": ["cli", "command"],
+    "isDone": false,
+    "tests": [
+      "packages/cli/test/commands/hook.test.ts passes"
+    ],
+    "dependencies": [37]
+  },
+  {
+    "id": 41,
+    "title": "Clean up old adapter packages",
+    "description": "Remove packages/adapters/claude-code/hooks.sh, install.ts, uninstall.ts. Keep only the test file (rewritten for the new hook command in TODO 40). Remove packages/adapters/claude-code/test/install.test.ts. Update packages/adapters/pi to just be the source file that gets copied by 'residue setup pi' (keep index.ts, remove test since it tests the extension API directly and is not affected by this refactor). Update AGENTS.md to reflect the new setup flow.",
+    "tags": ["cleanup"],
+    "isDone": false,
+    "tests": [],
+    "dependencies": [39, 40]
   }
 ]
