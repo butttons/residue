@@ -429,6 +429,7 @@ pnpm --filter worker deploy
 2. Whenever adding a new TODO, you must do a full scan and make sure all dependencies are also updated accordingly.
 3. The `tests` are simple english instructions like `[repo]/test/[util].test.ts passes' to verify that the implementaiton worked.
 4. `isDone` should be marked when tests are passing.
+5. After doing a feature, you must use the `/commit-helper` skill to make a succinct and concise commit
 
 ```ts
 type Todo = {

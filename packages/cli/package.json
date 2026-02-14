@@ -1,0 +1,18 @@
+{
+  "name": "residue",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "residue": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outfile dist/index.js --target bun",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/bun": "latest"
+  }
+}

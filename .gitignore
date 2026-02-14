@@ -1,1 +1,7 @@
 node_modules
+dist/
+.wrangler/
+.env
+*.tgz
+.turbo
+.DS_Store
