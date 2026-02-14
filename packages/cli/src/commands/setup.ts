@@ -90,9 +90,8 @@ function setupPi(projectRoot: string): ResultAsync<void, string> {
   const extensionDir = join(projectRoot, ".pi", "agent", "extensions");
   const targetPath = join(extensionDir, "residue.ts");
 
-  // The pi adapter source lives in packages/adapters/pi/
   // import.meta.dir for this file = packages/cli/src/commands/
-  const adapterSource = join(import.meta.dir, "..", "..", "..", "adapters", "pi", "index.ts");
+  const adapterSource = join(import.meta.dir, "..", "adapters", "pi", "index.ts");
 
   return ResultAsync.fromPromise(
     (async () => {
