@@ -254,6 +254,53 @@ export class DB {
     return result.results;
   }
 
+  async getCommitGraphData(opts: {
+    org: string;
+    repo: string;
+    cursor?: number;
+    limit?: number;
+  }): Promise<CommitWithSessionRow[]> {
+    const limit = opts.limit ?? 20;
+
+    if (opts.cursor !== undefined) {
+      const result = await this.db
+        .prepare(
+          `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.session_id, s.agent
+           FROM commits c
+           JOIN sessions s ON c.session_id = s.id
+           WHERE c.org = ? AND c.repo = ? AND c.commit_sha IN (
+             SELECT commit_sha FROM commits
+             WHERE org = ? AND repo = ? AND committed_at < ?
+             GROUP BY commit_sha
+             ORDER BY MAX(committed_at) DESC
+             LIMIT ?
+           )
+           ORDER BY c.committed_at DESC`
+        )
+        .bind(opts.org, opts.repo, opts.org, opts.repo, opts.cursor, limit)
+        .all<CommitWithSessionRow>();
+      return result.results;
+    }
+
+    const result = await this.db
+      .prepare(
+        `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.session_id, s.agent
+         FROM commits c
+         JOIN sessions s ON c.session_id = s.id
+         WHERE c.org = ? AND c.repo = ? AND c.commit_sha IN (
+           SELECT commit_sha FROM commits
+           WHERE org = ? AND repo = ?
+           GROUP BY commit_sha
+           ORDER BY MAX(committed_at) DESC
+           LIMIT ?
+         )
+         ORDER BY c.committed_at DESC`
+      )
+      .bind(opts.org, opts.repo, opts.org, opts.repo, limit)
+      .all<CommitWithSessionRow>();
+    return result.results;
+  }
+
   async getSessionCommits(sessionId: string): Promise<SessionCommitRow[]> {
     const result = await this.db
       .prepare(

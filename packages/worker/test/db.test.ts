@@ -178,6 +178,62 @@ describe("db helpers", () => {
     expect(orgs[0].repo_count).toBe(2);
   });
 
+  it("getCommitGraphData limits by unique commits and returns all sessions", async () => {
+    await db.upsertSession({
+      id: "sA",
+      agent: "claude-code",
+      agentVersion: "1.0.0",
+      status: "ended",
+      r2Key: "sessions/sA.json",
+    });
+    await db.upsertSession({
+      id: "sB",
+      agent: "pi",
+      agentVersion: "0.5.0",
+      status: "ended",
+      r2Key: "sessions/sB.json",
+    });
+
+    // Commit 1 has 2 sessions, commit 2 has 1, commit 3 has 1
+    await db.insertCommit({ commitSha: "c1", repo: "r", org: "o", sessionId: "sA", message: "m1", author: "j", committedAt: 300 });
+    await db.insertCommit({ commitSha: "c1", repo: "r", org: "o", sessionId: "sB", message: "m1", author: "j", committedAt: 300 });
+    await db.insertCommit({ commitSha: "c2", repo: "r", org: "o", sessionId: "sA", message: "m2", author: "j", committedAt: 200 });
+    await db.insertCommit({ commitSha: "c3", repo: "r", org: "o", sessionId: "sB", message: "m3", author: "j", committedAt: 100 });
+
+    // Limit to 2 unique commits: should get c1 (2 rows) and c2 (1 row) = 3 rows total
+    const rows = await db.getCommitGraphData({ org: "o", repo: "r", limit: 2 });
+    const uniqueShas = [...new Set(rows.map(r => r.commit_sha))];
+    expect(uniqueShas).toHaveLength(2);
+    expect(uniqueShas).toContain("c1");
+    expect(uniqueShas).toContain("c2");
+    // c1 has 2 sessions, so 3 total rows
+    expect(rows).toHaveLength(3);
+  });
+
+  it("getCommitGraphData supports cursor-based pagination", async () => {
+    await db.upsertSession({
+      id: "s1",
+      agent: "claude-code",
+      agentVersion: "1.0.0",
+      status: "ended",
+      r2Key: "sessions/s1.json",
+    });
+
+    await db.insertCommit({ commitSha: "c1", repo: "r", org: "o", sessionId: "s1", message: "m1", author: "j", committedAt: 300 });
+    await db.insertCommit({ commitSha: "c2", repo: "r", org: "o", sessionId: "s1", message: "m2", author: "j", committedAt: 200 });
+    await db.insertCommit({ commitSha: "c3", repo: "r", org: "o", sessionId: "s1", message: "m3", author: "j", committedAt: 100 });
+
+    // Page 1: limit 2, no cursor
+    const page1 = await db.getCommitGraphData({ org: "o", repo: "r", limit: 2 });
+    const page1Shas = [...new Set(page1.map(r => r.commit_sha))];
+    expect(page1Shas).toEqual(["c1", "c2"]);
+
+    // Page 2: cursor = committed_at of last commit on page 1 (200)
+    const page2 = await db.getCommitGraphData({ org: "o", repo: "r", limit: 2, cursor: 200 });
+    const page2Shas = [...new Set(page2.map(r => r.commit_sha))];
+    expect(page2Shas).toEqual(["c3"]);
+  });
+
   it("getReposByOrg returns repos with session counts", async () => {
     await db.upsertSession({
       id: "s1",

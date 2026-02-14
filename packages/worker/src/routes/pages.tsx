@@ -5,6 +5,8 @@ import { relativeTime, formatTimestamp } from "../lib/time";
 import { Layout } from "../components/Layout";
 import { Conversation } from "../components/Conversation";
 import type { ContinuationLink } from "../components/Conversation";
+import { CommitGraph } from "../components/CommitGraph";
+import { computeGraph } from "../lib/graph";
 import { getMapper } from "../mappers";
 import type { CommitWithSessionRow } from "../lib/db";
 
@@ -187,7 +189,7 @@ pages.get("/:org", async (c) => {
   );
 });
 
-// Repo page — commit timeline
+// Repo page — commit graph with session lanes
 pages.get("/:org/:repo", async (c) => {
   const org = c.req.param("org");
   const repo = c.req.param("repo");
@@ -195,8 +197,8 @@ pages.get("/:org/:repo", async (c) => {
   const cursor = cursorParam ? Number(cursorParam) : undefined;
 
   const db = new DB(c.env.DB);
-  const limit = 50;
-  const rows = await db.getCommitsWithSessions({ org, repo, cursor, limit });
+  const commitLimit = 20;
+  const rows = await db.getCommitGraphData({ org, repo, cursor, limit: commitLimit });
 
   if (rows.length === 0 && !cursorParam) {
     return c.html(
@@ -213,12 +215,12 @@ pages.get("/:org/:repo", async (c) => {
     );
   }
 
-  const commits = groupCommits(rows);
-  const lastRow = rows[rows.length - 1];
-  const hasMore = rows.length === limit;
+  const graphData = computeGraph(rows);
+  const lastCommit = graphData.commits[graphData.commits.length - 1];
+  const hasMore = graphData.commits.length === commitLimit;
   const nextCursor =
-    hasMore && lastRow?.committed_at != null
-      ? String(lastRow.committed_at)
+    hasMore && lastCommit?.committedAt != null
+      ? String(lastCommit.committedAt)
       : null;
 
   return c.html(
@@ -231,48 +233,7 @@ pages.get("/:org/:repo", async (c) => {
         ]}
       />
 
-      <div class="flex flex-col">
-        {commits.map((commit, i) => (
-          <div class="flex gap-3 pb-4">
-            {/* Timeline indicator */}
-            <div class="flex flex-col items-center pt-1.5 flex-shrink-0">
-              <div class="w-2 h-2 rounded-full bg-blue-500" />
-              {i < commits.length - 1 && (
-                <div class="w-px flex-1 bg-zinc-800 mt-1" />
-              )}
-            </div>
-
-            {/* Commit content */}
-            <div class="flex-1 min-w-0 pb-2">
-              <div class="flex items-center gap-2 flex-wrap mb-1">
-                <a
-                  href={`/app/${org}/${repo}/${commit.sha}`}
-                  class="text-blue-500 font-mono text-sm hover:underline"
-                >
-                  {commit.sha.slice(0, 7)}
-                </a>
-                <AgentBadges sessions={commit.sessions} />
-                <a
-                  href={`https://github.com/${org}/${repo}/commit/${commit.sha}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="ml-auto text-zinc-500 hover:text-zinc-200 transition-colors flex items-center gap-1"
-                  title="View on GitHub"
-                >
-                  <i class="ph ph-github-logo text-base" />
-                </a>
-              </div>
-              <p class="text-zinc-100 text-sm">{commit.message}</p>
-              <p class="text-zinc-500 text-xs mt-1">
-                {commit.author}
-                {commit.committed_at
-                  ? ` · ${relativeTime(commit.committed_at)}`
-                  : ""}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
+      <CommitGraph data={graphData} org={org} repo={repo} />
 
       {nextCursor && (
         <a
