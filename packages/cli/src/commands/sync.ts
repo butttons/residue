@@ -111,8 +111,7 @@ function syncSessions(opts: {
 
         const data = dataResult.value;
         if (data === null) {
-          console.error(`Warning: Session data not found: ${session.data_path}`);
-          remaining.push(session);
+          console.error(`Dropping session ${session.id}: data file missing at ${session.data_path}`);
           continue;
         }
 

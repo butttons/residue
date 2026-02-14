@@ -87,7 +87,7 @@ describe("capture command", () => {
     expect(count).toBe(1);
   });
 
-  test("tags both open and ended sessions", async () => {
+  test("only tags open sessions, skips ended", async () => {
     // Create two sessions
     const s1 = cli(["session", "start", "--agent", "claude-code", "--data", "/tmp/s1.jsonl"]);
     await s1.exited;
@@ -100,17 +100,25 @@ describe("capture command", () => {
     const endProc = cli(["session", "end", "--id", id1]);
     await endProc.exited;
 
-    // Capture
+    // Make a new commit and capture
+    await writeFile(join(tempDir, "file.txt"), "hello");
+    await gitExec(["add", "."]);
+    await gitExec(["commit", "-m", "test commit"]);
+    const sha = await gitExec(["rev-parse", "HEAD"]);
+
     const captureProc = cli(["capture"]);
     await captureProc.exited;
 
     const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
     const sessions = (await readPending(pendingPath))._unsafeUnwrap();
-    const sha = await gitExec(["rev-parse", "HEAD"]);
 
     expect(sessions).toHaveLength(2);
-    expect(sessions[0].commits).toContain(sha);
-    expect(sessions[1].commits).toContain(sha);
+    // Ended session should NOT get the new SHA
+    const ended = sessions.find((s: { id: string }) => s.id === id1);
+    expect(ended!.commits).not.toContain(sha);
+    // Open session should get the new SHA
+    const open = sessions.find((s: { id: string }) => s.id !== id1);
+    expect(open!.commits).toContain(sha);
   });
 
   test("exits 0 even with no pending sessions", async () => {

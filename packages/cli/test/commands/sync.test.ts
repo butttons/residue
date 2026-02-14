@@ -125,16 +125,16 @@ describe("sync command", () => {
       const dataPath = join(tempDir, "session-data.jsonl");
       await writeFile(dataPath, '{"role":"user","content":"hello"}');
 
-      // Create and end a session
+      // Create a session, capture while open, then end it
       const startProc = cli(["session", "start", "--agent", "claude-code", "--data", dataPath]);
       await startProc.exited;
       const sessionId = (await new Response(startProc.stdout).text()).trim();
 
-      const endProc = cli(["session", "end", "--id", sessionId]);
-      await endProc.exited;
-
       const captureProc = cli(["capture"]);
       await captureProc.exited;
+
+      const endProc = cli(["session", "end", "--id", sessionId]);
+      await endProc.exited;
 
       // Sync
       const syncProc = cli(["sync"]);
@@ -216,11 +216,12 @@ describe("sync command", () => {
       await startProc.exited;
       const sessionId = (await new Response(startProc.stdout).text()).trim();
 
-      const endProc = cli(["session", "end", "--id", sessionId]);
-      await endProc.exited;
-
+      // Capture while open so it gets a commit SHA
       const captureProc = cli(["capture"]);
       await captureProc.exited;
+
+      const endProc = cli(["session", "end", "--id", sessionId]);
+      await endProc.exited;
 
       const syncProc = cli(["sync"]);
       const exitCode = await syncProc.exited;

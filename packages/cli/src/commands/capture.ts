@@ -9,6 +9,7 @@ export function capture(): ResultAsync<void, string> {
       .andThen((pendingPath) =>
         readPending(pendingPath).andThen((sessions) => {
           for (const session of sessions) {
+            if (session.status === "ended") continue;
             if (!session.commits.includes(sha)) {
               session.commits.push(sha);
             }
