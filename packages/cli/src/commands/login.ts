@@ -1,16 +1,14 @@
 import { writeConfig } from "@/lib/config";
+import { errAsync, type ResultAsync } from "neverthrow";
 
-export async function login(opts: { url: string; token: string }): Promise<void> {
+export function login(opts: { url: string; token: string }): ResultAsync<void, string> {
   if (!opts.url.startsWith("http://") && !opts.url.startsWith("https://")) {
-    throw new Error("URL must start with http:// or https://");
+    return errAsync("URL must start with http:// or https://");
   }
 
   const cleanUrl = opts.url.replace(/\/+$/, "");
 
-  const result = await writeConfig({ worker_url: cleanUrl, token: opts.token });
-  if (result.isErr()) {
-    throw new Error(result._unsafeUnwrapErr());
-  }
-
-  console.log(`Logged in to ${cleanUrl}`);
+  return writeConfig({ worker_url: cleanUrl, token: opts.token }).map(() => {
+    console.log(`Logged in to ${cleanUrl}`);
+  });
 }

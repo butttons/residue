@@ -1,27 +1,27 @@
-// Wraps an async command handler with consistent error handling.
-// Catches any thrown error, prints to stderr, and exits with the given code.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- commander passes variadic args
-export function wrapCommand<T extends (...args: any[]) => Promise<void>>(
+import type { ResultAsync } from "neverthrow";
+
+type CommandFn = (...args: never[]) => ResultAsync<void, string>;
+
+// Wraps a command that returns ResultAsync<void, string> with consistent error handling.
+// On Err, prints to stderr and exits with the given code.
+export function wrapCommand<T extends CommandFn>(
   fn: T,
   opts?: { exitCode?: number },
-): T {
+): (...args: Parameters<T>) => Promise<void> {
   const exitCode = opts?.exitCode ?? 1;
-  return (async (...args: unknown[]) => {
-    try {
-      await fn(...args);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`Error: ${message}`);
+  return async (...args: Parameters<T>) => {
+    const result = await fn(...args);
+    if (result.isErr()) {
+      console.error(`Error: ${result.error}`);
       process.exit(exitCode);
     }
-  }) as T;
+  };
 }
 
 // Wraps a command that should never block git operations (hooks).
 // Errors are printed as warnings and exit 0 so git proceeds.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- commander passes variadic args
-export function wrapHookCommand<T extends (...args: any[]) => Promise<void>>(
+export function wrapHookCommand<T extends CommandFn>(
   fn: T,
-): T {
+): (...args: Parameters<T>) => Promise<void> {
   return wrapCommand(fn, { exitCode: 0 });
 }

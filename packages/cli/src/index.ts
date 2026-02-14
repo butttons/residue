@@ -22,16 +22,14 @@ program
   .description("Save worker URL and auth token")
   .requiredOption("--url <worker_url>", "Worker URL")
   .requiredOption("--token <auth_token>", "Auth token")
-  .action(wrapCommand(async (opts: { url: string; token: string }) => {
-    await login({ url: opts.url, token: opts.token });
-  }));
+  .action(wrapCommand((opts: { url: string; token: string }) =>
+    login({ url: opts.url, token: opts.token })
+  ));
 
 program
   .command("init")
   .description("Install git hooks in current repo")
-  .action(wrapCommand(async () => {
-    await init();
-  }));
+  .action(wrapCommand(() => init()));
 
 const session = program
   .command("session")
@@ -43,37 +41,31 @@ session
   .requiredOption("--agent <name>", "Agent name")
   .requiredOption("--data <path>", "Path to raw session file")
   .option("--agent-version <semver>", "Agent version", "unknown")
-  .action(wrapCommand(async (opts: { agent: string; data: string; agentVersion: string }) => {
-    await sessionStart({ agent: opts.agent, data: opts.data, agentVersion: opts.agentVersion });
-  }));
+  .action(wrapCommand((opts: { agent: string; data: string; agentVersion: string }) =>
+    sessionStart({ agent: opts.agent, data: opts.data, agentVersion: opts.agentVersion })
+  ));
 
 session
   .command("end")
   .description("Mark an agent session as ended")
   .requiredOption("--id <session-id>", "Session ID to end")
-  .action(wrapCommand(async (opts: { id: string }) => {
-    await sessionEnd({ id: opts.id });
-  }));
+  .action(wrapCommand((opts: { id: string }) =>
+    sessionEnd({ id: opts.id })
+  ));
 
 program
   .command("capture")
   .description("Tag pending sessions with current commit SHA (called by post-commit hook)")
-  .action(wrapHookCommand(async () => {
-    await capture();
-  }));
+  .action(wrapHookCommand(() => capture()));
 
 program
   .command("sync")
   .description("Upload pending sessions to worker (called by pre-push hook)")
-  .action(wrapHookCommand(async () => {
-    await sync();
-  }));
+  .action(wrapHookCommand(() => sync()));
 
 program
   .command("push")
   .description("Upload pending sessions to worker (manual trigger)")
-  .action(wrapCommand(async () => {
-    await push();
-  }));
+  .action(wrapCommand(() => push()));
 
 program.parse();
