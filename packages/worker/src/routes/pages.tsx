@@ -228,6 +228,15 @@ pages.get("/:org/:repo", async (c) => {
                 >
                   {commit.sha.slice(0, 7)}
                 </a>
+                <a
+                  href={`https://github.com/${org}/${repo}/commit/${commit.sha}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-zinc-500 hover:text-zinc-300 transition-colors"
+                  title="View on GitHub"
+                >
+                  <i class="ph ph-github-logo text-sm" />
+                </a>
                 {commit.sessions.map((s) => (
                   <span class="text-xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
                     {s.agent}
@@ -365,6 +374,15 @@ pages.get("/:org/:repo/:sha", async (c) => {
       <div class="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-6">
         <div class="flex items-center gap-2 mb-2">
           <span class="text-blue-500 font-mono text-sm">{sha}</span>
+          <a
+            href={`https://github.com/${org}/${repo}/commit/${sha}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-zinc-500 hover:text-zinc-300 transition-colors"
+            title="View on GitHub"
+          >
+            <i class="ph ph-github-logo text-sm" />
+          </a>
         </div>
         <p class="text-zinc-100">{first.message}</p>
         <p class="text-zinc-500 text-xs mt-2">

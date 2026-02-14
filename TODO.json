@@ -357,7 +357,7 @@
       "worker",
       "mapper"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/worker/test/mappers/claude-code.test.ts passes"
     ],
