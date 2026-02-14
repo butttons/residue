@@ -3,7 +3,7 @@ import { errAsync, okAsync, ResultAsync } from "neverthrow";
 import { join } from "path";
 import { mkdir, readFile, writeFile, stat } from "fs/promises";
 // Embedded at build time so the binary doesn't need to resolve a file path at runtime
-import piAdapterSource from "@/adapters/pi/index.ts" with { type: "text" };
+import piAdapterSource from "../../adapters/pi/extension.ts.txt" with { type: "text" };
 
 type HookHandler = {
   type: string;
