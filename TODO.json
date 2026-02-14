@@ -225,7 +225,7 @@
       "cli",
       "command"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/cli/test/commands/push.test.ts passes"
     ],
