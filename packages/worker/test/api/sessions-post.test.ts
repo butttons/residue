@@ -12,7 +12,6 @@ function makeBody(overrides?: Record<string, unknown>) {
       agent: "claude-code",
       agent_version: "1.2.3",
       status: "ended",
-      data: '{"messages": []}',
     },
     commits: [
       {
@@ -87,16 +86,6 @@ describe("POST /api/sessions", () => {
     expect(body.error).toBe("Validation failed");
   });
 
-  it("returns 400 when session.data is missing", async () => {
-    const payload = makeBody();
-    delete (payload.session as Record<string, unknown>).data;
-
-    const res = await postSession(payload);
-    expect(res.status).toBe(400);
-    const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("Validation failed");
-  });
-
   it("returns 400 when commits is not an array", async () => {
     const res = await postSession(makeBody({ commits: "not-array" }));
     expect(res.status).toBe(400);
@@ -114,7 +103,7 @@ describe("POST /api/sessions", () => {
     expect(body.error).toBe("Validation failed");
   });
 
-  it("stores session data in R2 and metadata in D1", async () => {
+  it("stores session metadata in D1", async () => {
     const res = await postSession(makeBody());
 
     expect(res.status).toBe(200);
@@ -137,12 +126,6 @@ describe("POST /api/sessions", () => {
     expect(commits[0].message).toBe("fix auth redirect");
     expect(commits[0].author).toBe("jane");
     expect(commits[0].committed_at).toBe(1700000000);
-
-    // Verify R2
-    const r2Obj = await env.BUCKET.get("sessions/test-session-1.json");
-    expect(r2Obj).not.toBeNull();
-    const r2Data = await r2Obj!.text();
-    expect(r2Data).toBe('{"messages": []}');
   });
 
   it("handles multiple commits for one session", async () => {
@@ -187,7 +170,7 @@ describe("POST /api/sessions", () => {
 
   it("handles open session status (ended_at stays null)", async () => {
     const payload = makeBody();
-    payload.session.status = "open";
+    (payload.session as Record<string, unknown>).status = "open";
 
     const res = await postSession(payload);
     expect(res.status).toBe(200);
@@ -197,25 +180,18 @@ describe("POST /api/sessions", () => {
     expect(session!.ended_at).toBeNull();
   });
 
-  it("upserts session on duplicate upload (overwrites R2)", async () => {
+  it("upserts session on duplicate (updates ended_at)", async () => {
     // First upload - open session
     const payload1 = makeBody();
-    payload1.session.data = '{"messages": ["v1"]}';
-    payload1.session.status = "open";
+    (payload1.session as Record<string, unknown>).status = "open";
     await postSession(payload1);
 
-    // Second upload - ended session with updated data
+    // Second upload - ended session
     const payload2 = makeBody();
-    payload2.session.data = '{"messages": ["v1", "v2"]}';
-    payload2.session.status = "ended";
+    (payload2.session as Record<string, unknown>).status = "ended";
     const res = await postSession(payload2);
 
     expect(res.status).toBe(200);
-
-    // R2 should have the latest data
-    const r2Obj = await env.BUCKET.get("sessions/test-session-1.json");
-    const r2Data = await r2Obj!.text();
-    expect(r2Data).toBe('{"messages": ["v1", "v2"]}');
 
     // D1 should have ended_at set
     const session = await db.getSessionById("test-session-1");
@@ -242,5 +218,50 @@ describe("POST /api/sessions", () => {
 
     const session = await db.getSessionById("test-session-1");
     expect(session!.agent_version).toBe("unknown");
+  });
+});
+
+describe("POST /api/sessions/upload-url", () => {
+  it("returns 401 without auth", async () => {
+    const res = await SELF.fetch("https://test.local/api/sessions/upload-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: "s1" }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when session_id is missing", async () => {
+    const res = await SELF.fetch("https://test.local/api/sessions/upload-url", {
+      method: "POST",
+      headers: { ...AUTH_HEADER, "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("Validation failed");
+  });
+
+  it("returns 400 when session_id is empty", async () => {
+    const res = await SELF.fetch("https://test.local/api/sessions/upload-url", {
+      method: "POST",
+      headers: { ...AUTH_HEADER, "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: "" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns a presigned URL for valid request", async () => {
+    const res = await SELF.fetch("https://test.local/api/sessions/upload-url", {
+      method: "POST",
+      headers: { ...AUTH_HEADER, "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: "test-session-upload" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json<{ url: string }>();
+    expect(body.url).toBeDefined();
+    expect(typeof body.url).toBe("string");
+    expect(body.url).toContain("sessions/test-session-upload.json");
+    expect(body.url).toContain("X-Amz-");
   });
 });

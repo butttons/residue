@@ -11,6 +11,10 @@ async function seedSession(opts: {
   status: "open" | "ended";
   data: string;
 }) {
+  // Write raw data to R2 directly (simulates presigned URL upload)
+  await env.BUCKET.put(`sessions/${opts.id}.json`, opts.data);
+
+  // POST metadata to D1
   await SELF.fetch("https://test.local/api/sessions", {
     method: "POST",
     headers: { ...AUTH_HEADER, "Content-Type": "application/json" },
@@ -20,7 +24,6 @@ async function seedSession(opts: {
         agent: opts.agent,
         agent_version: opts.agentVersion,
         status: opts.status,
-        data: opts.data,
       },
       commits: [],
     }),

@@ -529,5 +529,21 @@
     "dependencies": [
       21
     ]
+  },
+  {
+    "id": 32,
+    "title": "Worker: Presigned URL upload + metadata-only POST",
+    "description": "Add POST /api/sessions/upload-url endpoint that returns a presigned R2 PUT URL using AWS SDK. Update POST /api/sessions to accept metadata only (no data field) since raw session data is uploaded directly to R2 via presigned URL. Requires R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID, R2_BUCKET_NAME env vars.",
+    "tags": [
+      "worker",
+      "api"
+    ],
+    "isDone": true,
+    "tests": [
+      "packages/worker/test/api/sessions-post.test.ts passes"
+    ],
+    "dependencies": [
+      17
+    ]
   }
 ]
