@@ -1,0 +1,112 @@
+---
+import "../styles/global.css";
+import { Github, GitCommit } from "lucide-astro";
+
+type Props = {
+	title: string;
+	description?: string;
+};
+
+const {
+	title,
+	description = "Capture AI agent conversations and link them to git commits. Open-source CLI + self-hosted backend.",
+} = Astro.props;
+const currentPath = Astro.url.pathname;
+const canonicalURL = new URL(currentPath, "https://residue.dev").href;
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" type="image/png" href="/favicon.png" />
+        <link rel="canonical" href={canonicalURL} />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta name="generator" content={Astro.generator} />
+
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={canonicalURL} />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+    </head>
+    <body class="bg-zinc-950 text-zinc-100 min-h-screen">
+        <nav
+            class="border-b border-zinc-800 bg-zinc-950/50 backdrop-blur-sm sticky top-0 z-50"
+        >
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+                <div class="flex items-center justify-between">
+                    <a
+                        href="/"
+                        class="flex items-center gap-2 text-base sm:text-lg font-bold text-amber-500 hover:text-amber-400 transition-colors"
+                    >
+                        <GitCommit class="w-5 h-5" />
+                        <span>residue</span>
+                    </a>
+                    <div
+                        class="flex items-center gap-4 sm:gap-6 text-sm"
+                    >
+                        <a
+                            href="/docs"
+                            class:list={[
+                                "hover:text-amber-500 transition-colors",
+                                currentPath === "/docs/"
+                                    ? "text-amber-500"
+                                    : "text-zinc-400",
+                            ]}
+                        >
+                            Docs
+                        </a>
+                        <a
+                            href="https://github.com/butttons/residue"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-zinc-400 hover:text-amber-500 transition-colors"
+                        >
+                            <Github class="w-4 h-4" />
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <main>
+            <slot />
+        </main>
+        <footer class="border-t border-zinc-800 mt-20">
+            <div class="max-w-5xl mx-auto px-6 py-8">
+                <div
+                    class="flex items-center justify-between text-zinc-500 text-sm"
+                >
+                    <p>
+                        Built by <a
+                            href="https://github.com/butttons"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-amber-500 hover:underline">Yash</a
+                        >
+                    </p>
+                    <a
+                        href="https://github.com/butttons/residue"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-amber-500 hover:text-amber-400 transition-colors flex items-center gap-1.5"
+                    >
+                        <Github class="w-4 h-4" />
+                        <span class="hidden sm:inline">GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </footer>
+    </body>
+</html>

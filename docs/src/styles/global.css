@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+    --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-mono);
+}

@@ -6,3 +6,7 @@ windows:
       root: <%= ENV['PWD'] %>/packages/worker
       panes:
         - pnpm dev
+  - docs:
+      root: <%= ENV['PWD'] %>/docs
+      panes:
+        - pnpm dev

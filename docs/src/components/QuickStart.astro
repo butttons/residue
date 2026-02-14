@@ -1,0 +1,58 @@
+---
+---
+
+<div id="quick-start" class="mb-20">
+    <h2 class="text-3xl font-bold mb-8 text-center">Quick Start</h2>
+
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+            <div class="font-mono text-sm space-y-6">
+                <div>
+                    <div class="text-zinc-400 text-xs mb-2">
+                        1. Deploy your worker (one click)
+                    </div>
+                    <div class="bg-zinc-950 rounded p-3 text-zinc-300">
+                        <a
+                            href="https://deploy.workers.cloudflare.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-amber-400 hover:underline"
+                        >
+                            deploy.workers.cloudflare.com
+                        </a>
+                        <span class="text-zinc-500"> (sets up R2 + D1 + generates a token)</span>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="text-zinc-400 text-xs mb-2">
+                        2. Install the CLI
+                    </div>
+                    <pre class="bg-zinc-950 rounded p-3 overflow-x-auto text-zinc-300"><code>npm install -g residue</code></pre>
+                </div>
+
+                <div>
+                    <div class="text-zinc-400 text-xs mb-2">
+                        3. Login with your worker URL and token
+                    </div>
+                    <pre class="bg-zinc-950 rounded p-3 overflow-x-auto text-zinc-300"><code>residue login</code></pre>
+                </div>
+
+                <div>
+                    <div class="text-zinc-400 text-xs mb-2">
+                        4. Initialize in your repo
+                    </div>
+                    <pre class="bg-zinc-950 rounded p-3 overflow-x-auto text-zinc-300"><code>cd your-project
+residue init</code></pre>
+                    <p class="text-zinc-500 text-xs mt-2">
+                        Installs git hooks and detects available agent adapters.
+                    </p>
+                </div>
+
+                <div class="text-zinc-500 text-xs mt-4 pt-4 border-t border-zinc-800">
+                    That's it. Commit and push as usual. Conversations are captured automatically.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

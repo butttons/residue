@@ -1,0 +1,16 @@
+{
+  "name": "residue-docs",
+  "main": "./dist/_worker.js/index.js",
+  "compatibility_date": "2026-01-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "route": {
+    "pattern": "residue.dev",
+    "custom_domain": true
+  }
+}

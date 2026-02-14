@@ -1,0 +1,17 @@
+---
+---
+
+<div class="bg-zinc-900 border border-zinc-800 rounded-lg p-6 font-mono text-xs sm:text-sm overflow-x-auto">
+    <pre class="text-zinc-400 leading-relaxed"><span class="text-emerald-400">Agent Plugin</span>                    <span class="text-amber-400">Git Hooks</span>
+    |                               |
+    |-- <span class="text-amber-400">session-start</span> --+            |
+    |                  v            |
+    |              <span class="text-zinc-100">LOCAL STATE</span>      |
+    |              <span class="text-zinc-500">(pending queue)</span>  |
+    |-- <span class="text-amber-400">session-end</span> ----+            |
+    |                               |-- <span class="text-amber-400">post-commit</span> -> capture
+    |                               |   <span class="text-zinc-500">(tag sessions with SHA)</span>
+    |                               |
+    |                               |-- <span class="text-amber-400">pre-push</span> -> sync
+    |                               |   <span class="text-zinc-500">(upload to worker)</span></pre>
+</div>

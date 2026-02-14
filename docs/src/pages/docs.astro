@@ -1,0 +1,386 @@
+---
+import { Github } from "lucide-astro";
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+    title="Documentation - residue"
+    description="Complete guide to using residue. Capture AI agent conversations and link them to git commits."
+>
+    <div class="max-w-5xl mx-auto px-6 py-20">
+        <div class="mb-12">
+            <h1 class="text-3xl font-bold mb-4">Documentation</h1>
+            <p class="text-base text-zinc-400">
+                Complete guide to setting up and using residue.
+            </p>
+        </div>
+
+        <!-- Overview -->
+        <div class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-amber-400">Overview</h2>
+            <p class="text-zinc-300 text-sm leading-relaxed mb-4">
+                Residue has three components: a <strong>CLI</strong> that runs
+                locally, a <strong>Cloudflare Worker</strong> that stores and
+                serves data, and <strong>agent adapters</strong> that hook into
+                AI agents.
+            </p>
+            <p class="text-zinc-300 text-sm leading-relaxed">
+                The CLI manages local state, installs git hooks, and handles
+                syncing. The worker provides both an API and a web UI. Adapters
+                are thin plugins that detect when conversations start and end.
+            </p>
+        </div>
+
+        <!-- Prerequisites -->
+        <div class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-amber-400">Prerequisites</h2>
+            <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+                <ul class="space-y-2 text-zinc-300 text-sm">
+                    <li><strong>Node.js</strong> 18+ (for npm install)</li>
+                    <li><strong>Git</strong> (hooks are installed in .git/hooks/)</li>
+                    <li><strong>Cloudflare account</strong> (for deploying the worker)</li>
+                    <li><strong>A supported AI agent</strong> (Claude Code currently)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Setup -->
+        <div class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-amber-400">Setup</h2>
+
+            <div class="space-y-8">
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-amber-300">
+                        1. Deploy the Worker
+                    </h3>
+                    <p class="text-zinc-300 text-sm mb-3">
+                        Click the "Deploy to Cloudflare" button on the
+                        <a
+                            href="https://github.com/butttons/residue"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-amber-400 hover:underline">GitHub repo</a
+                        >. This will:
+                    </p>
+                    <ul class="text-zinc-400 text-sm space-y-1 ml-4 mb-4">
+                        <li>- Create a D1 database and run migrations</li>
+                        <li>- Create an R2 bucket</li>
+                        <li>- Generate a secret token</li>
+                        <li>- Deploy the worker</li>
+                    </ul>
+                    <p class="text-zinc-300 text-sm">
+                        You will get a <strong>worker URL</strong> and a <strong>token</strong>.
+                        Save these for the next step.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-amber-300">
+                        2. Install the CLI
+                    </h3>
+                    <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                        <div class="text-zinc-300">npm install -g residue</div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-amber-300">
+                        3. Login
+                    </h3>
+                    <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto mb-3">
+                        <div class="text-zinc-300">residue login</div>
+                    </div>
+                    <p class="text-zinc-400 text-sm">
+                        Enter the worker URL and token. Stored at <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">~/.residue/config</code>.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-amber-300">
+                        4. Initialize in a repo
+                    </h3>
+                    <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto mb-3">
+                        <div class="text-zinc-300">cd your-project</div>
+                        <div class="text-zinc-300">residue init</div>
+                    </div>
+                    <p class="text-zinc-400 text-sm">
+                        Installs <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">post-commit</code> and
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">pre-push</code> hooks.
+                        Detects installed agent adapters.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- How Sessions Work -->
+        <div class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-amber-400">How Sessions Work</h2>
+
+            <div class="space-y-6">
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+                    <h3 class="font-semibold text-zinc-200 mb-3">Session Lifecycle</h3>
+                    <ol class="text-zinc-300 text-sm space-y-2 list-decimal list-inside">
+                        <li>Agent plugin calls <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session-start</code>. CLI generates a session ID</li>
+                        <li>User has a conversation with the AI agent</li>
+                        <li>Agent plugin calls <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session-end</code>. CLI marks session as ended</li>
+                        <li>User commits. Post-commit hook runs <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue capture</code>, tags all pending sessions with the commit SHA</li>
+                        <li>User pushes. Pre-push hook runs <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue sync</code>, uploads everything</li>
+                    </ol>
+                </div>
+
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+                    <h3 class="font-semibold text-zinc-200 mb-3">Multi-Commit Sessions</h3>
+                    <p class="text-zinc-300 text-sm leading-relaxed">
+                        A conversation can span multiple commits. If a session is still open
+                        when a commit happens, it gets linked to that commit. When the next
+                        commit happens, the same session gets linked again. The session data
+                        is stored once in R2; multiple commits reference it.
+                    </p>
+                </div>
+
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+                    <h3 class="font-semibold text-zinc-200 mb-3">Open Sessions at Push Time</h3>
+                    <p class="text-zinc-300 text-sm leading-relaxed">
+                        If a session is still open when you push, the current state is
+                        uploaded. On the next push, it gets overwritten with the latest
+                        state. The R2 key stays the same.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Local State -->
+        <div class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-amber-400">Local State</h2>
+
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 text-amber-300">Global config</h3>
+                    <p class="text-zinc-400 text-sm mb-2">
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">~/.residue/config</code>
+                    </p>
+                    <pre class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto"><code class="text-zinc-300">{JSON.stringify({
+                        worker_url: "https://my-residue.workers.dev",
+                        token: "secret-token-from-deploy"
+                    }, null, 2)}</code></pre>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 text-amber-300">Pending queue</h3>
+                    <p class="text-zinc-400 text-sm mb-2">
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.git/ai-sessions/pending.json</code>
+                    </p>
+                    <pre class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs overflow-x-auto"><code class="text-zinc-300">{JSON.stringify([
+                        {
+                            id: "session-uuid-1",
+                            agent: "claude-code",
+                            agent_version: "1.2.3",
+                            status: "ended",
+                            data_path: "/path/to/raw/session/log",
+                            commits: []
+                        },
+                        {
+                            id: "session-uuid-2",
+                            agent: "claude-code",
+                            agent_version: "1.2.3",
+                            status: "open",
+                            data_path: "/path/to/raw/session/log",
+                            commits: ["abc123"]
+                        }
+                    ], null, 2)}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Worker -->
+        <div class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-amber-400">Worker</h2>
+
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 text-amber-300">Tech stack</h3>
+                    <ul class="text-zinc-300 text-sm space-y-1">
+                        <li><strong>Framework:</strong> Hono</li>
+                        <li><strong>Rendering:</strong> JSX (server-rendered HTML)</li>
+                        <li><strong>Storage:</strong> Cloudflare R2 (blobs) + D1 (query index)</li>
+                        <li><strong>Styling:</strong> Tailwind CSS</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 text-amber-300">API routes</h3>
+                    <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm space-y-2 overflow-x-auto">
+                        <div>
+                            <span class="text-emerald-400">POST</span>
+                            <span class="text-zinc-300 ml-2">/api/sessions</span>
+                            <span class="text-zinc-500 ml-4"># upload session + commits</span>
+                        </div>
+                        <div>
+                            <span class="text-amber-400">GET</span>
+                            <span class="text-zinc-300 ml-3">/api/sessions/:id</span>
+                            <span class="text-zinc-500 ml-4"># raw session from R2</span>
+                        </div>
+                        <div>
+                            <span class="text-amber-400">GET</span>
+                            <span class="text-zinc-300 ml-3">/api/repos/:org/:repo</span>
+                            <span class="text-zinc-500 ml-4"># commits with sessions</span>
+                        </div>
+                        <div>
+                            <span class="text-amber-400">GET</span>
+                            <span class="text-zinc-300 ml-3">/api/repos/:org/:repo/:sha</span>
+                            <span class="text-zinc-500 ml-4"># sessions for commit</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 text-amber-300">UI pages</h3>
+                    <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm space-y-2 overflow-x-auto">
+                        <div>
+                            <span class="text-amber-300">/</span>
+                            <span class="text-zinc-500 ml-12"># list orgs</span>
+                        </div>
+                        <div>
+                            <span class="text-amber-300">/:org</span>
+                            <span class="text-zinc-500 ml-8"># list repos</span>
+                        </div>
+                        <div>
+                            <span class="text-amber-300">/:org/:repo</span>
+                            <span class="text-zinc-500 ml-3"># commit timeline with sessions</span>
+                        </div>
+                        <div>
+                            <span class="text-amber-300">/:org/:repo/:sha</span>
+                            <span class="text-zinc-500 ml-2"># expanded commit + conversations</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 text-amber-300">Conversation rendering</h3>
+                    <p class="text-zinc-300 text-sm leading-relaxed mb-3">
+                        Each agent gets a <strong>mapper</strong>: a pure function that transforms
+                        the agent's raw session data into a common message format. The mapper
+                        is the only agent-specific code. Everything else is shared.
+                    </p>
+                    <pre class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs overflow-x-auto"><code class="text-zinc-300">{`type ToolCall = {
+  name: string;
+  input: string;
+  output: string;
+};
+
+type Message = {
+  role: string;
+  content: string;
+  timestamp?: string;
+  tool_calls?: ToolCall[];
+};
+
+type Mapper = (raw: string) => Message[];`}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- D1 Schema -->
+        <div class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-amber-400">Database Schema</h2>
+            <pre class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs overflow-x-auto"><code class="text-zinc-300">{`CREATE TABLE sessions (
+  id TEXT PRIMARY KEY,
+  agent TEXT NOT NULL,
+  agent_version TEXT,
+  created_at INTEGER NOT NULL,
+  ended_at INTEGER,
+  r2_key TEXT NOT NULL
+);
+
+CREATE TABLE commits (
+  commit_sha TEXT NOT NULL,
+  repo TEXT NOT NULL,
+  org TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  message TEXT,
+  author TEXT,
+  committed_at INTEGER,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
+
+CREATE UNIQUE INDEX idx_commits_unique
+  ON commits(commit_sha, session_id);
+CREATE INDEX idx_commits_repo
+  ON commits(org, repo);
+CREATE INDEX idx_commits_sha
+  ON commits(commit_sha);
+CREATE INDEX idx_commits_session
+  ON commits(session_id);`}</code></pre>
+        </div>
+
+        <!-- Adapters -->
+        <div class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-amber-400">Agent Adapters</h2>
+            <p class="text-zinc-300 text-sm leading-relaxed mb-4">
+                Each adapter hooks into an agent's lifecycle and calls two CLI commands:
+            </p>
+            <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto mb-6">
+                <div class="text-zinc-300">residue session-start --agent &lt;name&gt; --version &lt;semver&gt;</div>
+                <div class="text-zinc-500"># returns session ID to stdout</div>
+                <div class="text-zinc-300 mt-2">residue session-end --id &lt;session-id&gt; --data &lt;path&gt;</div>
+            </div>
+
+            <h3 class="text-lg font-semibold mb-3 text-amber-300">Claude Code</h3>
+            <p class="text-zinc-300 text-sm leading-relaxed">
+                The first adapter. Reads session data from <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">~/.claude/projects/</code>.
+                Detects conversation start/end and calls the CLI with the session log path.
+            </p>
+        </div>
+
+        <!-- Development -->
+        <div class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-amber-400">Development</h2>
+            <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm space-y-4 overflow-x-auto">
+                <div>
+                    <div class="text-zinc-500"># Install dependencies</div>
+                    <div class="text-zinc-300">pnpm install</div>
+                </div>
+                <div>
+                    <div class="text-zinc-500"># Dev</div>
+                    <div class="text-zinc-300">pnpm --filter cli dev</div>
+                    <div class="text-zinc-300">pnpm --filter worker dev</div>
+                </div>
+                <div>
+                    <div class="text-zinc-500"># Build</div>
+                    <div class="text-zinc-300">pnpm --filter cli build</div>
+                    <div class="text-zinc-300">pnpm --filter worker build</div>
+                </div>
+                <div>
+                    <div class="text-zinc-500"># Apply D1 migrations locally</div>
+                    <div class="text-zinc-300">cd packages/worker && pnpm exec wrangler d1 migrations apply DB --local</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contributing -->
+        <div class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-amber-400">Contributing</h2>
+            <p class="text-zinc-300 text-sm leading-relaxed mb-4">
+                Residue is open source.
+                See the <a
+                    href="https://github.com/butttons/residue"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-amber-400 hover:underline">GitHub repository</a
+                > for issues, discussions, and pull requests.
+            </p>
+            <div class="flex gap-4">
+                <a
+                    href="https://github.com/butttons/residue"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 text-sm"
+                >
+                    <Github class="w-4 h-4" />
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+    </div>
+</Layout>
