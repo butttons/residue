@@ -44,6 +44,11 @@ packages/
 
 Monorepo managed with pnpm workspaces. Runtime is bun.
 
+## Prerequisites
+
+- [bun](https://bun.sh) -- runtime for the CLI and adapter scripts
+- [pnpm](https://pnpm.io) -- monorepo package manager (for development)
+
 ## Setup
 
 ### 1. Deploy the worker
@@ -64,13 +69,13 @@ The setup script creates D1 + R2 resources, generates an auth token, and deploys
 npm install -g residue
 ```
 
-### 3. Login
+### 3. Login (requires worker URL from step 1)
 
 ```bash
 residue login --url https://your-worker.workers.dev --token YOUR_TOKEN
 ```
 
-### 4. Initialize a repo
+### 4. Initialize a repo (requires login from step 3)
 
 ```bash
 cd your-project
@@ -83,11 +88,15 @@ This installs `post-commit` and `pre-push` git hooks that call `residue capture`
 
 **Claude Code:**
 
+The adapter uses Claude Code's [hooks system](https://docs.anthropic.com/en/docs/claude-code/hooks) to call `residue session start` and `residue session end` automatically when conversations begin and end. Requires steps 1-4 above.
+
+Install from the monorepo root:
+
 ```bash
 bun run packages/adapters/claude-code/install.ts
 ```
 
-Adds `SessionStart` and `SessionEnd` hooks to `~/.claude/settings.json`. See [`packages/adapters/claude-code/README.md`](packages/adapters/claude-code/README.md) for details.
+This adds `SessionStart` and `SessionEnd` hooks to `~/.claude/settings.json`. See [`packages/adapters/claude-code/README.md`](packages/adapters/claude-code/README.md) for manual setup or details on how session tracking works.
 
 **Pi coding agent:**
 
