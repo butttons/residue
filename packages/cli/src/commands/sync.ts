@@ -4,54 +4,7 @@ import { getRemoteUrl, parseRemote, getCommitMeta } from "@/lib/git";
 import { getGitDir, getPendingPath, readPending, writePending } from "@/lib/pending";
 import type { PendingSession } from "@/lib/pending";
 
-async function getUploadUrl(opts: {
-  workerUrl: string;
-  token: string;
-  sessionId: string;
-}): Promise<{ isOk: true; url: string } | { isOk: false; error: string }> {
-  try {
-    const response = await fetch(`${opts.workerUrl}/api/sessions/upload-url`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${opts.token}`,
-      },
-      body: JSON.stringify({ session_id: opts.sessionId }),
-    });
-
-    if (!response.ok) {
-      return { isOk: false, error: `HTTP ${response.status}` };
-    }
-
-    const body = (await response.json()) as { url: string };
-    return { isOk: true, url: body.url };
-  } catch (e) {
-    return { isOk: false, error: e instanceof Error ? e.message : "unknown error" };
-  }
-}
-
-async function uploadToR2(opts: {
-  url: string;
-  data: string;
-}): Promise<{ isOk: true } | { isOk: false; error: string }> {
-  try {
-    const response = await fetch(opts.url, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: opts.data,
-    });
-
-    if (!response.ok) {
-      return { isOk: false, error: `HTTP ${response.status}` };
-    }
-
-    return { isOk: true };
-  } catch (e) {
-    return { isOk: false, error: e instanceof Error ? e.message : "unknown error" };
-  }
-}
-
-async function postMetadata(opts: {
+async function postSession(opts: {
   workerUrl: string;
   token: string;
   session: {
@@ -59,7 +12,7 @@ async function postMetadata(opts: {
     agent: string;
     agent_version: string;
     status: string;
-    data?: string;
+    data: string;
   };
   commits: Array<{
     sha: string;
@@ -181,8 +134,8 @@ export async function runSync(): Promise<void> {
       });
     }
 
-    // POST metadata + data to worker
-    const metadataResult = await postMetadata({
+    // POST session data + metadata to worker
+    const uploadResult = await postSession({
       workerUrl: config.worker_url,
       token: config.token,
       session: {
@@ -195,8 +148,8 @@ export async function runSync(): Promise<void> {
       commits,
     });
 
-    if (!metadataResult.isOk) {
-      console.error(`Warning: Metadata upload failed for session ${session.id}: ${metadataResult.error}`);
+    if (!uploadResult.isOk) {
+      console.error(`Warning: Upload failed for session ${session.id}: ${uploadResult.error}`);
       remaining.push(session);
       continue;
     }

@@ -64,26 +64,8 @@ type RequestLog = {
 
 function createMockServer() {
   const requests: RequestLog[] = [];
-  let r2Port: number;
 
-  // R2 mock (accepts PUT uploads)
-  const r2Server = Bun.serve({
-    port: 0,
-    fetch(req) {
-      return (async () => {
-        requests.push({
-          method: req.method,
-          url: new URL(req.url).pathname,
-          body: await req.text(),
-          auth: null,
-        });
-        return new Response("", { status: 200 });
-      })();
-    },
-  });
-  r2Port = r2Server.port;
-
-  // Worker mock
+  // Worker mock — single POST /api/sessions with inline data
   const workerServer = Bun.serve({
     port: 0,
     fetch(req) {
@@ -97,13 +79,6 @@ function createMockServer() {
           body,
           auth: req.headers.get("authorization"),
         });
-
-        if (url.pathname === "/api/sessions/upload-url") {
-          return new Response(
-            JSON.stringify({ url: `http://localhost:${r2Port}/sessions/${(body as { session_id: string }).session_id}.json` }),
-            { status: 200 }
-          );
-        }
 
         if (url.pathname === "/api/sessions") {
           return new Response(JSON.stringify({ ok: true }), { status: 200 });
@@ -119,7 +94,6 @@ function createMockServer() {
     requests,
     stop() {
       workerServer.stop();
-      r2Server.stop();
     },
   };
 }
@@ -170,30 +144,22 @@ describe("sync command", () => {
       expect(exitCode).toBe(0);
       expect(stderr).toContain(`Synced session ${sessionId}`);
 
-      // Should have 3 requests: upload-url, R2 PUT, metadata POST
-      expect(mock.requests).toHaveLength(3);
+      // Should have 1 request: POST /api/sessions with inline data
+      expect(mock.requests).toHaveLength(1);
 
-      // 1. Upload URL request
-      const uploadUrlReq = mock.requests[0];
-      expect(uploadUrlReq.url).toBe("/api/sessions/upload-url");
-      expect(uploadUrlReq.auth).toBe("Bearer my-token");
+      const req = mock.requests[0];
+      expect(req.url).toBe("/api/sessions");
+      expect(req.method).toBe("POST");
+      expect(req.auth).toBe("Bearer my-token");
 
-      // 2. R2 PUT
-      const r2Req = mock.requests[1];
-      expect(r2Req.method).toBe("PUT");
-      expect(r2Req.body).toBe('{"role":"user","content":"hello"}');
-
-      // 3. Metadata POST (no data field)
-      const metaReq = mock.requests[2];
-      expect(metaReq.url).toBe("/api/sessions");
-      const metaBody = metaReq.body as { session: Record<string, unknown>; commits: Array<Record<string, unknown>> };
-      expect(metaBody.session.id).toBe(sessionId);
-      expect(metaBody.session.agent).toBe("claude-code");
-      expect(metaBody.session.status).toBe("ended");
-      expect(metaBody.session).not.toHaveProperty("data");
-      expect(metaBody.commits).toHaveLength(1);
-      expect(metaBody.commits[0].org).toBe("my-org");
-      expect(metaBody.commits[0].repo).toBe("my-repo");
+      const body = req.body as { session: Record<string, unknown>; commits: Array<Record<string, unknown>> };
+      expect(body.session.id).toBe(sessionId);
+      expect(body.session.agent).toBe("claude-code");
+      expect(body.session.status).toBe("ended");
+      expect(body.session.data).toBe('{"role":"user","content":"hello"}');
+      expect(body.commits).toHaveLength(1);
+      expect(body.commits[0].org).toBe("my-org");
+      expect(body.commits[0].repo).toBe("my-repo");
 
       // Ended session removed from pending
       const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
@@ -261,7 +227,7 @@ describe("sync command", () => {
       const stderr = await new Response(syncProc.stderr).text();
 
       expect(exitCode).toBe(0);
-      expect(stderr).toContain("Failed to get upload URL");
+      expect(stderr).toContain("Upload failed");
 
       const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
       const sessions = (await readPending(pendingPath))._unsafeUnwrap();
