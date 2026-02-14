@@ -273,7 +273,7 @@
       "worker",
       "api"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/worker/test/api/sessions-post.test.ts passes"
     ],
