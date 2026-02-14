@@ -126,11 +126,11 @@ describe("sync command", () => {
       await writeFile(dataPath, '{"role":"user","content":"hello"}');
 
       // Create and end a session
-      const startProc = cli(["session-start", "--agent", "claude-code", "--data", dataPath]);
+      const startProc = cli(["session", "start", "--agent", "claude-code", "--data", dataPath]);
       await startProc.exited;
       const sessionId = (await new Response(startProc.stdout).text()).trim();
 
-      const endProc = cli(["session-end", "--id", sessionId]);
+      const endProc = cli(["session", "end", "--id", sessionId]);
       await endProc.exited;
 
       const captureProc = cli(["capture"]);
@@ -179,7 +179,7 @@ describe("sync command", () => {
       const dataPath = join(tempDir, "session-data.jsonl");
       await writeFile(dataPath, "data");
 
-      const startProc = cli(["session-start", "--agent", "claude-code", "--data", dataPath]);
+      const startProc = cli(["session", "start", "--agent", "claude-code", "--data", dataPath]);
       await startProc.exited;
 
       const captureProc = cli(["capture"]);
@@ -212,11 +212,11 @@ describe("sync command", () => {
       const dataPath = join(tempDir, "session-data.jsonl");
       await writeFile(dataPath, "data");
 
-      const startProc = cli(["session-start", "--agent", "claude-code", "--data", dataPath]);
+      const startProc = cli(["session", "start", "--agent", "claude-code", "--data", dataPath]);
       await startProc.exited;
       const sessionId = (await new Response(startProc.stdout).text()).trim();
 
-      const endProc = cli(["session-end", "--id", sessionId]);
+      const endProc = cli(["session", "end", "--id", sessionId]);
       await endProc.exited;
 
       const captureProc = cli(["capture"]);

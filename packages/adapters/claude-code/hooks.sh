@@ -56,7 +56,7 @@ case "$HOOK_EVENT" in
     fi
 
     # Call residue session-start; capture the session ID from stdout
-    RESIDUE_ID=$(residue session-start \
+    RESIDUE_ID=$(residue session start \
       --agent claude-code \
       --data "$TRANSCRIPT_PATH" \
       --agent-version "$CLAUDE_VERSION" 2>/dev/null) || true
@@ -73,7 +73,7 @@ case "$HOOK_EVENT" in
       rm -f "$STATE_FILE"
 
       if [ -n "$RESIDUE_ID" ]; then
-        residue session-end --id "$RESIDUE_ID" 2>/dev/null || true
+        residue session end --id "$RESIDUE_ID" 2>/dev/null || true
       fi
     fi
     ;;

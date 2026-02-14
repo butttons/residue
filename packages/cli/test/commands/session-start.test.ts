@@ -30,7 +30,7 @@ function cli(args: string[]) {
 
 describe("session-start command", () => {
   test("creates session and outputs UUID to stdout", async () => {
-    const proc = cli(["session-start", "--agent", "claude-code", "--data", "/tmp/session.jsonl"]);
+    const proc = cli(["session", "start", "--agent", "claude-code", "--data", "/tmp/session.jsonl"]);
     const exitCode = await proc.exited;
     const stdout = await new Response(proc.stdout).text();
     const stderr = await new Response(proc.stderr).text();
@@ -52,7 +52,7 @@ describe("session-start command", () => {
   });
 
   test("accepts --version flag", async () => {
-    const proc = cli(["session-start", "--agent", "claude-code", "--data", "/tmp/s.jsonl", "--agent-version", "1.2.3"]);
+    const proc = cli(["session", "start", "--agent", "claude-code", "--data", "/tmp/s.jsonl", "--agent-version", "1.2.3"]);
     await proc.exited;
 
     const pendingPath = join(tempDir, ".git/ai-sessions/pending.json");
@@ -61,13 +61,13 @@ describe("session-start command", () => {
   });
 
   test("exits 1 when --agent is missing", async () => {
-    const proc = cli(["session-start", "--data", "/tmp/s.jsonl"]);
+    const proc = cli(["session", "start", "--data", "/tmp/s.jsonl"]);
     const exitCode = await proc.exited;
     expect(exitCode).toBe(1);
   });
 
   test("exits 1 when --data is missing", async () => {
-    const proc = cli(["session-start", "--agent", "claude-code"]);
+    const proc = cli(["session", "start", "--agent", "claude-code"]);
     const exitCode = await proc.exited;
     expect(exitCode).toBe(1);
   });

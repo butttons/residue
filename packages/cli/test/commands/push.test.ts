@@ -44,12 +44,12 @@ function cli(args: string[]) {
 }
 
 describe("push command", () => {
-  test("behaves like sync (exits 0 when not configured)", async () => {
+  test("exits 1 when not configured", async () => {
     const proc = cli(["push"]);
     const exitCode = await proc.exited;
     const stderr = await new Response(proc.stderr).text();
 
-    expect(exitCode).toBe(0);
+    expect(exitCode).toBe(1);
     expect(stderr).toContain("Not configured");
   });
 

@@ -5,9 +5,9 @@
  * linking AI conversations to git commits.
  *
  * Lifecycle:
- *   session_start   -> residue session-start (registers session in pending queue)
- *   session_switch  -> residue session-end + session-start (swap tracked session)
- *   session_shutdown -> residue session-end (marks session as ended)
+ *   session_start   -> residue session start (registers session in pending queue)
+ *   session_switch  -> residue session end + session start (swap tracked session)
+ *   session_shutdown -> residue session end (marks session as ended)
  *
  * Install:
  *   pi -e /path/to/packages/adapters/pi/index.ts
@@ -42,7 +42,8 @@ export default function (pi: ExtensionAPI) {
     if (!isResidueAvailable) return;
 
     const result = await pi.exec("residue", [
-      "session-start",
+      "session",
+      "start",
       "--agent",
       "pi",
       "--data",
@@ -63,7 +64,7 @@ export default function (pi: ExtensionAPI) {
     const sessionId = residueSessionId;
     residueSessionId = undefined;
 
-    await pi.exec("residue", ["session-end", "--id", sessionId]);
+    await pi.exec("residue", ["session", "end", "--id", sessionId]);
   }
 
   pi.on("session_start", async (_event, ctx) => {

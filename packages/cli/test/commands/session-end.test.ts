@@ -31,12 +31,12 @@ function cli(args: string[]) {
 describe("session-end command", () => {
   test("marks an open session as ended", async () => {
     // First create a session
-    const startProc = cli(["session-start", "--agent", "claude-code", "--data", "/tmp/session.jsonl"]);
+    const startProc = cli(["session", "start", "--agent", "claude-code", "--data", "/tmp/session.jsonl"]);
     await startProc.exited;
     const sessionId = (await new Response(startProc.stdout).text()).trim();
 
     // End the session
-    const endProc = cli(["session-end", "--id", sessionId]);
+    const endProc = cli(["session", "end", "--id", sessionId]);
     const exitCode = await endProc.exited;
     const stderr = await new Response(endProc.stderr).text();
 
@@ -51,7 +51,7 @@ describe("session-end command", () => {
   });
 
   test("exits 1 when session not found", async () => {
-    const proc = cli(["session-end", "--id", "nonexistent-id"]);
+    const proc = cli(["session", "end", "--id", "nonexistent-id"]);
     const exitCode = await proc.exited;
     const stderr = await new Response(proc.stderr).text();
 
@@ -60,7 +60,7 @@ describe("session-end command", () => {
   });
 
   test("exits 1 when --id is missing", async () => {
-    const proc = cli(["session-end"]);
+    const proc = cli(["session", "end"]);
     const exitCode = await proc.exited;
     expect(exitCode).toBe(1);
   });

@@ -57,7 +57,7 @@ describe("claude code adapter", () => {
       fakeResidue,
       `#!/bin/sh
 echo "$@" >> "${residueCallsFile}"
-if echo "$@" | grep -q "session-start"; then
+if echo "$@" | grep -q "session start"; then
   echo "test-residue-session-id"
 fi
 exit 0
@@ -97,7 +97,7 @@ echo "2.1.42"
     };
   }
 
-  it("calls residue session-start on SessionStart", async () => {
+  it("calls residue session start on SessionStart", async () => {
     const result = await runHook({
       input: {
         session_id: "cc-session-123",
@@ -114,7 +114,7 @@ echo "2.1.42"
 
     const calls = getResidueCallsLog();
     expect(calls.length).toBe(1);
-    expect(calls[0]).toContain("session-start");
+    expect(calls[0]).toContain("session start");
     expect(calls[0]).toContain("--agent claude-code");
     expect(calls[0]).toContain("--data /tmp/transcript.jsonl");
     expect(calls[0]).toContain("--agent-version 2.1.42");
@@ -130,7 +130,7 @@ echo "2.1.42"
     expect(readFileSync(stateFile, "utf-8")).toBe("test-residue-session-id");
   });
 
-  it("calls residue session-end on SessionEnd", async () => {
+  it("calls residue session end on SessionEnd", async () => {
     // First start a session
     await runHook({
       input: {
@@ -158,7 +158,7 @@ echo "2.1.42"
 
     const calls = getResidueCallsLog();
     expect(calls.length).toBe(2);
-    expect(calls[1]).toContain("session-end");
+    expect(calls[1]).toContain("session end");
     expect(calls[1]).toContain("--id test-residue-session-id");
 
     // State file should be removed
@@ -295,11 +295,11 @@ echo "2.1.42"
     // Verify both residue calls
     const calls = getResidueCallsLog();
     expect(calls.length).toBe(2);
-    expect(calls[0]).toContain("session-start");
+    expect(calls[0]).toContain("session start");
     expect(calls[0]).toContain(
       "--data /home/user/.claude/projects/test/session.jsonl"
     );
-    expect(calls[1]).toContain("session-end");
+    expect(calls[1]).toContain("session end");
     expect(calls[1]).toContain("--id test-residue-session-id");
   });
 

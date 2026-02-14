@@ -1,4 +1,3 @@
-import type { Command } from "commander";
 import { readConfig } from "@/lib/config";
 import { getRemoteUrl, parseRemote, getCommitMeta } from "@/lib/git";
 import { getGitDir, getPendingPath, readPending, writePending } from "@/lib/pending";
@@ -46,53 +45,46 @@ async function postSession(opts: {
   }
 }
 
-export async function runSync(): Promise<void> {
+export async function sync(): Promise<void> {
   const configResult = await readConfig();
   if (configResult.isErr()) {
-    console.error(`Warning: ${configResult._unsafeUnwrapErr()}`);
-    process.exit(0);
+    throw new Error(configResult._unsafeUnwrapErr());
   }
 
   const config = configResult._unsafeUnwrap();
   if (!config) {
-    console.error("Warning: Not configured. Run 'residue login' first.");
-    process.exit(0);
+    throw new Error("Not configured. Run 'residue login' first.");
   }
 
   const gitDirResult = await getGitDir();
   if (gitDirResult.isErr()) {
-    console.error(`Warning: ${gitDirResult._unsafeUnwrapErr()}`);
-    process.exit(0);
+    throw new Error(gitDirResult._unsafeUnwrapErr());
   }
 
   const pendingPathResult = await getPendingPath(gitDirResult._unsafeUnwrap());
   if (pendingPathResult.isErr()) {
-    console.error(`Warning: ${pendingPathResult._unsafeUnwrapErr()}`);
-    process.exit(0);
+    throw new Error(pendingPathResult._unsafeUnwrapErr());
   }
 
   const pendingPath = pendingPathResult._unsafeUnwrap();
   const sessionsResult = await readPending(pendingPath);
   if (sessionsResult.isErr()) {
-    console.error(`Warning: ${sessionsResult._unsafeUnwrapErr()}`);
-    process.exit(0);
+    throw new Error(sessionsResult._unsafeUnwrapErr());
   }
 
   const sessions = sessionsResult._unsafeUnwrap();
   if (sessions.length === 0) {
-    process.exit(0);
+    return;
   }
 
   const remoteResult = await getRemoteUrl();
   if (remoteResult.isErr()) {
-    console.error(`Warning: ${remoteResult._unsafeUnwrapErr()}`);
-    process.exit(0);
+    throw new Error(remoteResult._unsafeUnwrapErr());
   }
 
   const parsed = parseRemote(remoteResult._unsafeUnwrap());
   if (parsed.isErr()) {
-    console.error(`Warning: ${parsed._unsafeUnwrapErr()}`);
-    process.exit(0);
+    throw new Error(parsed._unsafeUnwrapErr());
   }
 
   const { org, repo } = parsed._unsafeUnwrap();
@@ -164,15 +156,6 @@ export async function runSync(): Promise<void> {
 
   const writeResult = await writePending({ path: pendingPath, sessions: remaining });
   if (writeResult.isErr()) {
-    console.error(`Warning: ${writeResult._unsafeUnwrapErr()}`);
+    throw new Error(writeResult._unsafeUnwrapErr());
   }
-
-  process.exit(0);
-}
-
-export function registerSync(program: Command): void {
-  program
-    .command("sync")
-    .description("Upload pending sessions to worker (called by pre-push hook)")
-    .action(runSync);
 }

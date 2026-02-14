@@ -1,4 +1,3 @@
-import type { Command } from "commander";
 import { isGitRepo } from "@/lib/git";
 import { mkdir, readFile, writeFile, chmod, stat } from "fs/promises";
 import { join } from "path";
@@ -36,51 +35,45 @@ async function installHook(opts: {
   return `${opts.filename}: created`;
 }
 
-export function registerInit(program: Command): void {
-  program
-    .command("init")
-    .description("Install git hooks in current repo")
-    .action(async () => {
-      const isRepo = await isGitRepo();
-      if (isRepo.isErr() || !isRepo._unsafeUnwrap()) {
-        console.error("Error: not a git repository");
-        process.exit(1);
-      }
+export async function init(): Promise<void> {
+  const isRepo = await isGitRepo();
+  if (isRepo.isErr() || !isRepo._unsafeUnwrap()) {
+    throw new Error("not a git repository");
+  }
 
-      const proc = Bun.spawn(["git", "rev-parse", "--git-dir"], {
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      await proc.exited;
-      const gitDir = (await new Response(proc.stdout).text()).trim();
+  const proc = Bun.spawn(["git", "rev-parse", "--git-dir"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  await proc.exited;
+  const gitDir = (await new Response(proc.stdout).text()).trim();
 
-      const sessionsDir = join(gitDir, "ai-sessions");
-      await mkdir(sessionsDir, { recursive: true });
+  const sessionsDir = join(gitDir, "ai-sessions");
+  await mkdir(sessionsDir, { recursive: true });
 
-      const hooksDir = join(gitDir, "hooks");
-      await mkdir(hooksDir, { recursive: true });
+  const hooksDir = join(gitDir, "hooks");
+  await mkdir(hooksDir, { recursive: true });
 
-      const postCommit = await installHook({
-        hooksDir,
-        filename: "post-commit",
-        line: POST_COMMIT_LINE,
-      });
-      const prePush = await installHook({
-        hooksDir,
-        filename: "pre-push",
-        line: PRE_PUSH_LINE,
-      });
+  const postCommit = await installHook({
+    hooksDir,
+    filename: "post-commit",
+    line: POST_COMMIT_LINE,
+  });
+  const prePush = await installHook({
+    hooksDir,
+    filename: "pre-push",
+    line: PRE_PUSH_LINE,
+  });
 
-      console.log("Initialized residue in this repository.");
-      console.log(`  ${postCommit}`);
-      console.log(`  ${prePush}`);
+  console.log("Initialized residue in this repository.");
+  console.log(`  ${postCommit}`);
+  console.log(`  ${prePush}`);
 
-      const home = process.env.HOME || process.env.USERPROFILE || "/";
-      const hasClaudeDir = await Bun.file(join(home, ".claude")).exists().catch(() => false);
-      if (hasClaudeDir) {
-        console.log("\nDetected adapters: claude-code");
-      } else {
-        console.log("\nNo known adapters detected. Install an adapter to start capturing sessions.");
-      }
-    });
+  const home = process.env.HOME || process.env.USERPROFILE || "/";
+  const hasClaudeDir = await Bun.file(join(home, ".claude")).exists().catch(() => false);
+  if (hasClaudeDir) {
+    console.log("\nDetected adapters: claude-code");
+  } else {
+    console.log("\nNo known adapters detected. Install an adapter to start capturing sessions.");
+  }
 }

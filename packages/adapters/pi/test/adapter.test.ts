@@ -63,6 +63,12 @@ function createMockCtx(params: { sessionFile?: string }) {
   };
 }
 
+function findSessionCall(calls: ExecCall[], subcommand: "start" | "end") {
+  return calls.find(
+    (c) => c.command === "residue" && c.args[0] === "session" && c.args[1] === subcommand
+  );
+}
+
 describe("pi adapter", () => {
   let mock: ReturnType<typeof createMockPi>;
 
@@ -72,27 +78,26 @@ describe("pi adapter", () => {
     // Set up default exec results
     mock.execResults["which residue"] = { stdout: "/usr/local/bin/residue\n", stderr: "", code: 0 };
     mock.execResults["pi --version"] = { stdout: "0.52.12\n", stderr: "", code: 0 };
-    mock.execResults["residue session-start"] = { stdout: "test-session-id-123", stderr: "", code: 0 };
-    mock.execResults["residue session-end"] = { stdout: "", stderr: "Session ended", code: 0 };
+    mock.execResults["residue session start"] = { stdout: "test-session-id-123", stderr: "", code: 0 };
+    mock.execResults["residue session end"] = { stdout: "", stderr: "Session ended", code: 0 };
 
     // Load the extension
     const extensionModule = await import("../index.ts");
     extensionModule.default(mock.pi);
   });
 
-  it("calls residue session-start on session_start", async () => {
+  it("calls residue session start on session_start", async () => {
     const ctx = createMockCtx({
       sessionFile: "/home/user/.pi/agent/sessions/--project--/session.jsonl",
     });
 
     await mock.emit("session_start", {}, ctx);
 
-    const startCall = mock.execCalls.find(
-      (c) => c.command === "residue" && c.args[0] === "session-start"
-    );
+    const startCall = findSessionCall(mock.execCalls, "start");
     expect(startCall).toBeDefined();
     expect(startCall!.args).toEqual([
-      "session-start",
+      "session",
+      "start",
       "--agent",
       "pi",
       "--data",
@@ -102,7 +107,7 @@ describe("pi adapter", () => {
     ]);
   });
 
-  it("calls residue session-end on session_shutdown", async () => {
+  it("calls residue session end on session_shutdown", async () => {
     const ctx = createMockCtx({
       sessionFile: "/home/user/.pi/agent/sessions/--project--/session.jsonl",
     });
@@ -110,12 +115,11 @@ describe("pi adapter", () => {
     await mock.emit("session_start", {}, ctx);
     await mock.emit("session_shutdown", {}, {});
 
-    const endCall = mock.execCalls.find(
-      (c) => c.command === "residue" && c.args[0] === "session-end"
-    );
+    const endCall = findSessionCall(mock.execCalls, "end");
     expect(endCall).toBeDefined();
     expect(endCall!.args).toEqual([
-      "session-end",
+      "session",
+      "end",
       "--id",
       "test-session-id-123",
     ]);
@@ -138,7 +142,7 @@ describe("pi adapter", () => {
     let isSecondStart = false;
     const originalExec = mock.pi.exec.bind(mock.pi);
     (mock.pi as unknown as Record<string, unknown>).exec = async (command: string, args: string[]) => {
-      if (command === "residue" && args[0] === "session-start" && !isSecondStart) {
+      if (command === "residue" && args[0] === "session" && args[1] === "start" && !isSecondStart) {
         isSecondStart = true;
         mock.execCalls.push({ command, args });
         return { stdout: "new-session-id-456", stderr: "", code: 0, killed: false };
@@ -148,15 +152,11 @@ describe("pi adapter", () => {
 
     await mock.emit("session_switch", { reason: "new" }, ctx2);
 
-    const endCall = mock.execCalls.find(
-      (c) => c.command === "residue" && c.args[0] === "session-end"
-    );
+    const endCall = findSessionCall(mock.execCalls, "end");
     expect(endCall).toBeDefined();
     expect(endCall!.args).toContain("test-session-id-123");
 
-    const startCall = mock.execCalls.find(
-      (c) => c.command === "residue" && c.args[0] === "session-start"
-    );
+    const startCall = findSessionCall(mock.execCalls, "start");
     expect(startCall).toBeDefined();
     expect(startCall!.args).toContain("/sessions/new.jsonl");
   });
@@ -166,9 +166,7 @@ describe("pi adapter", () => {
 
     await mock.emit("session_start", {}, ctx);
 
-    const startCall = mock.execCalls.find(
-      (c) => c.command === "residue" && c.args[0] === "session-start"
-    );
+    const startCall = findSessionCall(mock.execCalls, "start");
     expect(startCall).toBeUndefined();
   });
 
@@ -181,19 +179,14 @@ describe("pi adapter", () => {
 
     await mock.emit("session_start", {}, ctx);
 
-    const startCall = mock.execCalls.find(
-      (c) => c.command === "residue" && c.args[0] === "session-start"
-    );
+    const startCall = findSessionCall(mock.execCalls, "start");
     expect(startCall).toBeUndefined();
   });
 
-  it("does not call session-end if no session was started", async () => {
-    // Don't fire session_start, go directly to shutdown
+  it("does not call session end if no session was started", async () => {
     await mock.emit("session_shutdown", {}, {});
 
-    const endCall = mock.execCalls.find(
-      (c) => c.command === "residue" && c.args[0] === "session-end"
-    );
+    const endCall = findSessionCall(mock.execCalls, "end");
     expect(endCall).toBeUndefined();
   });
 
@@ -206,9 +199,7 @@ describe("pi adapter", () => {
 
     await mock.emit("session_start", {}, ctx);
 
-    const startCall = mock.execCalls.find(
-      (c) => c.command === "residue" && c.args[0] === "session-start"
-    );
+    const startCall = findSessionCall(mock.execCalls, "start");
     expect(startCall).toBeDefined();
     expect(startCall!.args).toContain("1.0.0");
   });
@@ -222,9 +213,7 @@ describe("pi adapter", () => {
 
     await mock.emit("session_start", {}, ctx);
 
-    const startCall = mock.execCalls.find(
-      (c) => c.command === "residue" && c.args[0] === "session-start"
-    );
+    const startCall = findSessionCall(mock.execCalls, "start");
     expect(startCall).toBeDefined();
     expect(startCall!.args).toContain("unknown");
   });
