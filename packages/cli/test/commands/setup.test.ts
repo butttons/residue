@@ -128,7 +128,7 @@ describe("setup claude-code", () => {
 });
 
 describe("setup pi", () => {
-  test("copies extension to .pi/agent/extensions/residue.ts", async () => {
+  test("copies extension to .pi/extensions/residue.ts", async () => {
     const proc = cli(["setup", "pi"], tempDir);
     const exitCode = await proc.exited;
     const stdout = await new Response(proc.stdout).text();
@@ -139,7 +139,6 @@ describe("setup pi", () => {
     const extensionPath = join(
       tempDir,
       ".pi",
-      "agent",
       "extensions",
       "residue.ts"
     );

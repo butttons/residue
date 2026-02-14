@@ -2,6 +2,8 @@ import { getProjectRoot } from "@/lib/pending";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
 import { join } from "path";
 import { mkdir, readFile, writeFile, stat } from "fs/promises";
+// Embedded at build time so the binary doesn't need to resolve a file path at runtime
+import piAdapterSource from "@/adapters/pi/index.ts" with { type: "text" };
 
 type HookHandler = {
   type: string;
@@ -87,11 +89,8 @@ function setupClaudeCode(projectRoot: string): ResultAsync<void, string> {
 }
 
 function setupPi(projectRoot: string): ResultAsync<void, string> {
-  const extensionDir = join(projectRoot, ".pi", "agent", "extensions");
+  const extensionDir = join(projectRoot, ".pi", "extensions");
   const targetPath = join(extensionDir, "residue.ts");
-
-  // import.meta.dir for this file = packages/cli/src/commands/
-  const adapterSource = join(import.meta.dir, "..", "adapters", "pi", "index.ts");
 
   return ResultAsync.fromPromise(
     (async () => {
@@ -106,13 +105,12 @@ function setupPi(projectRoot: string): ResultAsync<void, string> {
       }
 
       if (isExisting) {
-        console.log("residue extension already exists at .pi/agent/extensions/residue.ts");
+        console.log("residue extension already exists at .pi/extensions/residue.ts");
         return;
       }
 
-      const source = await readFile(adapterSource, "utf-8");
-      await writeFile(targetPath, source);
-      console.log("Installed pi extension at .pi/agent/extensions/residue.ts");
+      await writeFile(targetPath, piAdapterSource);
+      console.log("Installed pi extension at .pi/extensions/residue.ts");
     })(),
     (e) => (e instanceof Error ? e.message : "Failed to setup pi")
   );
