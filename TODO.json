@@ -50,7 +50,7 @@
   {
     "id": 4,
     "title": "CLI: Git utilities",
-    "description": "Create packages/cli/src/lib/git.ts with:\n- parseRemote(remoteUrl: string) → {org, repo}: handles both SSH (git@github.com:org/repo.git) and HTTPS (https://github.com/org/repo.git) formats. Strips .git suffix.\n- getRemoteUrl() → string: runs 'git remote get-url origin'.\n- getCurrentSha() → string: runs 'git rev-parse HEAD'.\n- getCommitMeta(sha: string) → {message, author, committed_at}: runs git log with format string for the given SHA.\n- isGitRepo() → boolean: checks if .git/ exists.\nAll shell commands use Bun.spawn or Bun.$.",
+    "description": "Create packages/cli/src/lib/git.ts with:\n- parseRemote(remoteUrl: string) \u2192 {org, repo}: handles both SSH (git@github.com:org/repo.git) and HTTPS (https://github.com/org/repo.git) formats. Strips .git suffix.\n- getRemoteUrl() \u2192 string: runs 'git remote get-url origin'.\n- getCurrentSha() \u2192 string: runs 'git rev-parse HEAD'.\n- getCommitMeta(sha: string) \u2192 {message, author, committed_at}: runs git log with format string for the given SHA.\n- isGitRepo() \u2192 boolean: checks if .git/ exists.\nAll shell commands use Bun.spawn or Bun.$.",
     "tags": [
       "cli",
       "core"
@@ -66,7 +66,7 @@
   {
     "id": 5,
     "title": "CLI: Config management",
-    "description": "Create packages/cli/src/lib/config.ts. Manages ~/.residue/config (JSON file).\n- getConfigDir() → string: returns ~/.residue/, creates it if missing.\n- getConfigPath() → string: returns ~/.residue/config.\n- readConfig() → {worker_url: string, token: string} | null: reads and parses, returns null if file doesn't exist.\n- writeConfig(config: {worker_url: string, token: string}) → void: writes JSON, creates dir if needed.\n- configExists() → boolean.\nType: ResidueConfig = {worker_url: string, token: string}.",
+    "description": "Create packages/cli/src/lib/config.ts. Manages ~/.residue/config (JSON file).\n- getConfigDir() \u2192 string: returns ~/.residue/, creates it if missing.\n- getConfigPath() \u2192 string: returns ~/.residue/config.\n- readConfig() \u2192 {worker_url: string, token: string} | null: reads and parses, returns null if file doesn't exist.\n- writeConfig(config: {worker_url: string, token: string}) \u2192 void: writes JSON, creates dir if needed.\n- configExists() \u2192 boolean.\nType: ResidueConfig = {worker_url: string, token: string}.",
     "tags": [
       "cli",
       "core"
@@ -82,7 +82,7 @@
   {
     "id": 6,
     "title": "CLI: Pending queue management",
-    "description": "Create packages/cli/src/lib/pending.ts. Manages .git/ai-sessions/pending.json.\n\nType: PendingSession = {id: string, agent: string, agent_version: string, status: 'open' | 'ended', data_path: string, commits: string[]}.\n\nFunctions:\n- getPendingPath() → string: returns .git/ai-sessions/pending.json, creating dir if needed.\n- readPending() → PendingSession[]: reads file, returns [] if missing.\n- writePending(sessions: PendingSession[]) → void: atomic write.\n- addSession(session: PendingSession) → void: appends to list.\n- updateSession(id: string, updates: Partial<PendingSession>) → void: finds by ID, merges updates.\n- removeSession(id: string) → void: filters out by ID.\n- getSession(id: string) → PendingSession | undefined: find by ID.",
+    "description": "Create packages/cli/src/lib/pending.ts. Manages .git/ai-sessions/pending.json.\n\nType: PendingSession = {id: string, agent: string, agent_version: string, status: 'open' | 'ended', data_path: string, commits: string[]}.\n\nFunctions:\n- getPendingPath() \u2192 string: returns .git/ai-sessions/pending.json, creating dir if needed.\n- readPending() \u2192 PendingSession[]: reads file, returns [] if missing.\n- writePending(sessions: PendingSession[]) \u2192 void: atomic write.\n- addSession(session: PendingSession) \u2192 void: appends to list.\n- updateSession(id: string, updates: Partial<PendingSession>) \u2192 void: finds by ID, merges updates.\n- removeSession(id: string) \u2192 void: filters out by ID.\n- getSession(id: string) \u2192 PendingSession | undefined: find by ID.",
     "tags": [
       "cli",
       "core"
@@ -115,7 +115,7 @@
   {
     "id": 8,
     "title": "CLI: login command",
-    "description": "Create packages/cli/src/commands/login.ts.\n\nFlags: --url <worker_url>, --token <auth_token>.\n\nBehavior:\n1. Parse --url and --token from args.\n2. If either is missing, print error with usage and exit 1.\n3. Validate URL format (must start with http:// or https://).\n4. Strip trailing slash from URL.\n5. Save {worker_url, token} via config.writeConfig().\n6. Print success: 'Logged in to <url>'.\n\nNo interactive prompts — flags only for scriptability.",
+    "description": "Create packages/cli/src/commands/login.ts.\n\nFlags: --url <worker_url>, --token <auth_token>.\n\nBehavior:\n1. Parse --url and --token from args.\n2. If either is missing, print error with usage and exit 1.\n3. Validate URL format (must start with http:// or https://).\n4. Strip trailing slash from URL.\n5. Save {worker_url, token} via config.writeConfig().\n6. Print success: 'Logged in to <url>'.\n\nNo interactive prompts \u2014 flags only for scriptability.",
     "tags": [
       "cli",
       "command"
@@ -132,7 +132,7 @@
   {
     "id": 9,
     "title": "CLI: init command",
-    "description": "Create packages/cli/src/commands/init.ts.\n\nBehavior:\n1. Check isGitRepo() — exit with error if not.\n2. Create .git/ai-sessions/ directory.\n3. Install post-commit hook: write '#!/bin/sh\\nresidue capture' to .git/hooks/post-commit. If file exists, check if 'residue capture' is already present — if not, append it. Make executable (chmod +x).\n4. Install pre-push hook: write '#!/bin/sh\\nresidue sync' to .git/hooks/pre-push. Same append logic. Make executable.\n5. Print summary of what was installed.\n6. Check for known adapters (look for ~/.claude/ for claude-code). Print detected adapters or warn if none found.",
+    "description": "Create packages/cli/src/commands/init.ts.\n\nBehavior:\n1. Check isGitRepo() \u2014 exit with error if not.\n2. Create .git/ai-sessions/ directory.\n3. Install post-commit hook: write '#!/bin/sh\\nresidue capture' to .git/hooks/post-commit. If file exists, check if 'residue capture' is already present \u2014 if not, append it. Make executable (chmod +x).\n4. Install pre-push hook: write '#!/bin/sh\\nresidue sync' to .git/hooks/pre-push. Same append logic. Make executable.\n5. Print summary of what was installed.\n6. Check for known adapters (look for ~/.claude/ for claude-code). Print detected adapters or warn if none found.",
     "tags": [
       "cli",
       "command"
@@ -149,7 +149,7 @@
   {
     "id": 10,
     "title": "CLI: session-start command",
-    "description": "Create packages/cli/src/commands/session-start.ts.\n\nFlags: --agent <name>, --agent-version <semver>, --data <path-to-raw-session-file>.\n\nBehavior:\n1. Parse flags. --agent and --data are required; --agent-version defaults to 'unknown'.\n2. Validate data_path exists (or will exist — just store the path).\n3. Generate a UUID v4 session ID.\n4. Create PendingSession: {id, agent, agent_version, status: 'open', data_path, commits: []}.\n5. Add to pending queue via pending.addSession().\n6. Write ONLY the session ID to stdout (so the adapter can capture it). No other output to stdout.\n7. Log any status messages to stderr.",
+    "description": "Create packages/cli/src/commands/session-start.ts.\n\nFlags: --agent <name>, --agent-version <semver>, --data <path-to-raw-session-file>.\n\nBehavior:\n1. Parse flags. --agent and --data are required; --agent-version defaults to 'unknown'.\n2. Validate data_path exists (or will exist \u2014 just store the path).\n3. Generate a UUID v4 session ID.\n4. Create PendingSession: {id, agent, agent_version, status: 'open', data_path, commits: []}.\n5. Add to pending queue via pending.addSession().\n6. Write ONLY the session ID to stdout (so the adapter can capture it). No other output to stdout.\n7. Log any status messages to stderr.",
     "tags": [
       "cli",
       "command"
@@ -336,7 +336,7 @@
   {
     "id": 21,
     "title": "Worker: Common message types + mapper registry",
-    "description": "Create packages/worker/src/types.ts:\n\ntype ToolCall = {name: string, input: string, output: string}.\ntype Message = {role: string, content: string, timestamp?: string, tool_calls?: ToolCall[]}.\ntype Mapper = (raw: string) => Message[].\n\nCreate packages/worker/src/mappers/index.ts:\nExport a registry: Record<string, Mapper> mapping agent names to mapper functions. Initially has 'claude-code' key (pointing to placeholder until mapper is built). Export a getMapper(agent: string) → Mapper | null function.",
+    "description": "Create packages/worker/src/types.ts:\n\ntype ToolCall = {name: string, input: string, output: string}.\ntype Message = {role: string, content: string, timestamp?: string, tool_calls?: ToolCall[]}.\ntype Mapper = (raw: string) => Message[].\n\nCreate packages/worker/src/mappers/index.ts:\nExport a registry: Record<string, Mapper> mapping agent names to mapper functions. Initially has 'claude-code' key (pointing to placeholder until mapper is built). Export a getMapper(agent: string) \u2192 Mapper | null function.",
     "tags": [
       "worker",
       "types"
@@ -352,7 +352,7 @@
   {
     "id": 22,
     "title": "Worker: Claude Code mapper",
-    "description": "Create packages/worker/src/mappers/claude-code.ts.\n\nPure function: (raw: string) => Message[].\n\nClaude Code stores sessions as JSON (array of message objects). Each message has type/role. Parse the raw data and map:\n- 'human'/'user' type → Message with role 'human'\n- 'assistant' type → Message with role 'assistant'. If content blocks include tool_use, extract name + input into tool_calls array.\n- 'tool_result' type → match back to the preceding tool_use by tool_use_id and fill in the output field.\n\nHandle edge cases: empty sessions, malformed JSON (return empty array), missing fields.\n\nRegister in the mapper registry.",
+    "description": "Create packages/worker/src/mappers/claude-code.ts.\n\nPure function: (raw: string) => Message[].\n\nClaude Code stores sessions as JSON (array of message objects). Each message has type/role. Parse the raw data and map:\n- 'human'/'user' type \u2192 Message with role 'human'\n- 'assistant' type \u2192 Message with role 'assistant'. If content blocks include tool_use, extract name + input into tool_calls array.\n- 'tool_result' type \u2192 match back to the preceding tool_use by tool_use_id and fill in the output field.\n\nHandle edge cases: empty sessions, malformed JSON (return empty array), missing fields.\n\nRegister in the mapper registry.",
     "tags": [
       "worker",
       "mapper"
@@ -384,7 +384,7 @@
   {
     "id": 24,
     "title": "Worker: Conversation renderer component",
-    "description": "Create packages/worker/src/components/Conversation.tsx.\n\nProps: {messages: Message[], continuesFrom?: {sha: string, url: string}, continuesIn?: {sha: string, url: string}}.\n\nRenders:\n- Each message with a role label: emerald-400 for 'human', violet-400 for 'assistant', amber-400 for 'tool'.\n- Content as HTML (pre-rendered markdown — or raw text with whitespace preserved).\n- Code blocks: darker bg than surface (zinc-950 in dark mode), rounded-md, p-3, overflow-x-auto, monospace.\n- Tool calls: <details> element, collapsed by default. Summary shows tool name with CaretRight icon. Expanded shows input + output in subdued zinc-500 text.\n- Tight spacing: gap-2 between messages.\n- Continuation links at top/bottom: 'Continues from <sha>' with ArrowUp, 'Continues in <sha>' with ArrowDown, in zinc-400 secondary text.",
+    "description": "Create packages/worker/src/components/Conversation.tsx.\n\nProps: {messages: Message[], continuesFrom?: {sha: string, url: string}, continuesIn?: {sha: string, url: string}}.\n\nRenders:\n- Each message with a role label: emerald-400 for 'human', violet-400 for 'assistant', amber-400 for 'tool'.\n- Content as HTML (pre-rendered markdown \u2014 or raw text with whitespace preserved).\n- Code blocks: darker bg than surface (zinc-950 in dark mode), rounded-md, p-3, overflow-x-auto, monospace.\n- Tool calls: <details> element, collapsed by default. Summary shows tool name with CaretRight icon. Expanded shows input + output in subdued zinc-500 text.\n- Tight spacing: gap-2 between messages.\n- Continuation links at top/bottom: 'Continues from <sha>' with ArrowUp, 'Continues in <sha>' with ArrowDown, in zinc-400 secondary text.",
     "tags": [
       "worker",
       "ui"
@@ -493,7 +493,7 @@
   {
     "id": 30,
     "title": "Worker: Deployment config + Deploy to Cloudflare",
-    "description": "Finalize deployment setup:\n1. Ensure wrangler.toml has correct D1 database_name + database_id placeholder, R2 bucket_name, AUTH_TOKEN as secret.\n2. Create packages/worker/setup.sh script that: runs wrangler d1 create, runs wrangler d1 execute with migration, runs wrangler r2 bucket create, generates a random auth token, sets it via wrangler secret put.\n3. Add 'Deploy to Cloudflare Workers' button to the worker README that forks and deploys.\n4. Document: after deploy, user gets worker URL + auth token → run 'residue login --url <url> --token <token>'.\n5. Ensure 'pnpm --filter worker deploy' runs wrangler deploy successfully.",
+    "description": "Finalize deployment setup:\n1. Ensure wrangler.toml has correct D1 database_name + database_id placeholder, R2 bucket_name, AUTH_TOKEN as secret.\n2. Create packages/worker/setup.sh script that: runs wrangler d1 create, runs wrangler d1 execute with migration, runs wrangler r2 bucket create, generates a random auth token, sets it via wrangler secret put.\n3. Add 'Deploy to Cloudflare Workers' button to the worker README that forks and deploys.\n4. Document: after deploy, user gets worker URL + auth token \u2192 run 'residue login --url <url> --token <token>'.\n5. Ensure 'pnpm --filter worker deploy' runs wrangler deploy successfully.",
     "tags": [
       "worker",
       "deployment"
@@ -622,7 +622,10 @@
     "id": 37,
     "title": "Move pending state from .git/ai-sessions/ to .residue/",
     "description": "All project-local residue state should live in a .residue/ folder at the project root (gitignored), not inside .git/. Change pending.ts: replace getGitDir() with getProjectRoot() (git rev-parse --show-toplevel), replace getPendingPath to use .residue/pending.json, add getResidueDir() helper. Update all consumers (session-start, session-end, capture, sync) to use getProjectRoot + getPendingPath instead of getGitDir + getPendingPath. Update all tests to expect .residue/pending.json instead of .git/ai-sessions/pending.json.",
-    "tags": ["cli", "refactor"],
+    "tags": [
+      "cli",
+      "refactor"
+    ],
     "isDone": true,
     "tests": [
       "packages/cli/test/pending.test.ts passes",
@@ -637,42 +640,78 @@
     "id": 38,
     "title": "Update init command: .residue/ dir + .gitignore",
     "description": "Update residue init to: create .residue/ directory instead of .git/ai-sessions/, add .residue/ to .gitignore if not already present. Keep git hook installation (post-commit, pre-push) as-is. Remove the adapter detection logic at the end (no longer relevant). Update init tests accordingly.",
-    "tags": ["cli", "refactor"],
+    "tags": [
+      "cli",
+      "refactor"
+    ],
     "isDone": true,
     "tests": [
       "packages/cli/test/commands/init.test.ts passes"
     ],
-    "dependencies": [37]
+    "dependencies": [
+      37
+    ]
   },
   {
     "id": 39,
     "title": "Add residue setup command with claude-code and pi subcommands",
     "description": "Add 'residue setup <agent>' command. For claude-code: create .claude/settings.json in project root with SessionStart (matcher: startup) and SessionEnd hooks that call 'residue hook claude-code'. If .claude/settings.json already exists, merge hooks into it without clobbering existing config. For pi: copy the pi extension source to .pi/agent/extensions/residue.ts in the project, creating directories as needed. Both subcommands should be idempotent.",
-    "tags": ["cli", "command"],
+    "tags": [
+      "cli",
+      "command"
+    ],
     "isDone": true,
     "tests": [
       "packages/cli/test/commands/setup.test.ts passes"
     ],
-    "dependencies": [37]
+    "dependencies": [
+      37
+    ]
   },
   {
     "id": 40,
     "title": "Add residue hook claude-code command",
     "description": "Add 'residue hook claude-code' command that reads Claude Code hook JSON from stdin. Checks hook_event_name field. On SessionStart (source=startup): extracts transcript_path and session_id from stdin JSON, detects claude version via 'claude --version', calls session-start logic, saves mapping of claude session_id to residue session_id in .residue/hooks/<claude-session-id>.state. On SessionEnd: reads claude session_id from stdin, looks up residue session ID from state file, calls session-end logic, removes state file. Skips gracefully on resume/compact/clear, missing transcript_path, or missing state. Must exit 0 always (never block Claude Code).",
-    "tags": ["cli", "command"],
+    "tags": [
+      "cli",
+      "command"
+    ],
     "isDone": true,
     "tests": [
       "packages/cli/test/commands/hook.test.ts passes"
     ],
-    "dependencies": [37]
+    "dependencies": [
+      37
+    ]
   },
   {
     "id": 41,
     "title": "Clean up old adapter packages",
     "description": "Remove packages/adapters/claude-code/hooks.sh, install.ts, uninstall.ts. Keep only the test file (rewritten for the new hook command in TODO 40). Remove packages/adapters/claude-code/test/install.test.ts. Update packages/adapters/pi to just be the source file that gets copied by 'residue setup pi' (keep index.ts, remove test since it tests the extension API directly and is not affected by this refactor). Update AGENTS.md to reflect the new setup flow.",
-    "tags": ["cleanup"],
+    "tags": [
+      "cleanup"
+    ],
     "isDone": true,
     "tests": [],
-    "dependencies": [39, 40]
+    "dependencies": [
+      39,
+      40
+    ]
+  },
+  {
+    "id": 42,
+    "title": "Auto-close stale open sessions during sync",
+    "description": "Before syncing, check each open session's data_path mtime. If the file hasn't been modified in 30+ minutes, mark the session as ended. If the file is missing/inaccessible, also mark as ended. This handles dangling sessions from crashed or closed agent processes that never called session-end. Implemented in closeStaleOpenSessions() in sync.ts, called before syncSessions().",
+    "tags": [
+      "cli",
+      "feature"
+    ],
+    "isDone": true,
+    "tests": [
+      "packages/cli/test/commands/sync.test.ts passes"
+    ],
+    "dependencies": [
+      13
+    ]
   }
 ]

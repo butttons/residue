@@ -3,6 +3,9 @@ import { getRemoteUrl, parseRemote, getCommitMeta } from "@/lib/git";
 import { getProjectRoot, getPendingPath, readPending, writePending } from "@/lib/pending";
 import type { PendingSession, CommitRef } from "@/lib/pending";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
+import { stat } from "fs/promises";
+
+const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
 
 type CommitPayload = {
   sha: string;
@@ -85,6 +88,50 @@ function buildCommitMeta(opts: {
       return commits;
     })()
   );
+}
+
+function getFileMtimeMs(path: string): ResultAsync<number | null, string> {
+  return ResultAsync.fromPromise(
+    stat(path).then((s) => s.mtimeMs),
+    () => "stat failed"
+  ).orElse(() => okAsync(null));
+}
+
+/**
+ * Mark open sessions as ended if their data file hasn't been modified
+ * in the last 30 minutes. This handles dangling sessions from crashed
+ * or closed agent processes that never called session-end.
+ */
+function closeStaleOpenSessions(opts: {
+  sessions: PendingSession[];
+}): ResultAsync<PendingSession[], string> {
+  const now = Date.now();
+  const openSessions = opts.sessions.filter((s) => s.status === "open");
+
+  if (openSessions.length === 0) {
+    return okAsync(opts.sessions);
+  }
+
+  const checks = openSessions.map((session) =>
+    getFileMtimeMs(session.data_path).map((mtimeMs) => {
+      if (mtimeMs === null) {
+        session.status = "ended";
+        console.error(
+          `Auto-closed session ${session.id} (data file not accessible)`
+        );
+      } else {
+        const msSinceModified = now - mtimeMs;
+        if (msSinceModified > STALE_THRESHOLD_MS) {
+          session.status = "ended";
+          console.error(
+            `Auto-closed stale session ${session.id} (data file unchanged for ${Math.round(msSinceModified / 60_000)}m)`
+          );
+        }
+      }
+    })
+  );
+
+  return ResultAsync.combine(checks).map(() => opts.sessions);
 }
 
 function syncSessions(opts: {
@@ -183,17 +230,20 @@ export function sync(opts?: { remoteUrl?: string }): ResultAsync<void, string> {
             return okAsync(undefined);
           }
 
-          return resolveRemote(opts?.remoteUrl)
-            .andThen(({ org, repo }) =>
-              syncSessions({
-                sessions,
-                workerUrl: config.worker_url,
-                token: config.token,
-                org,
-                repo,
-              }).andThen((remaining) =>
-                writePending({ path: pendingPath, sessions: remaining })
-              )
+          return closeStaleOpenSessions({ sessions })
+            .andThen((updatedSessions) =>
+              resolveRemote(opts?.remoteUrl)
+                .andThen(({ org, repo }) =>
+                  syncSessions({
+                    sessions: updatedSessions,
+                    workerUrl: config.worker_url,
+                    token: config.token,
+                    org,
+                    repo,
+                  }).andThen((remaining) =>
+                    writePending({ path: pendingPath, sessions: remaining })
+                  )
+                )
             );
         })
       );

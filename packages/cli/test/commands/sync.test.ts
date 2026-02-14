@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { join } from "path";
-import { mkdtemp, rm, writeFile, mkdir } from "fs/promises";
+import { mkdtemp, rm, writeFile, mkdir, utimes } from "fs/promises";
 import { tmpdir } from "os";
 import { readPending } from "@/lib/pending";
 
@@ -261,6 +261,115 @@ describe("sync command", () => {
       const body = mock.requests[0].body as { commits: Array<{ org: string; repo: string }> };
       expect(body.commits[0].org).toBe("my-org");
       expect(body.commits[0].repo).toBe("my-repo");
+    } finally {
+      mock.stop();
+    }
+  });
+
+  test("auto-closes stale open sessions before syncing", async () => {
+    const mock = createMockServer();
+
+    try {
+      await setupConfig({ workerUrl: mock.workerUrl, token: "t" });
+
+      const dataPath = join(tempDir, "session-data.jsonl");
+      await writeFile(dataPath, "stale data");
+
+      // Start a session and capture a commit
+      const startProc = cli(["session", "start", "--agent", "pi", "--data", dataPath]);
+      await startProc.exited;
+      const sessionId = (await new Response(startProc.stdout).text()).trim();
+
+      const captureProc = cli(["capture"]);
+      await captureProc.exited;
+
+      // Set the data file mtime to 2 hours ago so it looks stale
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      await utimes(dataPath, twoHoursAgo, twoHoursAgo);
+
+      // Sync -- the open session should be auto-closed and removed from pending
+      const syncProc = cli(["sync"]);
+      const exitCode = await syncProc.exited;
+      const stderr = await new Response(syncProc.stderr).text();
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toContain("Auto-closed stale session");
+      expect(stderr).toContain(sessionId);
+
+      // Session was auto-closed to "ended", so after successful sync it should be removed
+      const pendingPath = join(tempDir, ".residue/pending.json");
+      const sessions = (await readPending(pendingPath))._unsafeUnwrap();
+      expect(sessions).toHaveLength(0);
+
+      // Verify the upload sent status "ended"
+      expect(mock.requests).toHaveLength(1);
+      const body = mock.requests[0].body as { session: { status: string } };
+      expect(body.session.status).toBe("ended");
+    } finally {
+      mock.stop();
+    }
+  });
+
+  test("does not auto-close recently active open sessions", async () => {
+    const mock = createMockServer();
+
+    try {
+      await setupConfig({ workerUrl: mock.workerUrl, token: "t" });
+
+      const dataPath = join(tempDir, "session-data.jsonl");
+      await writeFile(dataPath, "fresh data");
+
+      // Start a session and capture a commit -- data file mtime is now (fresh)
+      const startProc = cli(["session", "start", "--agent", "pi", "--data", dataPath]);
+      await startProc.exited;
+
+      const captureProc = cli(["capture"]);
+      await captureProc.exited;
+
+      const syncProc = cli(["sync"]);
+      const exitCode = await syncProc.exited;
+      const stderr = await new Response(syncProc.stderr).text();
+
+      expect(exitCode).toBe(0);
+      expect(stderr).not.toContain("Auto-closed");
+
+      // Open session stays in pending
+      const pendingPath = join(tempDir, ".residue/pending.json");
+      const sessions = (await readPending(pendingPath))._unsafeUnwrap();
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].status).toBe("open");
+    } finally {
+      mock.stop();
+    }
+  });
+
+  test("auto-closes open session when data file is missing", async () => {
+    const mock = createMockServer();
+
+    try {
+      await setupConfig({ workerUrl: mock.workerUrl, token: "t" });
+
+      const dataPath = join(tempDir, "session-data.jsonl");
+      await writeFile(dataPath, "data");
+
+      const startProc = cli(["session", "start", "--agent", "pi", "--data", dataPath]);
+      await startProc.exited;
+      const sessionId = (await new Response(startProc.stdout).text()).trim();
+
+      const captureProc = cli(["capture"]);
+      await captureProc.exited;
+
+      // Delete the data file
+      await rm(dataPath);
+
+      const syncProc = cli(["sync"]);
+      const exitCode = await syncProc.exited;
+      const stderr = await new Response(syncProc.stderr).text();
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toContain("Auto-closed session");
+      expect(stderr).toContain("not accessible");
+      expect(stderr).toContain(sessionId);
     } finally {
       mock.stop();
     }
