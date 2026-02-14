@@ -57,4 +57,39 @@ repos.get("/:org/:repo", async (c) => {
   return c.json({ commits, next_cursor: nextCursor }, 200);
 });
 
+repos.get("/:org/:repo/:sha", async (c) => {
+  const org = c.req.param("org");
+  const repo = c.req.param("repo");
+  const sha = c.req.param("sha");
+
+  const db = new DB(c.env.DB);
+  const rows = await db.getCommitShaDetail({ sha, org, repo });
+
+  if (rows.length === 0) {
+    return c.json({ error: "Commit not found" }, 404);
+  }
+
+  const first = rows[0];
+  const sessions = rows.map((row) => ({
+    id: row.session_id,
+    agent: row.agent,
+    agent_version: row.agent_version,
+    created_at: row.session_created_at,
+    ended_at: row.session_ended_at,
+  }));
+
+  return c.json(
+    {
+      commit: {
+        sha: first.commit_sha,
+        message: first.message,
+        author: first.author,
+        committed_at: first.committed_at,
+      },
+      sessions,
+    },
+    200
+  );
+});
+
 export { repos };

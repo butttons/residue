@@ -324,7 +324,7 @@
       "worker",
       "api"
     ],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/worker/test/api/repos-sha.test.ts passes"
     ],

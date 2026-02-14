@@ -56,7 +56,26 @@ type CommitWithSessionRow = {
   agent: string;
 };
 
-export type { SessionRow, CommitRow, CommitWithSessionRow, OrgListItem, RepoListItem };
+type CommitShaDetailRow = {
+  commit_sha: string;
+  message: string | null;
+  author: string | null;
+  committed_at: number | null;
+  session_id: string;
+  agent: string;
+  agent_version: string | null;
+  session_created_at: number;
+  session_ended_at: number | null;
+};
+
+export type {
+  SessionRow,
+  CommitRow,
+  CommitWithSessionRow,
+  CommitShaDetailRow,
+  OrgListItem,
+  RepoListItem,
+};
 
 export class DB {
   constructor(private db: D1Database) {}
@@ -170,6 +189,26 @@ export class DB {
       .prepare("SELECT * FROM commits WHERE commit_sha = ?")
       .bind(sha)
       .all<CommitRow>();
+
+    return result.results;
+  }
+
+  async getCommitShaDetail(opts: {
+    sha: string;
+    org: string;
+    repo: string;
+  }): Promise<CommitShaDetailRow[]> {
+    const result = await this.db
+      .prepare(
+        `SELECT c.commit_sha, c.message, c.author, c.committed_at,
+                s.id as session_id, s.agent, s.agent_version,
+                s.created_at as session_created_at, s.ended_at as session_ended_at
+         FROM commits c
+         JOIN sessions s ON c.session_id = s.id
+         WHERE c.commit_sha = ? AND c.org = ? AND c.repo = ?`
+      )
+      .bind(opts.sha, opts.org, opts.repo)
+      .all<CommitShaDetailRow>();
 
     return result.results;
   }
