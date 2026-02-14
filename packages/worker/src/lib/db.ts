@@ -47,7 +47,16 @@ type RepoListItem = {
   last_activity: number;
 };
 
-export type { SessionRow, CommitRow, OrgListItem, RepoListItem };
+type CommitWithSessionRow = {
+  commit_sha: string;
+  message: string | null;
+  author: string | null;
+  committed_at: number | null;
+  session_id: string;
+  agent: string;
+};
+
+export type { SessionRow, CommitRow, CommitWithSessionRow, OrgListItem, RepoListItem };
 
 export class DB {
   constructor(private db: D1Database) {}
@@ -115,6 +124,43 @@ export class DB {
       )
       .bind(opts.org, opts.repo, cursor, limit)
       .all<CommitRow>();
+
+    return result.results;
+  }
+
+  async getCommitsWithSessions(opts: {
+    org: string;
+    repo: string;
+    cursor?: number;
+    limit?: number;
+  }): Promise<CommitWithSessionRow[]> {
+    const limit = opts.limit ?? 50;
+
+    let query: string;
+    let bindings: unknown[];
+
+    if (opts.cursor !== undefined) {
+      query = `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.session_id, s.agent
+               FROM commits c
+               JOIN sessions s ON c.session_id = s.id
+               WHERE c.org = ? AND c.repo = ? AND c.committed_at < ?
+               ORDER BY c.committed_at DESC
+               LIMIT ?`;
+      bindings = [opts.org, opts.repo, opts.cursor, limit];
+    } else {
+      query = `SELECT c.commit_sha, c.message, c.author, c.committed_at, c.session_id, s.agent
+               FROM commits c
+               JOIN sessions s ON c.session_id = s.id
+               WHERE c.org = ? AND c.repo = ?
+               ORDER BY c.committed_at DESC
+               LIMIT ?`;
+      bindings = [opts.org, opts.repo, limit];
+    }
+
+    const result = await this.db
+      .prepare(query)
+      .bind(...bindings)
+      .all<CommitWithSessionRow>();
 
     return result.results;
   }
