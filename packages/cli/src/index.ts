@@ -9,6 +9,7 @@ import { sessionEnd } from "@/commands/session-end";
 import { capture } from "@/commands/capture";
 import { sync } from "@/commands/sync";
 import { push } from "@/commands/push";
+import { hookClaudeCode } from "@/commands/hook";
 import { wrapCommand, wrapHookCommand } from "@/utils/errors";
 
 const program = new Command();
@@ -37,6 +38,15 @@ program
   .description("Configure an agent adapter for this project")
   .argument("<agent>", "Agent to set up (claude-code, pi)")
   .action(wrapCommand((agent: string) => setup({ agent })));
+
+const hook = program
+  .command("hook")
+  .description("Agent hook handlers (called by agent plugins)");
+
+hook
+  .command("claude-code")
+  .description("Handle Claude Code hook events (reads JSON from stdin)")
+  .action(wrapHookCommand(() => hookClaudeCode()));
 
 const session = program
   .command("session")

@@ -660,7 +660,7 @@
     "title": "Add residue hook claude-code command",
     "description": "Add 'residue hook claude-code' command that reads Claude Code hook JSON from stdin. Checks hook_event_name field. On SessionStart (source=startup): extracts transcript_path and session_id from stdin JSON, detects claude version via 'claude --version', calls session-start logic, saves mapping of claude session_id to residue session_id in .residue/hooks/<claude-session-id>.state. On SessionEnd: reads claude session_id from stdin, looks up residue session ID from state file, calls session-end logic, removes state file. Skips gracefully on resume/compact/clear, missing transcript_path, or missing state. Must exit 0 always (never block Claude Code).",
     "tags": ["cli", "command"],
-    "isDone": false,
+    "isDone": true,
     "tests": [
       "packages/cli/test/commands/hook.test.ts passes"
     ],
