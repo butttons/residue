@@ -9,5 +9,5 @@ windows:
             - cd packages/worker
             - pnpm dev
         - docs:
-            - cd docs
+            - cd packages/docs
             - pnpm dev
