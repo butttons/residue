@@ -255,47 +255,4 @@ describe("POST /api/sessions", () => {
 	});
 });
 
-describe("POST /api/sessions/upload-url", () => {
-	it("returns 401 without auth", async () => {
-		const res = await SELF.fetch("https://test.local/api/sessions/upload-url", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ session_id: "s1" }),
-		});
-		expect(res.status).toBe(401);
-	});
 
-	it("returns 400 when session_id is missing", async () => {
-		const res = await SELF.fetch("https://test.local/api/sessions/upload-url", {
-			method: "POST",
-			headers: { ...AUTH_HEADER, "Content-Type": "application/json" },
-			body: JSON.stringify({}),
-		});
-		expect(res.status).toBe(400);
-		const body = await res.json<{ error: string }>();
-		expect(body.error).toBe("Validation failed");
-	});
-
-	it("returns 400 when session_id is empty", async () => {
-		const res = await SELF.fetch("https://test.local/api/sessions/upload-url", {
-			method: "POST",
-			headers: { ...AUTH_HEADER, "Content-Type": "application/json" },
-			body: JSON.stringify({ session_id: "" }),
-		});
-		expect(res.status).toBe(400);
-	});
-
-	it("returns a presigned URL for valid request", async () => {
-		const res = await SELF.fetch("https://test.local/api/sessions/upload-url", {
-			method: "POST",
-			headers: { ...AUTH_HEADER, "Content-Type": "application/json" },
-			body: JSON.stringify({ session_id: "test-session-upload" }),
-		});
-		expect(res.status).toBe(200);
-		const body = await res.json<{ url: string }>();
-		expect(body.url).toBeDefined();
-		expect(typeof body.url).toBe("string");
-		expect(body.url).toContain("sessions/test-session-upload.json");
-		expect(body.url).toContain("X-Amz-");
-	});
-});

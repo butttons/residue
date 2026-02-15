@@ -10,8 +10,6 @@
 		"cf-typegen": "wrangler types"
 	},
 	"dependencies": {
-		"@aws-sdk/client-s3": "^3.990.0",
-		"@aws-sdk/s3-request-presigner": "^3.990.0",
 		"@hono/zod-validator": "^0.7.6",
 		"date-fns": "^4.1.0",
 		"hono": "^4.7.0",

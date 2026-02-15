@@ -9,10 +9,6 @@ declare namespace Cloudflare {
 		BUCKET: R2Bucket;
 		DB: D1Database;
 		AUTH_TOKEN: string;
-		R2_ACCESS_KEY_ID: string;
-		R2_SECRET_ACCESS_KEY: string;
-		R2_ACCOUNT_ID: string;
-		R2_BUCKET_NAME: string;
 		ADMIN_USERNAME: string;
 		ADMIN_PASSWORD: string;
 	}

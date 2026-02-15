@@ -9,9 +9,9 @@ An open-source CLI + self-hosted backend that captures AI agent conversations an
 ```
 packages/
   cli/                → "residue" npm package, built with bun
+    adapters/
+      pi/             → pi coding agent extension (embedded at build time)
   worker/             → Cloudflare Worker (Hono + JSX), one-click deploy template
-  adapters/
-    claude-code/      → Claude Code agent plugin
 ```
 
 Monorepo managed with **pnpm workspaces**. Runtime is **bun**.
@@ -20,42 +20,59 @@ Monorepo managed with **pnpm workspaces**. Runtime is **bun**.
 
 ### Core Flow
 
-There are two event sources: **agent plugins** and **git hooks**.
+There are two event sources: **agent adapters** and **git hooks**.
 
-Agent plugins call into the CLI when conversations start and end. Git hooks call into the CLI when commits and pushes happen. The CLI maintains local state that connects the two.
+Agent adapters call into the CLI when conversations start and end. Git hooks call into the CLI when commits and pushes happen. The CLI maintains local state that connects the two.
 
 ```
-Agent Plugin                    Git Hooks
-    │                               │
-    ├─ session-start ──┐            │
-    │                  ▼            │
-    │              LOCAL STATE      │
-    │              (pending queue)  │
-    ├─ session-end ────┘            │
-    │                               ├─ post-commit → capture
-    │                               │   (tag pending sessions with SHA)
-    │                               │
-    │                               ├─ pre-push → sync
-    │                               │   (upload to worker, clear local state)
+Agent Adapter                   Git Hooks
+    |                               |
+    |-- session start --+           |
+    |                   v           |
+    |              LOCAL STATE      |
+    |              (pending queue)  |
+    |-- session end ----+           |
+    |                               |-- post-commit -> capture
+    |                               |   (tag pending sessions with SHA)
+    |                               |
+    |                               |-- pre-push -> sync
+    |                               |   (upload to worker, clear local state)
 ```
 
 ### Session Lifecycle
 
-1. Agent plugin calls `residue session-start` → CLI generates a session ID, adds entry to pending queue
+1. Agent adapter triggers a session start -> CLI generates a session ID, adds entry to pending queue
 2. User has a conversation with the AI agent
-3. Agent plugin calls `residue session-end` → CLI saves the raw session data, marks session as ended
-4. User commits → post-commit hook runs `residue capture` → all pending sessions (ended AND open) get tagged with the commit SHA
-5. User pushes → pre-push hook runs `residue sync` → uploads session data + commit mappings to the worker, clears local state
+3. Agent adapter triggers a session end -> CLI marks session as ended in the pending queue
+4. User commits -> post-commit hook runs `residue capture` -> pending sessions get tagged with the commit SHA
+5. User pushes -> pre-push hook runs `residue sync` -> CLI reads raw session data from disk, POSTs it inline to the worker API, worker writes to R2 and D1
+
+### Upload Flow
+
+The CLI uploads session data **through the worker API**, not directly to R2. The flow is:
+
+```
+CLI (reads data_path from disk)
+  -> POST /api/sessions (session data sent inline as JSON string)
+    -> Worker writes to R2 (via BUCKET binding)
+    -> Worker upserts D1 metadata
+```
+
+There is no presigned URL flow. The worker's R2 bucket binding handles all R2 writes server-side.
 
 ### Key Design Decisions
 
 **A conversation can span multiple commits.** If a session is still open when a commit happens, it gets linked to that commit. When the next commit happens, the same session gets linked again. The full session data is stored once; multiple commits reference it.
 
+**Capture tagging is selective.** Open sessions always get tagged. Ended sessions with zero commits get tagged once. Ended sessions that already have commits are skipped to avoid incorrectly linking unrelated work.
+
 **On push, open sessions upload their current state.** If a session is still open at push time, the current conversation state is uploaded to R2. On the next push, it gets overwritten with the latest state. The R2 key stays the same.
 
-**Org and repo are inferred from the git remote.** `git@github.com:my-team/my-app.git` → org is `my-team`, repo is `my-app`. No manual configuration needed.
+**Stale session detection.** During sync, open sessions whose data file has not been modified in 30 minutes are automatically marked as ended. This handles agent processes that crashed or closed without calling session-end.
 
-**No data normalization.** Raw agent session data is stored as-is in R2. The UI knows how to render each agent's format. Adding a new agent means writing a new renderer, not changing the storage schema.
+**Org and repo are inferred from the git remote.** `git@github.com:my-team/my-app.git` -> org is `my-team`, repo is `my-app`. No manual configuration needed.
+
+**No data normalization at rest.** Raw agent session data is stored as-is in R2. The worker's mappers transform it into a common format at render time. Adding a new agent means writing a mapper, not changing the storage schema.
 
 **Users deploy their own worker.** No multi-tenant backend. Each user/team deploys their own Cloudflare Worker via a one-click deploy button. This eliminates auth complexity, data privacy concerns, and hosting costs for us.
 
@@ -71,25 +88,37 @@ Agent Plugin                    Git Hooks
 
 **User-facing:**
 
-| Command         | Description                                                                                  |
-| --------------- | -------------------------------------------------------------------------------------------- |
-| `residue login` | Save worker URL + auth token to global config                                                |
-| `residue init`  | Install git hooks in current repo, detect available adapters. Warns if no adapters are found |
-| `residue push`  | Manual trigger to upload pending sessions (alias for sync)                                   |
+| Command                       | Description                                                      |
+| ----------------------------- | ---------------------------------------------------------------- |
+| `residue login`               | Save worker URL + auth token to global config                    |
+| `residue init`                | Install git hooks (post-commit, pre-push) in current repo        |
+| `residue setup <agent>`       | Configure an agent adapter for this project (claude-code, pi)    |
+| `residue push`                | Manual trigger to upload pending sessions (alias for sync)       |
 
 **Hook-invoked (git):**
 
 | Command           | Description                                                                                  |
 | ----------------- | -------------------------------------------------------------------------------------------- |
-| `residue capture` | Called by post-commit hook. Tags all pending sessions with the current commit SHA            |
-| `residue sync`    | Called by pre-push hook. Accepts `--remote-url` to derive org/repo from the pushed remote. Uploads all unsynced session data to the worker, clears local state |
+| `residue capture` | Called by post-commit hook. Tags pending sessions with the current commit SHA and branch     |
+| `residue sync`    | Called by pre-push hook. Accepts `--remote-url` to derive org/repo. Uploads session data inline to worker API, clears ended sessions from local state |
 
-**Hook-invoked (agent plugins):**
+**Hook-invoked (agent adapters):**
 
-| Command                 | Description                                                                                                                                                                    |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `residue session-start` | Called by agent plugin when a conversation begins. Generates and returns a session ID to stdout. Flags: `--agent <n>` `--version <semver>` `--data <path-to-raw-session-file>` |
-| `residue session-end`   | Called by agent plugin when a conversation ends. Just marks the session as ended. Flags: `--id <session-id>`                                                                   |
+| Command                    | Description                                                                                                                             |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `residue session start`    | Called by agent adapter when a conversation begins. Generates and returns a session ID to stdout. Flags: `--agent <name>` `--data <path-to-raw-session-file>` `--agent-version <semver>` |
+| `residue session end`      | Called by agent adapter when a conversation ends. Marks the session as ended. Flags: `--id <session-id>`                                |
+| `residue hook claude-code` | Specialized handler for Claude Code hooks. Reads JSON from stdin (Claude Code hook protocol). Handles both SessionStart and SessionEnd internally |
+
+### Agent Adapters
+
+Adapters are **not a separate package**. They live inside the CLI or are installed into projects by `residue setup`.
+
+**Claude Code:** Uses Claude Code's native hook system. `residue setup claude-code` writes hook entries into `.claude/settings.json` that pipe session lifecycle events (as JSON on stdin) to `residue hook claude-code`. The hook command internally manages session start/end and maps Claude's `session_id` to residue's session ID via state files in `.residue/hooks/`.
+
+**Pi:** Uses pi's extension system. `residue setup pi` installs an extension file at `.pi/extensions/residue.ts`. The extension source is embedded into the CLI binary at build time from `packages/cli/adapters/pi/extension.ts.txt`. The extension calls `residue session start` and `residue session end` directly via `pi.exec()`.
+
+Both adapters store hook state in `.residue/hooks/` within the project root.
 
 ### Local State
 
@@ -102,9 +131,9 @@ Agent Plugin                    Git Hooks
 }
 ```
 
-**Repo-level state:** `.git/ai-sessions/`
+**Repo-level state:** `.residue/` (gitignored by `residue init`)
 
-Pending queue: `.git/ai-sessions/pending.json`
+Pending queue: `.residue/pending.json`
 
 ```json
 [
@@ -118,8 +147,8 @@ Pending queue: `.git/ai-sessions/pending.json`
   },
   {
     "id": "session-uuid-2",
-    "agent": "claude-code",
-    "agent_version": "1.2.3",
+    "agent": "pi",
+    "agent_version": "0.5.0",
     "status": "open",
     "data_path": "/path/to/raw/session/log",
     "commits": [{"sha": "abc123", "branch": "feature-auth"}]
@@ -127,23 +156,29 @@ Pending queue: `.git/ai-sessions/pending.json`
 ]
 ```
 
+Hook state: `.residue/hooks/` (maps agent session IDs to residue session IDs)
+
 **`residue capture` behavior:**
 
 - Reads pending.json
 - Gets the current commit SHA and branch name
-- For every session (both `open` and `ended`), appends `{sha, branch}` to its `commits` array (if not already tagged)
+- Open sessions: always tagged
+- Ended sessions with zero commits: tagged once
+- Ended sessions that already have commits: skipped
 - Writes updated pending.json
 
 **`residue sync` behavior:**
 
 - Reads pending.json
+- Auto-closes stale open sessions (data file unmodified for 30+ minutes)
 - Derives org + repo from `--remote-url` if provided (passed by pre-push hook), otherwise falls back to `git remote get-url origin`
-- For each session:
+- For each session with commits:
   - Reads raw session data directly from `data_path` (no local copies)
   - Reads commit metadata (message, author, timestamp) from git log for each associated SHA
-  - POSTs to worker: session metadata + raw data + commit SHAs with metadata
+  - POSTs to `POST /api/sessions` on the worker: session metadata + raw data inline + commit payloads
   - If session is `ended`: removes from pending.json
   - If session is `open`: keeps in pending.json (will re-upload with updated data on next push)
+- Sessions with zero commits are kept as-is (nothing to upload yet)
 
 ### Git Hooks
 
@@ -171,17 +206,19 @@ The `$2` argument is the remote URL passed by git to the pre-push hook. This ens
 
 - **Framework:** Hono
 - **Rendering:** JSX (server-rendered HTML)
-- **Build:** Vite
+- **Testing:** Vitest with @cloudflare/vitest-pool-workers
 - **Styling:** Tailwind CSS
 - **Icons:** Phosphor Icons
 - **Storage:** Cloudflare R2 (raw session blobs) + D1 (query index)
 - **Deployment:** One-click "Deploy to Cloudflare" button
 
-The worker serves both the API (JSON) and the UI (HTML) from the same routes or parallel route groups.
+The worker serves both the API (JSON) and the UI (HTML) from separate route groups.
 
 ### Auth
 
-A single secret token set at deploy time as an environment variable. The CLI sends it as a Bearer token. No user management, no OAuth. It's their own infrastructure.
+**API routes** (`/api/*`): Bearer token auth. A single secret `AUTH_TOKEN` set at deploy time. The CLI sends it as `Authorization: Bearer <token>`.
+
+**UI routes** (`/app/*`): HTTP basic auth. `ADMIN_USERNAME` and `ADMIN_PASSWORD` env vars set at deploy time.
 
 ### D1 Schema
 
@@ -221,15 +258,15 @@ A session is stored once. Multiple commits can reference the same session. Org a
 
 Key format: `sessions/<session-id>.json`
 
-The blob is the raw, unmodified agent session data. The worker does not parse, validate, or transform it. For open sessions that span multiple pushes, the key stays the same and the blob is overwritten with the latest state.
+The blob is the raw, unmodified agent session data. The worker writes to R2 via its `BUCKET` binding when it receives a `POST /api/sessions` request with inline data. For open sessions that span multiple pushes, the key stays the same and the blob is overwritten with the latest state.
 
 ### API Routes
 
 ```
-POST   /api/sessions                → Upload session data + commit mappings
-GET    /api/sessions/:id            → Fetch raw session data from R2
-GET    /api/repos/:org/:repo        → List commits with sessions (from D1, paginated via ?cursor=)
-GET    /api/repos/:org/:repo/:sha   → Get sessions for a specific commit
+POST   /api/sessions                -> Receive session data inline + commit mappings, write to R2 and D1
+GET    /api/sessions/:id            -> Fetch session metadata + raw data from R2
+GET    /api/repos/:org/:repo        -> List commits with sessions (from D1, paginated via ?cursor=)
+GET    /api/repos/:org/:repo/:sha   -> Get sessions for a specific commit
 ```
 
 **POST /api/sessions** request body:
@@ -241,7 +278,7 @@ GET    /api/repos/:org/:repo/:sha   → Get sessions for a specific commit
     "agent": "claude-code",
     "agent_version": "1.2.3",
     "status": "ended",
-    "data": "<raw session content>"
+    "data": "<raw session content as string>"
   },
   "commits": [
     {
@@ -252,15 +289,6 @@ GET    /api/repos/:org/:repo/:sha   → Get sessions for a specific commit
       "author": "jane",
       "committed_at": 1700000000,
       "branch": "feature-auth"
-    },
-    {
-      "sha": "def456",
-      "org": "my-team",
-      "repo": "my-app",
-      "message": "add rate limiting",
-      "author": "jane",
-      "committed_at": 1700003600,
-      "branch": "feature-auth"
     }
   ]
 }
@@ -268,15 +296,71 @@ GET    /api/repos/:org/:repo/:sha   → Get sessions for a specific commit
 
 Worker behavior on POST:
 
-1. Write raw session data to R2 at `sessions/<session-id>.json`
+1. If `session.data` is provided, write it to R2 at `sessions/<session-id>.json`
 2. Upsert session row in D1 (update `ended_at` if status is ended)
-3. Insert commit rows in D1 (skip duplicates)
+3. Insert commit rows in D1 (skip duplicates via `ON CONFLICT DO NOTHING`)
+
+### Conversation Rendering
+
+There is **one generic UI component** that renders all conversations. It takes a common `Message[]` format and renders:
+
+- Chat messages with role labels
+- Code blocks with syntax highlighting
+- Tool calls as collapsible blocks (tool name as header, input/output inside)
+- Markdown rendering in message content
+- "Continues from / continues in" links for sessions spanning multiple commits
+
+Each agent gets a **mapper** -- a pure function that transforms the agent's raw session data into the common format. The mapper is the only agent-specific code. Everything else is shared.
+
+```ts
+type ToolCall = {
+  name: string;
+  input: string;
+  output: string;
+};
+
+type Message = {
+  role: string;
+  content: string;
+  timestamp?: string;
+  model?: string;
+  tool_calls?: ToolCall[];
+};
+
+type Mapper = (raw: string) => Message[];
+```
+
+Mappers live in the worker:
+
+```
+worker/src/mappers/
+  claude-code.ts
+  pi.ts
+  index.ts          -> registry, getMapper(agent) lookup
+```
+
+The worker reads `agent` from D1, picks the right mapper via `getMapper()`, transforms the raw R2 blob, and passes `Message[]` to the JSX template. Adding a new agent means writing one mapper function and registering it.
+
+### UI Routes (Hono + JSX)
+
+All UI routes are under `/app` and protected by basic auth:
+
+```
+GET    /app                         -> List orgs (grouped from commits table)
+GET    /app/:org                    -> List repos in org
+GET    /app/:org/:repo              -> Commit log with linked sessions
+GET    /app/:org/:repo/:sha         -> Expanded view: commit + conversation(s)
+```
+
+`GET /` redirects to `/app`.
+
+The UI is server-rendered HTML via Hono's JSX support. No client-side framework.
 
 ### Styling
 
 **Fonts:** Monospace-first. `JetBrains Mono` or `IBM Plex Mono` for all UI text. System monospace as fallback.
 
-**Color palette (dark mode — default):**
+**Color palette (dark mode -- default):**
 
 - Background: `zinc-950`
 - Surface/cards: `zinc-900`
@@ -296,83 +380,17 @@ Worker behavior on POST:
 - Accent: `blue-600`
 - Role labels: `emerald-600` (human), `violet-600` (assistant), `amber-600` (tool)
 
-**Spacing:** Tight. `gap-2` between messages, `gap-4` between commits. Dense information display — this is a dev tool, not a marketing site.
+**Spacing:** Tight. `gap-2` between messages, `gap-4` between commits. Dense information display -- this is a dev tool, not a marketing site.
 
 **Code blocks:** Syntax highlighted with a minimal theme. Background slightly darker than surface. Rounded corners, small padding.
 
-**Tool calls:** Collapsed by default. Phosphor `CaretRight` icon to expand. When expanded, show tool name, input, and output in a subdued style — they're context, not the main content.
+**Tool calls:** Collapsed by default. Phosphor `CaretRight` icon to expand. When expanded, show tool name, input, and output in a subdued style -- they're context, not the main content.
 
 **Commit entries:** Subtle left border or dot indicator. SHA in monospace accent color. Message in primary text. Author and timestamp in secondary text. Agent badges as small pills.
 
 **Session continuation:** Thin connecting line between commits that share a session. "continues from/in" links in secondary text with Phosphor `ArrowUp`/`ArrowDown` icons.
 
 **Responsive:** Single column. Works on mobile but optimized for desktop. No sidebar on mobile.
-
-### UI Routes (Hono + JSX)
-
-```
-GET    /                            → List orgs (grouped from commits table)
-GET    /:org                        → List repos in org
-GET    /:org/:repo                  → Commit log with linked sessions
-GET    /:org/:repo/:sha             → Expanded view: commit + conversation(s)
-```
-
-The UI is server-rendered HTML via Hono's JSX support. No client-side framework.
-
-### UI Design
-
-**Four pages:**
-
-**`/` — Home:** List of orgs with repo counts.
-
-**`/:org` — Org:** List of repos with last activity and session counts.
-
-**`/:org/:repo` — Commit log (primary view):** Vertical timeline of commits, newest first. Each entry shows short SHA, commit message, author, relative timestamp, and agent badge(s). Clicking a commit expands the conversation(s) inline. If a session spans multiple commits, show "continues from <sha>" / "continues in <sha>" links for navigation.
-
-**`/:org/:repo/:sha` — Permalink:** Same as expanded state but as its own page. Shareable URL.
-
-**Overall feel:** Minimal. Dark and light mode. Monospace-leaning like GitHub. No dashboards, no charts. It's a reading interface.
-
-### Conversation Rendering
-
-There is **one generic UI component** that renders all conversations. It takes a common `Message[]` format and renders:
-
-- Chat messages with role labels
-- Code blocks with syntax highlighting
-- Tool calls as collapsible blocks (tool name as header, input/output inside)
-- Markdown rendering in message content
-- "Continues from / continues in" links for sessions spanning multiple commits
-
-Each agent gets a **mapper** — a pure function that transforms the agent's raw session data into the common format. The mapper is the only agent-specific code. Everything else is shared.
-
-```ts
-type ToolCall = {
-  name: string;
-  input: string;
-  output: string;
-};
-
-type Message = {
-  role: string;
-  content: string;
-  timestamp?: string;
-  tool_calls?: ToolCall[];
-};
-
-type Mapper = (raw: string) => Message[];
-```
-
-Mappers live in the worker:
-
-```
-worker/
-  mappers/
-    claude-code.ts
-    cursor.ts
-    aider.ts
-```
-
-The worker reads `agent` + `agent_version` from D1, picks the right mapper, transforms the raw R2 blob, and passes `Message[]` to the JSX template. Adding a new agent means writing one mapper function.
 
 ### Deployment Template
 
@@ -386,32 +404,6 @@ The worker repo includes a "Deploy to Cloudflare" button that:
 
 The user gets back a worker URL and a token. That's all they need to run `residue login`.
 
-## Adapters (`packages/adapters/`)
-
-Each adapter is an agent-specific plugin that hooks into the agent's lifecycle and calls two CLI commands:
-
-```
-residue session-start --agent <name> --version <semver>
-# returns session ID to stdout
-
-residue session-end --id <session-id> --data <path-to-raw-log>
-```
-
-### Claude Code Adapter (`packages/adapters/claude-code/`)
-
-The first adapter to build. Implementation depends on how Claude Code exposes session lifecycle hooks. The adapter needs to:
-
-1. Detect when a new conversation starts
-2. Locate the raw session log file path
-3. Call `residue session-start --agent claude-code --version <detected-version> --data <path-to-log>`
-4. Hold the returned session ID
-5. Detect when the conversation ends
-6. Call `residue session-end --id <session-id>`
-
-Session data is stored in `~/.claude/projects/` — the adapter should read from there.
-
-Future adapters (Cursor, Aider, Copilot, etc.) follow the same pattern with agent-specific lifecycle detection.
-
 ## Build & Development
 
 ```bash
@@ -424,7 +416,9 @@ pnpm --filter worker dev    # wrangler dev
 
 # Build
 pnpm --filter cli build
-pnpm --filter worker build
+
+# Test
+pnpm --filter worker test
 
 # Deploy worker
 pnpm --filter worker deploy
@@ -449,7 +443,7 @@ The tmux session is named `residue`. Use `tmux capture-pane -t residue -p` to re
 
 ## Coding Conventions
 
-- **No emojis.** Never use emojis anywhere — code, comments, logs, commit messages. Hard requirement.
+- **No emojis.** Never use emojis anywhere -- code, comments, logs, commit messages. Hard requirement.
 - **`type` over `interface`.** Always prefer `type` for object shapes. Never use `interface`.
 - **Boolean naming.** Boolean variables and properties must be prefixed with `is` or `has`.
 - **Single object params.** Functions with 2+ parameters must use a single object parameter. Single-primitive-param functions are fine as-is.
