@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { raw } from "hono/html";
 import type { FC } from "hono/jsx";
+import { ActivityGraph } from "../components/ActivityGraph";
 import { CommitGraph } from "../components/CommitGraph";
 import type { ContinuationLink } from "../components/Conversation";
 import { Conversation } from "../components/Conversation";
@@ -213,12 +214,12 @@ pages.get("/:org/:repo", async (c) => {
 
 	const db = new DB(c.env.DB);
 	const commitLimit = 20;
-	const rows = await db.getCommitGraphData({
-		org,
-		repo,
-		cursor,
-		limit: commitLimit,
-	});
+
+	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
+	const [rows, dailyCounts] = await Promise.all([
+		db.getCommitGraphData({ org, repo, cursor, limit: commitLimit }),
+		db.getDailySessionCounts({ org, repo, since: oneYearAgo }),
+	]);
 
 	if (rows.length === 0 && !cursorParam) {
 		return c.html(
@@ -252,6 +253,8 @@ pages.get("/:org/:repo", async (c) => {
 					{ label: repo },
 				]}
 			/>
+
+			<ActivityGraph dailyCounts={dailyCounts} org={org} repo={repo} />
 
 			<CommitGraph data={graphData} org={org} repo={repo} />
 

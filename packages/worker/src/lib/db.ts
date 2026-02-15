@@ -82,6 +82,11 @@ type CommitShaDetailRow = {
 	branch: string | null;
 };
 
+type DailySessionCount = {
+	date: string;
+	count: number;
+};
+
 export type {
 	SessionRow,
 	CommitRow,
@@ -90,6 +95,7 @@ export type {
 	OrgListItem,
 	RepoListItem,
 	SessionCommitRow,
+	DailySessionCount,
 };
 
 export class DB {
@@ -324,6 +330,26 @@ export class DB {
 			)
 			.bind(sessionId)
 			.all<SessionCommitRow>();
+
+		return result.results;
+	}
+
+	async getDailySessionCounts(opts: {
+		org: string;
+		repo: string;
+		since: number;
+	}): Promise<DailySessionCount[]> {
+		const result = await this.db
+			.prepare(
+				`SELECT DATE(s.created_at, 'unixepoch') as date, COUNT(DISTINCT s.id) as count
+         FROM sessions s
+         JOIN commits c ON c.session_id = s.id
+         WHERE c.org = ? AND c.repo = ? AND s.created_at >= ?
+         GROUP BY date
+         ORDER BY date ASC`,
+			)
+			.bind(opts.org, opts.repo, opts.since)
+			.all<DailySessionCount>();
 
 		return result.results;
 	}
