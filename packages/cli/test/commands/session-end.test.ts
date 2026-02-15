@@ -24,7 +24,7 @@ function cli(args: string[]) {
     cwd: tempDir,
     stdout: "pipe",
     stderr: "pipe",
-    env: { ...process.env },
+    env: { ...process.env, DEBUG: "residue:*" },
   });
 }
 
@@ -39,7 +39,9 @@ describe("session-end command", () => {
     const stderr = await new Response(endProc.stderr).text();
 
     expect(exitCode).toBe(0);
-    expect(stderr).toContain(`Session ${sessionId} ended`);
+    expect(stderr).toContain("session");
+    expect(stderr).toContain(sessionId);
+    expect(stderr).toContain("ended");
 
     const pendingPath = join(tempDir, ".residue/pending.json");
     const sessions = (await readPending(pendingPath))._unsafeUnwrap();

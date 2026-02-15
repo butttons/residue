@@ -3,7 +3,10 @@ import { getRemoteUrl, parseRemote, getCommitMeta } from "@/lib/git";
 import { getProjectRoot, getPendingPath, readPending, writePending } from "@/lib/pending";
 import type { PendingSession, CommitRef } from "@/lib/pending";
 import { CliError, toCliError } from "@/utils/errors";
+import { createLogger } from "@/utils/logger";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
+
+const log = createLogger("sync");
 import { stat } from "fs/promises";
 
 const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
@@ -73,7 +76,7 @@ function buildCommitMeta(opts: {
       for (const ref of opts.commitRefs) {
         const metaResult = await getCommitMeta(ref.sha);
         if (metaResult.isErr()) {
-          console.error(`Warning: ${metaResult.error.message}`);
+          log.warn(metaResult.error);
           continue;
         }
         commits.push({
@@ -117,15 +120,15 @@ function closeStaleOpenSessions(opts: {
     getFileMtimeMs(session.data_path).map((mtimeMs) => {
       if (mtimeMs === null) {
         session.status = "ended";
-        console.error(
-          `Auto-closed session ${session.id} (data file not accessible)`
-        );
+        log.debug("auto-closed session %s (data file not accessible)", session.id);
       } else {
         const msSinceModified = now - mtimeMs;
         if (msSinceModified > STALE_THRESHOLD_MS) {
           session.status = "ended";
-          console.error(
-            `Auto-closed stale session ${session.id} (data file unchanged for ${Math.round(msSinceModified / 60_000)}m)`
+          log.debug(
+            "auto-closed stale session %s (data file unchanged for %dm)",
+            session.id,
+            Math.round(msSinceModified / 60_000),
           );
         }
       }
@@ -154,14 +157,14 @@ function syncSessions(opts: {
 
         const dataResult = await readSessionData(session.data_path);
         if (dataResult.isErr()) {
-          console.error(`Warning: ${dataResult.error.message}`);
+          log.warn(dataResult.error);
           remaining.push(session);
           continue;
         }
 
         const data = dataResult.value;
         if (data === null) {
-          console.error(`Dropping session ${session.id}: data file missing at ${session.data_path}`);
+          log.warn(`dropping session ${session.id}: data file missing at ${session.data_path}`);
           continue;
         }
 
@@ -171,7 +174,7 @@ function syncSessions(opts: {
           repo: opts.repo,
         });
         if (commitsResult.isErr()) {
-          console.error(`Warning: ${commitsResult.error.message}`);
+          log.warn(commitsResult.error);
           remaining.push(session);
           continue;
         }
@@ -190,7 +193,7 @@ function syncSessions(opts: {
         });
 
         if (uploadResult.isErr()) {
-          console.error(`Warning: Upload failed for session ${session.id}: ${uploadResult.error.message}`);
+          log.warn(`upload failed for session ${session.id}: ${uploadResult.error.message}`);
           remaining.push(session);
           continue;
         }
@@ -199,7 +202,7 @@ function syncSessions(opts: {
           remaining.push(session);
         }
 
-        console.error(`Synced session ${session.id}`);
+        log.debug("synced session %s", session.id);
       }
 
       return remaining;

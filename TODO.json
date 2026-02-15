@@ -747,5 +747,24 @@
     "dependencies": [
       34
     ]
+  },
+  {
+    "id": 45,
+    "title": "CLI: Replace console.log/error with structured logger",
+    "description": "Create packages/cli/src/utils/logger.ts using the debug npm package. The logger provides: log.debug() for diagnostic messages gated behind DEBUG=residue:*, log.info() for user-facing status always printed to stderr, log.warn() for warnings (accepts string or Error), log.error() for errors (accepts string or Error). All output goes to stderr so stdout stays clean for machine-readable data. Replace every console.log and console.error across the CLI source with the appropriate logger call.",
+    "tags": [
+      "cli",
+      "core",
+      "dx"
+    ],
+    "isDone": true,
+    "tests": [
+      "packages/cli/test passes (all 89 tests)",
+      "grep -r console.log packages/cli/src/ returns no results",
+      "grep -r console.error packages/cli/src/ returns no results"
+    ],
+    "dependencies": [
+      2
+    ]
   }
 ]

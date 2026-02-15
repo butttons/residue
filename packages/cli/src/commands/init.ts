@@ -1,7 +1,10 @@
 import { isGitRepo } from "@/lib/git";
 import { getProjectRoot, getResidueDir } from "@/lib/pending";
 import { CliError, toCliError } from "@/utils/errors";
+import { createLogger } from "@/utils/logger";
 import { errAsync, ResultAsync } from "neverthrow";
+
+const log = createLogger("init");
 import { mkdir, readFile, writeFile, chmod, stat, appendFile } from "fs/promises";
 import { join } from "path";
 
@@ -112,9 +115,9 @@ export function init(): ResultAsync<void, CliError> {
             installHook({ hooksDir, filename: "pre-push", line: PRE_PUSH_LINE }),
             ensureGitignore(projectRoot),
           ]).map(([postCommit, prePush]) => {
-            console.log("Initialized residue in this repository.");
-            console.log(`  ${postCommit}`);
-            console.log(`  ${prePush}`);
+            log.info("Initialized residue in this repository.");
+            log.info(`  ${postCommit}`);
+            log.info(`  ${prePush}`);
           })
         );
       }

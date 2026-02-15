@@ -1,6 +1,9 @@
 import { writeConfig } from "@/lib/config";
 import { CliError } from "@/utils/errors";
+import { createLogger } from "@/utils/logger";
 import { errAsync, type ResultAsync } from "neverthrow";
+
+const log = createLogger("login");
 
 export function login(opts: { url: string; token: string }): ResultAsync<void, CliError> {
   if (!opts.url.startsWith("http://") && !opts.url.startsWith("https://")) {
@@ -15,6 +18,6 @@ export function login(opts: { url: string; token: string }): ResultAsync<void, C
   const cleanUrl = opts.url.replace(/\/+$/, "");
 
   return writeConfig({ worker_url: cleanUrl, token: opts.token }).map(() => {
-    console.log(`Logged in to ${cleanUrl}`);
+    log.info(`Logged in to ${cleanUrl}`);
   });
 }

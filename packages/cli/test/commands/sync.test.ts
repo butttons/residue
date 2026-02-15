@@ -42,7 +42,7 @@ function cli(args: string[], env?: Record<string, string>) {
     cwd: tempDir,
     stdout: "pipe",
     stderr: "pipe",
-    env: { ...process.env, HOME: fakeHome, ...env },
+    env: { ...process.env, HOME: fakeHome, DEBUG: "residue:*", ...env },
   });
 }
 
@@ -142,7 +142,8 @@ describe("sync command", () => {
       const stderr = await new Response(syncProc.stderr).text();
 
       expect(exitCode).toBe(0);
-      expect(stderr).toContain(`Synced session ${sessionId}`);
+      expect(stderr).toContain("synced session");
+      expect(stderr).toContain(sessionId);
 
       // Should have 1 request: POST /api/sessions with inline data
       expect(mock.requests).toHaveLength(1);
@@ -293,7 +294,7 @@ describe("sync command", () => {
       const stderr = await new Response(syncProc.stderr).text();
 
       expect(exitCode).toBe(0);
-      expect(stderr).toContain("Auto-closed stale session");
+      expect(stderr).toContain("auto-closed stale session");
       expect(stderr).toContain(sessionId);
 
       // Session was auto-closed to "ended", so after successful sync it should be removed
@@ -331,7 +332,7 @@ describe("sync command", () => {
       const stderr = await new Response(syncProc.stderr).text();
 
       expect(exitCode).toBe(0);
-      expect(stderr).not.toContain("Auto-closed");
+      expect(stderr).not.toContain("auto-closed");
 
       // Open session stays in pending
       const pendingPath = join(tempDir, ".residue/pending.json");
@@ -367,7 +368,7 @@ describe("sync command", () => {
       const stderr = await new Response(syncProc.stderr).text();
 
       expect(exitCode).toBe(0);
-      expect(stderr).toContain("Auto-closed session");
+      expect(stderr).toContain("auto-closed session");
       expect(stderr).toContain("not accessible");
       expect(stderr).toContain(sessionId);
     } finally {
@@ -406,7 +407,7 @@ describe("sync command", () => {
       const stderr = await new Response(syncProc.stderr).text();
 
       expect(exitCode).toBe(0);
-      expect(stderr).toContain("Upload failed");
+      expect(stderr).toContain("upload failed");
 
       const pendingPath = join(tempDir, ".residue/pending.json");
       const sessions = (await readPending(pendingPath))._unsafeUnwrap();

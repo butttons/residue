@@ -1,6 +1,9 @@
 import { getProjectRoot, getPendingPath, getSession, updateSession } from "@/lib/pending";
 import { CliError } from "@/utils/errors";
+import { createLogger } from "@/utils/logger";
 import { errAsync, type ResultAsync } from "neverthrow";
+
+const log = createLogger("session");
 
 export function sessionEnd(opts: { id: string }): ResultAsync<void, CliError> {
   return getProjectRoot()
@@ -23,6 +26,6 @@ export function sessionEnd(opts: { id: string }): ResultAsync<void, CliError> {
       })
     )
     .map(() => {
-      console.error(`Session ${opts.id} ended`);
+      log.debug("session %s ended", opts.id);
     });
 }

@@ -1,4 +1,7 @@
+import { createLogger } from "@/utils/logger";
 import type { ResultAsync } from "neverthrow";
+
+const log = createLogger("cli");
 
 type CliErrorCode =
   | "GIT_ERROR"
@@ -48,7 +51,7 @@ function wrapCommand<T extends CommandFn>(
   return async (...args: Parameters<T>) => {
     const result = await fn(...args);
     if (result.isErr()) {
-      console.error(`Error: ${result.error.message}`);
+      log.error(result.error);
       process.exit(exitCode);
     }
   };

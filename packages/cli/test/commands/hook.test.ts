@@ -29,7 +29,7 @@ function cli(opts: { args: string[]; stdin: string; cwd: string }) {
     stdin: new Blob([opts.stdin]),
     stdout: "pipe",
     stderr: "pipe",
-    env: { ...process.env },
+    env: { ...process.env, DEBUG: "residue:*" },
   });
 }
 
@@ -55,7 +55,7 @@ describe("hook claude-code", () => {
     const stderr = await new Response(proc.stderr).text();
 
     expect(exitCode).toBe(0);
-    expect(stderr).toContain("Session started for claude-code");
+    expect(stderr).toContain("session started for claude-code");
 
     // Check pending session was created
     const pendingPath = join(tempDir, ".residue", "pending.json");

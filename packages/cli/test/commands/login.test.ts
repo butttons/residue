@@ -33,9 +33,9 @@ describe("login command", () => {
   test("saves config with valid url and token", async () => {
     const proc = cli(["login", "--url", "https://my-worker.dev", "--token", "secret-123"]);
     const exitCode = await proc.exited;
-    const stdout = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
     expect(exitCode).toBe(0);
-    expect(stdout.trim()).toBe("Logged in to https://my-worker.dev");
+    expect(stderr.trim()).toBe("Logged in to https://my-worker.dev");
 
     const config = (await readConfig())._unsafeUnwrap();
     expect(config).toEqual({ worker_url: "https://my-worker.dev", token: "secret-123" });

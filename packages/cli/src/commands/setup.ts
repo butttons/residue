@@ -1,6 +1,9 @@
 import { getProjectRoot } from "@/lib/pending";
 import { CliError, toCliError } from "@/utils/errors";
+import { createLogger } from "@/utils/logger";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
+
+const log = createLogger("setup");
 import { join } from "path";
 import { mkdir, readFile, writeFile, stat } from "fs/promises";
 // Embedded at build time so the binary doesn't need to resolve a file path at runtime
@@ -78,12 +81,12 @@ function setupClaudeCode(projectRoot: string): ResultAsync<void, CliError> {
       }
 
       if (!isChanged) {
-        console.log("residue hooks already configured in .claude/settings.json");
+        log.info("residue hooks already configured in .claude/settings.json");
         return;
       }
 
       await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
-      console.log("Configured Claude Code hooks in .claude/settings.json");
+      log.info("Configured Claude Code hooks in .claude/settings.json");
     })(),
     toCliError({ message: "Failed to setup Claude Code", code: "IO_ERROR" })
   );
@@ -106,12 +109,12 @@ function setupPi(projectRoot: string): ResultAsync<void, CliError> {
       }
 
       if (isExisting) {
-        console.log("residue extension already exists at .pi/extensions/residue.ts");
+        log.info("residue extension already exists at .pi/extensions/residue.ts");
         return;
       }
 
       await writeFile(targetPath, piAdapterSource);
-      console.log("Installed pi extension at .pi/extensions/residue.ts");
+      log.info("Installed pi extension at .pi/extensions/residue.ts");
     })(),
     toCliError({ message: "Failed to setup pi", code: "IO_ERROR" })
   );

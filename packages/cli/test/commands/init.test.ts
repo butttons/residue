@@ -35,12 +35,12 @@ describe("init command", () => {
   test("creates hooks and .residue dir", async () => {
     const proc = cli(["init"], tempDir);
     const exitCode = await proc.exited;
-    const stdout = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
 
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("Initialized residue");
-    expect(stdout).toContain("post-commit: created");
-    expect(stdout).toContain("pre-push: created");
+    expect(stderr).toContain("Initialized residue");
+    expect(stderr).toContain("post-commit: created");
+    expect(stderr).toContain("pre-push: created");
 
     const postCommit = await readFile(join(tempDir, ".git/hooks/post-commit"), "utf-8");
     expect(postCommit).toContain("residue capture");
@@ -89,10 +89,10 @@ describe("init command", () => {
 
     const proc = cli(["init"], tempDir);
     const exitCode = await proc.exited;
-    const stdout = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
 
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("post-commit: appended");
+    expect(stderr).toContain("post-commit: appended");
 
     const content = await readFile(join(hooksDir, "post-commit"), "utf-8");
     expect(content).toContain("echo existing");
@@ -101,8 +101,8 @@ describe("init command", () => {
     // Run again -- should say already installed
     const proc2 = cli(["init"], tempDir);
     await proc2.exited;
-    const stdout2 = await new Response(proc2.stdout).text();
-    expect(stdout2).toContain("post-commit: already installed");
+    const stderr2 = await new Response(proc2.stderr).text();
+    expect(stderr2).toContain("post-commit: already installed");
   });
 
   test("exits 1 when not in a git repo", async () => {

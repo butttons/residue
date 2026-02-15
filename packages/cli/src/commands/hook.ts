@@ -6,7 +6,10 @@ import {
   updateSession,
 } from "@/lib/pending";
 import { CliError, toCliError } from "@/utils/errors";
+import { createLogger } from "@/utils/logger";
 import { okAsync, Result, ResultAsync } from "neverthrow";
+
+const log = createLogger("hook");
 import { join } from "path";
 import { mkdir, readFile, writeFile, rm, stat } from "fs/promises";
 
@@ -132,7 +135,7 @@ function handleSessionStart(opts: {
       );
     })
     .map(() => {
-      console.error(`Session started for claude-code`);
+      log.debug("session started for claude-code");
     });
 }
 
@@ -209,7 +212,7 @@ function handleSessionEnd(opts: {
             )
           )
           .map(() => {
-            console.error(`Session ${trimmedId} ended`);
+            log.debug("session %s ended", trimmedId);
           });
       });
     });

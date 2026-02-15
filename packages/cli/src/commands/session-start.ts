@@ -1,6 +1,9 @@
 import { getProjectRoot, getPendingPath, addSession } from "@/lib/pending";
 import type { CliError } from "@/utils/errors";
+import { createLogger } from "@/utils/logger";
 import type { ResultAsync } from "neverthrow";
+
+const log = createLogger("session");
 
 export function sessionStart(opts: {
   agent: string;
@@ -27,6 +30,6 @@ export function sessionStart(opts: {
     .map(() => {
       // Only the session ID goes to stdout so adapters can capture it
       process.stdout.write(id);
-      console.error(`Session started for ${opts.agent}`);
+      log.debug("session started for %s", opts.agent);
     });
 }

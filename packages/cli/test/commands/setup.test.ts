@@ -35,10 +35,10 @@ describe("setup claude-code", () => {
   test("creates .claude/settings.json with hooks", async () => {
     const proc = cli(["setup", "claude-code"], tempDir);
     const exitCode = await proc.exited;
-    const stdout = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
 
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("Configured Claude Code hooks");
+    expect(stderr).toContain("Configured Claude Code hooks");
 
     const settingsPath = join(tempDir, ".claude", "settings.json");
     expect(existsSync(settingsPath)).toBe(true);
@@ -97,10 +97,10 @@ describe("setup claude-code", () => {
     await cli(["setup", "claude-code"], tempDir).exited;
     const proc = cli(["setup", "claude-code"], tempDir);
     const exitCode = await proc.exited;
-    const stdout = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
 
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("already configured");
+    expect(stderr).toContain("already configured");
 
     const settings = JSON.parse(
       await readFile(join(tempDir, ".claude", "settings.json"), "utf-8")
@@ -131,10 +131,10 @@ describe("setup pi", () => {
   test("copies extension to .pi/extensions/residue.ts", async () => {
     const proc = cli(["setup", "pi"], tempDir);
     const exitCode = await proc.exited;
-    const stdout = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
 
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("Installed pi extension");
+    expect(stderr).toContain("Installed pi extension");
 
     const extensionPath = join(
       tempDir,
@@ -154,10 +154,10 @@ describe("setup pi", () => {
 
     const proc = cli(["setup", "pi"], tempDir);
     const exitCode = await proc.exited;
-    const stdout = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
 
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("already exists");
+    expect(stderr).toContain("already exists");
   });
 });
 
