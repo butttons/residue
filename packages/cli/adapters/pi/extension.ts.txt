@@ -4,21 +4,21 @@
  * Hooks into pi's session lifecycle to call the residue CLI,
  * linking AI conversations to git commits.
  *
+ * Uses a persistent state file (.residue/hooks/pi.state) to survive
+ * process crashes. On startup, any leftover state from a previous
+ * run is cleaned up automatically.
+ *
  * Lifecycle:
- *   session_start   -> residue session start (registers session in pending queue)
+ *   session_start   -> end stale session (if any), then residue session start
  *   session_switch  -> residue session end + session start (swap tracked session)
  *   session_shutdown -> residue session end (marks session as ended)
- *
- * Install:
- *   pi -e /path/to/packages/adapters/pi/index.ts
- *   OR symlink to ~/.pi/agent/extensions/residue.ts
- *   OR pi install /path/to/packages/adapters/pi
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
+const STATE_FILE = ".residue/hooks/pi.state";
+
 export default function (pi: ExtensionAPI) {
-  let residueSessionId: string | undefined;
   let piVersion = "unknown";
   let isResidueAvailable = true;
 
@@ -33,6 +33,47 @@ export default function (pi: ExtensionAPI) {
   async function checkResidueAvailable(): Promise<boolean> {
     const result = await pi.exec("which", ["residue"]);
     return result.code === 0;
+  }
+
+  async function readStateFile(): Promise<string | undefined> {
+    const result = await pi.exec("cat", [STATE_FILE]);
+    if (result.code === 0 && result.stdout.trim()) {
+      return result.stdout.trim();
+    }
+    return undefined;
+  }
+
+  async function writeStateFile(params: {
+    sessionId: string;
+  }): Promise<void> {
+    await pi.exec("mkdir", ["-p", ".residue/hooks"]);
+    // Use sh -c to write via redirect since pi.exec may not support shell features
+    await pi.exec("sh", ["-c", `printf '%s' '${params.sessionId}' > ${STATE_FILE}`]);
+  }
+
+  async function removeStateFile(): Promise<void> {
+    await pi.exec("rm", ["-f", STATE_FILE]);
+  }
+
+  /**
+   * End a session by ID. Does not touch the state file.
+   */
+  async function endSessionById(params: {
+    sessionId: string;
+  }): Promise<void> {
+    if (!isResidueAvailable) return;
+    await pi.exec("residue", ["session", "end", "--id", params.sessionId]);
+  }
+
+  /**
+   * End whatever session is recorded in the state file, then remove
+   * the state file. This cleans up after crashes / missed shutdowns.
+   */
+  async function endStaleSession(): Promise<void> {
+    const staleId = await readStateFile();
+    if (!staleId) return;
+    await endSessionById({ sessionId: staleId });
+    await removeStateFile();
   }
 
   async function startResidueSession(params: {
@@ -53,18 +94,18 @@ export default function (pi: ExtensionAPI) {
     ]);
 
     if (result.code === 0 && result.stdout.trim()) {
-      residueSessionId = result.stdout.trim();
+      const sessionId = result.stdout.trim();
+      await writeStateFile({ sessionId });
     }
   }
 
   async function endResidueSession(): Promise<void> {
-    if (!residueSessionId) return;
+    const sessionId = await readStateFile();
+    if (!sessionId) return;
     if (!isResidueAvailable) return;
 
-    const sessionId = residueSessionId;
-    residueSessionId = undefined;
-
-    await pi.exec("residue", ["session", "end", "--id", sessionId]);
+    await endSessionById({ sessionId });
+    await removeStateFile();
   }
 
   pi.on("session_start", async (_event, ctx) => {
@@ -72,6 +113,10 @@ export default function (pi: ExtensionAPI) {
     if (!isResidueAvailable) return;
 
     piVersion = await detectPiVersion();
+
+    // Clean up any leftover session from a previous run that
+    // did not shut down cleanly.
+    await endStaleSession();
 
     const sessionFile = ctx.sessionManager.getSessionFile();
     await startResidueSession({ sessionFile });

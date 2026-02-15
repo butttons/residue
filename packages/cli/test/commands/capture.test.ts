@@ -80,7 +80,7 @@ describe("capture command", () => {
     expect(count).toBe(1);
   });
 
-  test("tags both open and ended sessions", async () => {
+  test("tags ended sessions with zero commits (first capture after ending)", async () => {
     const s1 = cli(["session", "start", "--agent", "claude-code", "--data", "/tmp/s1.jsonl"]);
     await s1.exited;
     const id1 = (await new Response(s1.stdout).text()).trim();
@@ -103,10 +103,48 @@ describe("capture command", () => {
     const sessions = (await readPending(pendingPath))._unsafeUnwrap();
 
     expect(sessions).toHaveLength(2);
+    // Ended session with zero commits gets tagged (first capture after ending)
     const ended = sessions.find((s: { id: string }) => s.id === id1);
     expect(ended!.commits.some((c) => c.sha === sha)).toBe(true);
+    // Open session always gets tagged
     const open = sessions.find((s: { id: string }) => s.id !== id1);
     expect(open!.commits.some((c) => c.sha === sha)).toBe(true);
+  });
+
+  test("does not tag ended sessions that already have commits", async () => {
+    const s1 = cli(["session", "start", "--agent", "claude-code", "--data", "/tmp/s1.jsonl"]);
+    await s1.exited;
+    const id1 = (await new Response(s1.stdout).text()).trim();
+
+    // First commit while session is open -- capture tags it
+    await writeFile(join(tempDir, "file.txt"), "hello");
+    await gitExec(["add", "."]);
+    await gitExec(["commit", "-m", "commit 1"]);
+    const sha1 = await gitExec(["rev-parse", "HEAD"]);
+
+    const c1 = cli(["capture"]);
+    await c1.exited;
+
+    // End the session
+    const endProc = cli(["session", "end", "--id", id1]);
+    await endProc.exited;
+
+    // Second commit after session ended -- capture should NOT tag the ended session
+    await writeFile(join(tempDir, "file2.txt"), "world");
+    await gitExec(["add", "."]);
+    await gitExec(["commit", "-m", "commit 2"]);
+    const sha2 = await gitExec(["rev-parse", "HEAD"]);
+
+    const c2 = cli(["capture"]);
+    await c2.exited;
+
+    const pendingPath = join(tempDir, ".residue/pending.json");
+    const sessions = (await readPending(pendingPath))._unsafeUnwrap();
+
+    expect(sessions).toHaveLength(1);
+    const ended = sessions.find((s: { id: string }) => s.id === id1);
+    expect(ended!.commits.some((c) => c.sha === sha1)).toBe(true);
+    expect(ended!.commits.some((c) => c.sha === sha2)).toBe(false);
   });
 
   test("records branch name with commit SHA", async () => {

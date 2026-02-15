@@ -713,5 +713,39 @@
     "dependencies": [
       13
     ]
+  },
+  {
+    "id": 43,
+    "title": "Pi adapter: use persistent state files for reliable session lifecycle",
+    "description": "The pi adapter currently holds the residue session ID in an in-memory variable. If pi exits abruptly or session_shutdown does not fire, the session is never ended and accumulates commits indefinitely. Fix: use persistent state files in .residue/hooks/ (same pattern as the Claude Code hook command). On session_start: write residue session ID to .residue/hooks/pi.state. On session_start: also check if a leftover state file exists from a previous run and end that session first. On session_shutdown: read the state file, call session-end, delete the file. On session_switch: end the old session (via state file), start a new one, write new state file. Update the embedded pi adapter source in packages/cli/adapters/pi/extension.ts.txt and the live copy at .pi/extensions/residue.ts.",
+    "tags": [
+      "adapter",
+      "pi",
+      "bugfix"
+    ],
+    "isDone": true,
+    "tests": [
+      "packages/cli/test/commands/capture.test.ts passes",
+      "packages/cli/test/commands/sync.test.ts passes"
+    ],
+    "dependencies": [
+      33
+    ]
+  },
+  {
+    "id": 44,
+    "title": "Capture: only tag sessions that are actively relevant to the commit",
+    "description": "The capture command currently tags ALL pending sessions (open and ended) with every new commit SHA. This causes ended sessions to accumulate unrelated commits while they sit in the queue waiting for a push. Fix: change capture to only tag (1) open sessions (the agent is still active) and (2) ended sessions that have zero commits (they ended before any capture ran, meaning the commit being captured is likely informed by that session). Ended sessions that already have one or more commits should NOT be tagged with additional commits -- they have already been captured and are just waiting for sync. Update the test 'tags both open and ended sessions' to reflect the new behavior: an ended session WITH existing commits should NOT get tagged.",
+    "tags": [
+      "cli",
+      "bugfix"
+    ],
+    "isDone": false,
+    "tests": [
+      "packages/cli/test/commands/capture.test.ts passes"
+    ],
+    "dependencies": [
+      34
+    ]
   }
 ]
