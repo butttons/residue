@@ -142,22 +142,33 @@ auth.post("/login", async (c) => {
 
 	const db = new DB(c.env.DB);
 
-	const user = await db.getUserByUsername(username);
-	if (!user) {
-		return c.html(LoginPage({ error: "Invalid username or password." }), 401);
+	let authenticatedUsername: string | null = null;
+
+	// Try admin env vars first
+	if (username === c.env.ADMIN_USERNAME && password === c.env.ADMIN_PASSWORD) {
+		authenticatedUsername = username;
 	}
 
-	const isPasswordValid = await verifyPassword({
-		password,
-		storedHash: user.password_hash,
-	});
+	// Fall back to DB users
+	if (!authenticatedUsername) {
+		const user = await db.getUserByUsername(username);
+		if (user) {
+			const isPasswordValid = await verifyPassword({
+				password,
+				storedHash: user.password_hash,
+			});
+			if (isPasswordValid) {
+				authenticatedUsername = user.username;
+			}
+		}
+	}
 
-	if (!isPasswordValid) {
+	if (!authenticatedUsername) {
 		return c.html(LoginPage({ error: "Invalid username or password." }), 401);
 	}
 
 	const token = await createSessionToken({
-		username: user.username,
+		username: authenticatedUsername,
 		secret: c.env.AUTH_TOKEN,
 	});
 
