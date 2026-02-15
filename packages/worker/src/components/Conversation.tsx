@@ -117,6 +117,23 @@ const Conversation: FC<ConversationProps> = ({
 						)}
 					</div>
 
+					{msg.thinking && msg.thinking.length > 0 && (
+						<div class="mb-2 flex flex-col gap-1">
+							{msg.thinking.map((tb) => (
+								<details class="border border-zinc-800 rounded-md overflow-hidden">
+									<summary class="cursor-pointer px-2 py-1.5 text-sm text-zinc-500 hover:text-zinc-400 flex items-center gap-1.5">
+										<i class="ph ph-caret-right text-xs transition-transform" />
+										<i class="ph ph-brain text-xs" />
+										<span class="italic">thinking</span>
+									</summary>
+									<div class="p-3 text-xs bg-zinc-950 border-t border-zinc-800">
+										<pre class="text-zinc-500 overflow-x-auto whitespace-pre-wrap break-all max-h-96 overflow-y-auto">{tb.content}</pre>
+									</div>
+								</details>
+							))}
+						</div>
+					)}
+
 					<div class="text-sm text-zinc-200">
 						<ContentRenderer content={msg.content} />
 					</div>

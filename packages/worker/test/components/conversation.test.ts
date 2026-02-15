@@ -126,4 +126,47 @@ describe("Conversation", () => {
 		const html = (await result).toString();
 		expect(html).toContain("claude-3.5-sonnet");
 	});
+
+	it("renders thinking blocks as collapsible details", async () => {
+		const messages: Message[] = [
+			{
+				role: "assistant",
+				content: "Here is my answer.",
+				thinking: [{ content: "Let me reason through this carefully..." }],
+			},
+		];
+		const result = Conversation({ messages });
+		const html = (await result).toString();
+		expect(html).toContain("<details");
+		expect(html).toContain("thinking");
+		expect(html).toContain("ph-brain");
+		expect(html).toContain("Let me reason through this carefully...");
+		expect(html).toContain("Here is my answer.");
+	});
+
+	it("renders multiple thinking blocks", async () => {
+		const messages: Message[] = [
+			{
+				role: "assistant",
+				content: "Done.",
+				thinking: [
+					{ content: "First thought" },
+					{ content: "Second thought" },
+				],
+			},
+		];
+		const result = Conversation({ messages });
+		const html = (await result).toString();
+		expect(html).toContain("First thought");
+		expect(html).toContain("Second thought");
+	});
+
+	it("does not render thinking section when absent", async () => {
+		const messages: Message[] = [
+			{ role: "assistant", content: "No thinking here" },
+		];
+		const result = Conversation({ messages });
+		const html = (await result).toString();
+		expect(html).not.toContain("ph-brain");
+	});
 });

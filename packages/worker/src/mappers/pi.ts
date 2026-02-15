@@ -1,4 +1,4 @@
-import type { Mapper, Message, ToolCall } from "../types";
+import type { Mapper, Message, ThinkingBlock, ToolCall } from "../types";
 
 type PiEntry = {
 	type: string;
@@ -102,6 +102,16 @@ const extractTextContent = (
 		.join("\n");
 };
 
+const extractThinking = (
+	content: string | PiContentBlock[] | undefined,
+): ThinkingBlock[] => {
+	if (!content || typeof content === "string") return [];
+
+	return content
+		.filter((b) => b.type === "thinking" && b.thinking)
+		.map((b) => ({ content: b.thinking! }));
+};
+
 const extractToolCalls = (
 	content: string | PiContentBlock[] | undefined,
 ): ToolCall[] => {
@@ -149,6 +159,7 @@ const piMapper: Mapper = (raw: string): Message[] => {
 		} else if (msg.role === "assistant") {
 			const toolCalls = extractToolCalls(msg.content);
 			const textContent = extractTextContent(msg.content);
+			const thinkingBlocks = extractThinking(msg.content);
 
 			// Register tool calls for later matching with tool results
 			if (Array.isArray(msg.content)) {
@@ -171,6 +182,10 @@ const piMapper: Mapper = (raw: string): Message[] => {
 
 			if (toolCalls.length > 0) {
 				message.tool_calls = toolCalls;
+			}
+
+			if (thinkingBlocks.length > 0) {
+				message.thinking = thinkingBlocks;
 			}
 
 			messages.push(message);

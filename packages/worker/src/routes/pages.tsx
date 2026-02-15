@@ -14,33 +14,6 @@ import { getMapper } from "../mappers";
 
 // --- Shared sub-components ---
 
-type BreadcrumbItem = { label: string; href?: string };
-
-const Breadcrumb: FC<{ items: BreadcrumbItem[] }> = ({ items }) => (
-	<nav class="flex items-center gap-1.5 text-sm text-zinc-400 mb-6">
-		{items.map((item, i) => (
-			<span class="flex items-center gap-1.5">
-				{i > 0 && <span class="text-zinc-600">/</span>}
-				{i === 0 && item.href ? (
-					<a
-						href={item.href}
-						class="hover:text-zinc-200 transition-colors flex items-center"
-						title="Home"
-					>
-						<i class="ph ph-house text-base" />
-					</a>
-				) : item.href ? (
-					<a href={item.href} class="hover:text-zinc-200 transition-colors">
-						{item.label}
-					</a>
-				) : (
-					<span class="text-zinc-200">{item.label}</span>
-				)}
-			</span>
-		))}
-	</nav>
-);
-
 type GroupedCommit = {
 	sha: string;
 	message: string | null;
@@ -123,6 +96,7 @@ pages.get("/", async (c) => {
 		<Layout title="residue" username={username}>
 			<h1 class="text-2xl font-bold mb-6 text-zinc-100">residue</h1>
 
+
 			{orgs.length === 0 ? (
 				<p class="text-zinc-400">
 					No sessions uploaded yet. Run{" "}
@@ -174,8 +148,7 @@ pages.get("/:org", async (c) => {
 
 	if (repos.length === 0) {
 		return c.html(
-			<Layout title={`${org} — residue`} username={username}>
-				<Breadcrumb items={[{ label: "residue", href: "/app" }]} />
+			<Layout title={`${org} — residue`} username={username} breadcrumbs={[{ label: "residue", href: "/app" }]}>
 				<p class="text-zinc-400">No data found for this organization.</p>
 			</Layout>,
 			404,
@@ -183,10 +156,7 @@ pages.get("/:org", async (c) => {
 	}
 
 	return c.html(
-		<Layout title={`${org} — residue`} username={username}>
-			<Breadcrumb
-				items={[{ label: "residue", href: "/app" }, { label: org }]}
-			/>
+		<Layout title={`${org} — residue`} username={username} breadcrumbs={[{ label: "residue", href: "/app" }, { label: org }]}>
 
 			<ActivityGraph dailyCounts={dailyCounts} />
 
@@ -240,13 +210,10 @@ pages.get("/:org/:repo", async (c) => {
 
 	if (rows.length === 0 && !cursorParam) {
 		return c.html(
-			<Layout title={`${org}/${repo} — residue`} username={username}>
-				<Breadcrumb
-					items={[
-						{ label: "residue", href: "/app" },
-						{ label: org, href: `/app/${org}` },
-					]}
-				/>
+			<Layout title={`${org}/${repo} — residue`} username={username} breadcrumbs={[
+				{ label: "residue", href: "/app" },
+				{ label: org, href: `/app/${org}` },
+			]}>
 				<p class="text-zinc-400">No data found for this repository.</p>
 			</Layout>,
 			404,
@@ -262,14 +229,11 @@ pages.get("/:org/:repo", async (c) => {
 			: null;
 
 	return c.html(
-		<Layout title={`${org}/${repo} — residue`} username={username}>
-			<Breadcrumb
-				items={[
-					{ label: "residue", href: "/app" },
-					{ label: org, href: `/app/${org}` },
-					{ label: repo },
-				]}
-			/>
+		<Layout title={`${org}/${repo} — residue`} username={username} breadcrumbs={[
+			{ label: "residue", href: "/app" },
+			{ label: org, href: `/app/${org}` },
+			{ label: repo },
+		]}>
 
 			<ActivityGraph dailyCounts={dailyCounts} org={org} repo={repo} />
 
@@ -299,14 +263,11 @@ pages.get("/:org/:repo/:sha", async (c) => {
 
 	if (rows.length === 0) {
 		return c.html(
-			<Layout title="Not found — residue" username={username}>
-				<Breadcrumb
-					items={[
-						{ label: "residue", href: "/app" },
-						{ label: org, href: `/app/${org}` },
-						{ label: repo, href: `/app/${org}/${repo}` },
-					]}
-				/>
+			<Layout title="Not found — residue" username={username} breadcrumbs={[
+				{ label: "residue", href: "/app" },
+				{ label: org, href: `/app/${org}` },
+				{ label: repo, href: `/app/${org}/${repo}` },
+			]}>
 				<p class="text-zinc-400">Commit not found.</p>
 			</Layout>,
 			404,
@@ -405,16 +366,17 @@ pages.get("/:org/:repo/:sha", async (c) => {
 		}),
 	);
 
+	const totalMessages = sessionsData.reduce((s, d) => s + d.messageCount, 0);
+	const totalToolCalls = sessionsData.reduce((s, d) => s + d.toolCallCount, 0);
+	const allModels = [...new Set(sessionsData.flatMap((d) => d.models))];
+
 	return c.html(
-		<Layout title={`${sha.slice(0, 7)} — ${org}/${repo} — residue`} username={username}>
-			<Breadcrumb
-				items={[
-					{ label: "residue", href: "/app" },
-					{ label: org, href: `/app/${org}` },
-					{ label: repo, href: `/app/${org}/${repo}` },
-					{ label: sha.slice(0, 7) },
-				]}
-			/>
+		<Layout title={`${sha.slice(0, 7)} — ${org}/${repo} — residue`} username={username} breadcrumbs={[
+			{ label: "residue", href: "/app" },
+			{ label: org, href: `/app/${org}` },
+			{ label: repo, href: `/app/${org}/${repo}` },
+			{ label: sha.slice(0, 7) },
+		]}>
 
 			{/* Commit header */}
 			<div class="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-6">
@@ -434,7 +396,8 @@ pages.get("/:org/:repo/:sha", async (c) => {
 						<span class="hidden sm:inline">View on GitHub</span>
 					</a>
 				</div>
-				<div class="flex items-center gap-2 mb-2 flex-wrap">
+				<p class="text-zinc-100 mb-3">{first.message}</p>
+				<div class="flex items-center gap-2 mb-3 flex-wrap">
 					{first.branch && (
 						<span class="text-xs px-1.5 py-0.5 rounded bg-zinc-800/60 text-zinc-400 font-mono">
 							<i class="ph ph-git-branch text-[10px] mr-0.5" />
@@ -447,28 +410,44 @@ pages.get("/:org/:repo/:sha", async (c) => {
 							agent: s.agent,
 						}))}
 					/>
-				</div>
-				<p class="text-zinc-100">{first.message}</p>
-				<div class="flex items-center gap-x-4 gap-y-1 mt-2 text-xs text-zinc-500 flex-wrap">
-					<span>{first.author}</span>
-					{first.committed_at && (
-						<span>{formatTimestamp(first.committed_at)}</span>
-					)}
-					<span>
-						{sessionsData.length}{" "}
-						{sessionsData.length === 1 ? "session" : "sessions"}
-					</span>
-					<span>
-						{sessionsData.reduce((s, d) => s + d.messageCount, 0)} messages
-					</span>
-					<span>
-						{sessionsData.reduce((s, d) => s + d.toolCallCount, 0)} tool calls
-					</span>
-					{sessionsData.flatMap((d) => d.models).length > 0 && (
-						<span>
-							{[...new Set(sessionsData.flatMap((d) => d.models))].join(", ")}
+					{allModels.map((model) => (
+						<span class="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono">
+							{model}
 						</span>
+					))}
+				</div>
+				<div class="flex items-center gap-x-1.5 text-xs text-zinc-400 flex-wrap">
+					<span class="flex items-center gap-1">
+						<i class="ph ph-user text-zinc-500" />
+						{first.author}
+					</span>
+					{first.committed_at && (
+						<>
+							<span class="text-zinc-600">&middot;</span>
+							<span class="flex items-center gap-1">
+								<i class="ph ph-clock text-zinc-500" />
+								{formatTimestamp(first.committed_at)}
+							</span>
+						</>
 					)}
+					<span class="text-zinc-600">&middot;</span>
+					<span class="flex items-center gap-1">
+						<i class="ph ph-chats-circle text-zinc-500" />
+						<span class="text-zinc-200 font-medium">{sessionsData.length}</span>
+						{sessionsData.length === 1 ? " session" : " sessions"}
+					</span>
+					<span class="text-zinc-600">&middot;</span>
+					<span class="flex items-center gap-1">
+						<i class="ph ph-chat-text text-zinc-500" />
+						<span class="text-zinc-200 font-medium">{totalMessages}</span>
+						{totalMessages === 1 ? " message" : " messages"}
+					</span>
+					<span class="text-zinc-600">&middot;</span>
+					<span class="flex items-center gap-1">
+						<i class="ph ph-wrench text-zinc-500" />
+						<span class="text-zinc-200 font-medium">{totalToolCalls}</span>
+						{totalToolCalls === 1 ? " tool call" : " tool calls"}
+					</span>
 				</div>
 			</div>
 

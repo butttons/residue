@@ -1,4 +1,4 @@
-import type { Mapper, Message, ToolCall } from "../types";
+import type { Mapper, Message, ThinkingBlock, ToolCall } from "../types";
 
 /**
  * Claude Code stores sessions as JSONL (one JSON object per line).
@@ -295,8 +295,15 @@ const claudeCodeMapper: Mapper = (raw: string): Message[] => {
 					if ("id" in block && block.id) {
 						pendingToolCalls.set(block.id, toolCall);
 					}
+				} else if (block.type === "thinking" && "thinking" in block) {
+					const thinkingText = block.thinking;
+					if (thinkingText) {
+						if (!currentAssistantMessage.thinking) {
+							currentAssistantMessage.thinking = [];
+						}
+						currentAssistantMessage.thinking.push({ content: thinkingText });
+					}
 				}
-				// Skip thinking blocks - they're internal reasoning, not conversation content
 			}
 
 			// Trim leading newline from content aggregation

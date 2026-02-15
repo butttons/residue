@@ -488,7 +488,7 @@ describe("claude code mapper", () => {
 		expect(messages[1].content).toBe("response");
 	});
 
-	it("skips thinking blocks from assistant content", () => {
+	it("captures thinking blocks from assistant content", () => {
 		const raw = makeSession([
 			{
 				type: "user",
@@ -532,8 +532,10 @@ describe("claude code mapper", () => {
 		const messages = claudeCodeMapper(raw);
 		expect(messages).toHaveLength(2);
 		expect(messages[1].content).toBe("Here is my answer.");
-		// Thinking should not appear in content
+		// Thinking should not appear in content but should be in thinking blocks
 		expect(messages[1].content).not.toContain("Deep internal reasoning");
+		expect(messages[1].thinking).toHaveLength(1);
+		expect(messages[1].thinking![0].content).toBe("Deep internal reasoning...");
 	});
 
 	it("handles assistant turn with only thinking (no text or tool)", () => {
@@ -563,10 +565,14 @@ describe("claude code mapper", () => {
 		]);
 
 		const messages = claudeCodeMapper(raw);
-		// The assistant message should still be emitted (with empty content)
+		// The assistant message should still be emitted (with empty content but thinking captured)
 		expect(messages).toHaveLength(2);
 		expect(messages[1].role).toBe("assistant");
 		expect(messages[1].content).toBe("");
+		expect(messages[1].thinking).toHaveLength(1);
+		expect(messages[1].thinking![0].content).toBe(
+			"Only thinking, no output yet...",
+		);
 	});
 
 	it("handles user entries with text content blocks (non-meta)", () => {

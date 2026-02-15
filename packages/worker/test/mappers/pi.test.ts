@@ -398,7 +398,7 @@ describe("pi mapper", () => {
 		expect(messages[0].content).toBe("hello");
 	});
 
-	it("handles assistant message with only thinking blocks (no text)", () => {
+	it("captures thinking blocks from assistant content", () => {
 		const raw = makeSession([
 			header,
 			{
@@ -436,6 +436,8 @@ describe("pi mapper", () => {
 		expect(messages).toHaveLength(2);
 		expect(messages[1].content).toBe("");
 		expect(messages[1].tool_calls).toHaveLength(1);
+		expect(messages[1].thinking).toHaveLength(1);
+		expect(messages[1].thinking![0].content).toBe("deep thoughts");
 	});
 
 	it("joins multiple text blocks with newline", () => {
