@@ -13,25 +13,7 @@ const Layout: FC<LayoutProps> = ({ title, username, children }) => {
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>${title}</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-          tailwind.config = {
-            darkMode: "class",
-            theme: {
-              extend: {
-                fontFamily: {
-                  mono: [
-                    "JetBrains Mono",
-                    "IBM Plex Mono",
-                    "ui-monospace",
-                    "SFMono-Regular",
-                    "monospace",
-                  ],
-                },
-              },
-            },
-          };
-        </script>
+        <link rel="stylesheet" href="/styles.css" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -41,44 +23,6 @@ const Layout: FC<LayoutProps> = ({ title, username, children }) => {
         <script
           src="https://unpkg.com/@phosphor-icons/web"
         ></script>
-        <style>
-          body {
-            font-family: "JetBrains Mono", "IBM Plex Mono", ui-monospace,
-              SFMono-Regular, monospace;
-          }
-          details summary::-webkit-details-marker {
-            display: none;
-          }
-          details summary {
-            list-style: none;
-          }
-          details[open] summary .ph-caret-right {
-            transform: rotate(90deg);
-          }
-          .activity-tooltip {
-            margin: 0;
-            padding: 6px 10px;
-            border: 1px solid #3f3f46;
-            border-radius: 6px;
-            background: #18181b;
-            color: #e4e4e7;
-            font-size: 11px;
-            line-height: 1.4;
-            white-space: nowrap;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            pointer-events: none;
-            inset: unset;
-          }
-          .activity-tooltip-date {
-            display: block;
-            font-weight: 600;
-            color: #a1a1aa;
-          }
-          .activity-tooltip-counts {
-            display: block;
-            color: #e4e4e7;
-          }
-        </style>
       </head>
       <body class="bg-zinc-950 text-zinc-100 min-h-screen antialiased">
         ${

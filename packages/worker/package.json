@@ -3,10 +3,13 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
+		"build:assets": "vite build",
+		"dev:assets": "vite build --watch",
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev --remote",
 		"start": "wrangler dev --remote",
 		"test": "vitest",
+		"typecheck": "tsc --noEmit",
 		"cf-typegen": "wrangler types",
 		"db:migrate": "wrangler d1 migrations apply residue-app --remote",
 		"db:migrate:local": "wrangler d1 migrations apply residue-app --local"
@@ -19,8 +22,11 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.12.4",
+		"@tailwindcss/vite": "^4.1.17",
 		"@types/node": "^25.2.3",
+		"tailwindcss": "^4.1.17",
 		"typescript": "^5.5.2",
+		"vite": "^7.1.9",
 		"vitest": "~3.2.0",
 		"wrangler": "^4.65.0"
 	}

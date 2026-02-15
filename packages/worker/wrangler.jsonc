@@ -6,6 +6,9 @@
 	"observability": {
 		"enabled": true,
 	},
+	"assets": {
+		"directory": "./public",
+	},
 	"vars": {
 		"ADMIN_USERNAME": "your-admin-username",
 		"R2_ACCESS_KEY_ID": "your-r2-access-key-id",

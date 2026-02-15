@@ -9,6 +9,7 @@
     "deploy:worker": "pnpm --filter worker deploy",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
     "biome:check": "biome check --write packages/*"
   },
   "devDependencies": {

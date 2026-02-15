@@ -30,10 +30,10 @@ jobs:
         run: pnpm install
 
       - name: Type check CLI
-        run: pnpm --filter residue exec tsc --noEmit
+        run: pnpm --filter residue typecheck
 
       - name: Type check Worker
-        run: pnpm --filter worker exec tsc --noEmit
+        run: pnpm --filter worker typecheck
 
   test:
     name: Run tests

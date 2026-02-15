@@ -10,17 +10,16 @@ describe("Layout", () => {
 		expect(html).toContain("Hello World");
 	});
 
-	it("includes Tailwind CDN script", async () => {
+	it("includes built stylesheet", async () => {
 		const result = Layout({ title: "T", children: "" });
 		const html = (await result).toString();
-		expect(html).toContain("cdn.tailwindcss.com");
+		expect(html).toContain('/styles.css"');
 	});
 
 	it("includes JetBrains Mono font", async () => {
 		const result = Layout({ title: "T", children: "" });
 		const html = (await result).toString();
 		expect(html).toContain("JetBrains+Mono");
-		expect(html).toContain("JetBrains Mono");
 	});
 
 	it("includes Phosphor Icons CDN", async () => {

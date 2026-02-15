@@ -87,7 +87,7 @@ settings.get("/settings", async (c) => {
 								: "Only authenticated users can view conversations. Enable to allow public access."}
 						</p>
 					</div>
-					<form method="POST" action="/app/settings/visibility">
+					<form method="post" action="/app/settings/visibility">
 						<input
 							type="hidden"
 							name="is_public"
@@ -168,7 +168,7 @@ settings.get("/settings/users", async (c) => {
 			<div class="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-6">
 				<h2 class="text-sm font-medium text-zinc-100 mb-4">Create user</h2>
 				<form
-					method="POST"
+					method="post"
 					action="/app/settings/users"
 					class="flex flex-col sm:flex-row gap-3"
 				>
@@ -229,7 +229,7 @@ settings.get("/settings/users", async (c) => {
 									</div>
 									{!isSelf && (
 										<form
-											method="POST"
+											method="post"
 											action={`/app/settings/users/${user.id}/delete`}
 											onsubmit="return confirm('Are you sure you want to delete this user?')"
 										>
