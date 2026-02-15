@@ -2,10 +2,7 @@ import { env, SELF } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { hashPassword } from "../../src/lib/auth";
 import { DB } from "../../src/lib/db";
-import {
-	nonAdminSessionCookieHeader,
-	sessionCookieHeader,
-} from "../utils";
+import { nonAdminSessionCookieHeader, sessionCookieHeader } from "../utils";
 
 const db = new DB(env.DB);
 

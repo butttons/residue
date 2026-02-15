@@ -91,12 +91,24 @@ sessions.post(
 	async (c) => {
 		const { session_id } = c.req.valid("json");
 
-		const { R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID, R2_BUCKET_NAME } =
-			c.env;
+		const {
+			R2_ACCESS_KEY_ID,
+			R2_SECRET_ACCESS_KEY,
+			R2_ACCOUNT_ID,
+			R2_BUCKET_NAME,
+		} = c.env;
 
-		if (!R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_ACCOUNT_ID || !R2_BUCKET_NAME) {
+		if (
+			!R2_ACCESS_KEY_ID ||
+			!R2_SECRET_ACCESS_KEY ||
+			!R2_ACCOUNT_ID ||
+			!R2_BUCKET_NAME
+		) {
 			return c.json(
-				{ error: "R2 S3 API credentials not configured. Set R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID, and R2_BUCKET_NAME." },
+				{
+					error:
+						"R2 S3 API credentials not configured. Set R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID, and R2_BUCKET_NAME.",
+				},
 				500,
 			);
 		}

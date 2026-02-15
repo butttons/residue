@@ -4,20 +4,20 @@
 	"main": "src/index.tsx",
 	"compatibility_date": "2025-02-14",
 	"assets": {
-		"directory": "./public",
+		"directory": "./public"
 	},
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "residue-app",
-			"database_id": "your-database-id",
-		},
+			"database_id": "your-database-id"
+		}
 	],
 	"r2_buckets": [
 		{
 			"binding": "BUCKET",
-			"bucket_name": "residue",
-		},
+			"bucket_name": "residue"
+		}
 	],
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": ["nodejs_compat"]
 }

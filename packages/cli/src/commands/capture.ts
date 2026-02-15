@@ -1,7 +1,12 @@
 import { ok, ResultAsync, safeTry } from "neverthrow";
 import { getCurrentBranch, getCurrentSha } from "@/lib/git";
 import type { PendingSession } from "@/lib/pending";
-import { getPendingPath, getProjectRoot, readPending, writePending } from "@/lib/pending";
+import {
+	getPendingPath,
+	getProjectRoot,
+	readPending,
+	writePending,
+} from "@/lib/pending";
 import type { CliError } from "@/utils/errors";
 
 /**

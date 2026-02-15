@@ -1,5 +1,5 @@
-import { html } from 'hono/html';
-import type { FC, PropsWithChildren } from 'hono/jsx';
+import { html } from "hono/html";
+import type { FC, PropsWithChildren } from "hono/jsx";
 
 type BreadcrumbItem = { label: string; href?: string };
 
@@ -9,7 +9,12 @@ type LayoutProps = PropsWithChildren<{
 	breadcrumbs?: BreadcrumbItem[];
 }>;
 
-const Layout: FC<LayoutProps> = ({ title, username, breadcrumbs, children }) => {
+const Layout: FC<LayoutProps> = ({
+	title,
+	username,
+	breadcrumbs,
+	children,
+}) => {
 	return html`<!doctype html>
 		<html lang="en" class="dark">
 			<head>
@@ -26,27 +31,33 @@ const Layout: FC<LayoutProps> = ({ title, username, breadcrumbs, children }) => 
 				<nav class="border-b border-zinc-800">
 					<div class="max-w-4xl mx-auto px-4 h-12 flex items-center justify-between">
 						<div class="flex items-center gap-1.5 text-sm text-zinc-400">
-							${breadcrumbs && breadcrumbs.length > 0
-								? html`${breadcrumbs.map(
-										(item, i) => html`
-											${i > 0 ? html`<span class="text-zinc-600">/</span>` : ''}
-											${i === 0 && item.href
-												? html`<a href="${item.href}" class="hover:text-zinc-200 transition-colors flex items-center" title="Home"><i class="ph ph-house text-base"></i></a>`
-												: item.href
-													? html`<a href="${item.href}" class="hover:text-zinc-200 transition-colors">${item.label}</a>`
-													: html`<span class="text-zinc-200">${item.label}</span>`}
+							${
+								breadcrumbs && breadcrumbs.length > 0
+									? html`${breadcrumbs.map(
+											(item, i) => html`
+											${i > 0 ? html`<span class="text-zinc-600">/</span>` : ""}
+											${
+												i === 0 && item.href
+													? html`<a href="${item.href}" class="hover:text-zinc-200 transition-colors flex items-center" title="Home"><i class="ph ph-house text-base"></i></a>`
+													: item.href
+														? html`<a href="${item.href}" class="hover:text-zinc-200 transition-colors">${item.label}</a>`
+														: html`<span class="text-zinc-200">${item.label}</span>`
+											}
 										`,
-									)}`
-								: html`<a href="/app" class="hover:text-zinc-200 transition-colors flex items-center" title="Home"><i class="ph ph-house text-base"></i></a>`}
+										)}`
+									: html`<a href="/app" class="hover:text-zinc-200 transition-colors flex items-center" title="Home"><i class="ph ph-house text-base"></i></a>`
+							}
 						</div>
 						<div class="flex items-center gap-3">
-							${username
-								? html`<span class="text-xs text-zinc-500">${username}</span>
+							${
+								username
+									? html`<span class="text-xs text-zinc-500">${username}</span>
 									<a href="/app/settings" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">settings</a>
 									<form method="POST" action="/app/logout" class="inline-flex">
 										<button type="submit" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">sign out</button>
 									</form>`
-								: html`<a href="/app/login" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">sign in</a>`}
+									: html`<a href="/app/login" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">sign in</a>`
+							}
 						</div>
 					</div>
 				</nav>

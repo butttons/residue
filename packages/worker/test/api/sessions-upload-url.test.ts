@@ -50,18 +50,24 @@ describe("POST /api/sessions/upload-url", () => {
 	});
 
 	it("generates unique URLs for different session IDs", async () => {
-		const res1 = await SELF.fetch("https://test.local/api/sessions/upload-url", {
-			method: "POST",
-			headers: { ...AUTH_HEADER, "Content-Type": "application/json" },
-			body: JSON.stringify({ session_id: "session-a" }),
-		});
+		const res1 = await SELF.fetch(
+			"https://test.local/api/sessions/upload-url",
+			{
+				method: "POST",
+				headers: { ...AUTH_HEADER, "Content-Type": "application/json" },
+				body: JSON.stringify({ session_id: "session-a" }),
+			},
+		);
 		const body1 = await res1.json<{ url: string; r2_key: string }>();
 
-		const res2 = await SELF.fetch("https://test.local/api/sessions/upload-url", {
-			method: "POST",
-			headers: { ...AUTH_HEADER, "Content-Type": "application/json" },
-			body: JSON.stringify({ session_id: "session-b" }),
-		});
+		const res2 = await SELF.fetch(
+			"https://test.local/api/sessions/upload-url",
+			{
+				method: "POST",
+				headers: { ...AUTH_HEADER, "Content-Type": "application/json" },
+				body: JSON.stringify({ session_id: "session-b" }),
+			},
+		);
 		const body2 = await res2.json<{ url: string; r2_key: string }>();
 
 		expect(body1.r2_key).toBe("sessions/session-a.json");

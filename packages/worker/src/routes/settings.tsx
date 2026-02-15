@@ -66,10 +66,7 @@ settings.get("/settings", async (c) => {
 	return c.html(
 		<Layout title="Settings -- residue" username={username}>
 			<Breadcrumb
-				items={[
-					{ label: "residue", href: "/app" },
-					{ label: "Settings" },
-				]}
+				items={[{ label: "residue", href: "/app" }, { label: "Settings" }]}
 			/>
 
 			<FlashMessages success={success} error={error} />
@@ -138,9 +135,7 @@ settings.post("/settings/visibility", async (c) => {
 		? "Instance is now publicly visible."
 		: "Instance is now private.";
 
-	return c.redirect(
-		`/app/settings?success=${encodeURIComponent(message)}`,
-	);
+	return c.redirect(`/app/settings?success=${encodeURIComponent(message)}`);
 });
 
 // List users + create form

@@ -73,7 +73,11 @@ const buildGrid = (dailyCounts: DailyActivityCount[]): Cell[] => {
 	}
 
 	const now = new Date();
-	const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+	const todayUTC = Date.UTC(
+		now.getUTCFullYear(),
+		now.getUTCMonth(),
+		now.getUTCDate(),
+	);
 	const today = new Date(todayUTC);
 	const todayDay = today.getUTCDay();
 
@@ -102,9 +106,7 @@ const buildGrid = (dailyCounts: DailyActivityCount[]): Cell[] => {
 	return cells;
 };
 
-const getMonthLabels = (
-	cells: Cell[],
-): { label: string; week: number }[] => {
+const getMonthLabels = (cells: Cell[]): { label: string; week: number }[] => {
 	const labels: { label: string; week: number }[] = [];
 	let lastMonth = -1;
 
@@ -194,17 +196,14 @@ const ActivityGraph: FC<ActivityGraphProps> = ({ dailyCounts }) => {
 
 				{/* Popover tooltip elements */}
 				{cells.map((cell) => {
-					const isActive =
-						cell.sessionCount > 0 || cell.commitCount > 0;
+					const isActive = cell.sessionCount > 0 || cell.commitCount > 0;
 					return (
 						<div
 							popover="manual"
 							id={`ag-${cell.date}`}
 							class="activity-tooltip"
 						>
-							<span class="activity-tooltip-date">
-								{formatDate(cell.date)}
-							</span>
+							<span class="activity-tooltip-date">{formatDate(cell.date)}</span>
 							{isActive ? (
 								<span class="activity-tooltip-counts">
 									{pluralize(cell.sessionCount, "conversation")}

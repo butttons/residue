@@ -76,13 +76,15 @@ const LoginPage = ({ error }: LoginPageProps) => {
 					<h1 class="text-xl font-bold mb-6 text-zinc-100">
 						residue
 					</h1>
-					${error
-						? html`<div
+					${
+						error
+							? html`<div
 								class="text-red-400 text-sm mb-4 bg-red-950/30 border border-red-900/50 rounded px-3 py-2"
 							>
 								${error}
 							</div>`
-						: ""}
+							: ""
+					}
 					<form method="POST" action="/app/login">
 						<div class="mb-4">
 							<label
@@ -132,11 +134,15 @@ auth.get("/login", (c) => {
 
 auth.post("/login", async (c) => {
 	const body = await c.req.parseBody();
-	const username = typeof body.username === "string" ? body.username.trim() : "";
+	const username =
+		typeof body.username === "string" ? body.username.trim() : "";
 	const password = typeof body.password === "string" ? body.password : "";
 
 	if (!username || !password) {
-		return c.html(LoginPage({ error: "Username and password are required." }), 400);
+		return c.html(
+			LoginPage({ error: "Username and password are required." }),
+			400,
+		);
 	}
 
 	const db = new DB(c.env.DB);

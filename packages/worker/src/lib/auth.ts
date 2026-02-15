@@ -24,7 +24,11 @@ function fromHex(hex: string): Uint8Array {
  * Hash a password using PBKDF2-SHA256.
  * Returns a string in the format "salt:hash" (both hex-encoded).
  */
-async function hashPassword({ password }: { password: string }): Promise<string> {
+async function hashPassword({
+	password,
+}: {
+	password: string;
+}): Promise<string> {
 	const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
 
 	const keyMaterial = await crypto.subtle.importKey(

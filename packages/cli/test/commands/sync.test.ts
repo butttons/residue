@@ -230,9 +230,7 @@ describe("sync command", () => {
 
 			// R2 should have received the data directly
 			expect(mock.r2Uploads).toHaveLength(1);
-			expect(mock.r2Uploads[0].body).toBe(
-				'{"role":"user","content":"hello"}',
-			);
+			expect(mock.r2Uploads[0].body).toBe('{"role":"user","content":"hello"}');
 
 			// Ended session removed from pending
 			const pendingPath = join(tempDir, ".residue/pending.json");

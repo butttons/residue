@@ -35,7 +35,11 @@ async function hmacSha256(
 		false,
 		["sign"],
 	);
-	return crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(message));
+	return crypto.subtle.sign(
+		"HMAC",
+		cryptoKey,
+		new TextEncoder().encode(message),
+	);
 }
 
 async function sha256Hex(data: string): Promise<string> {
@@ -62,7 +66,10 @@ async function getSigningKey(opts: {
 }
 
 function formatAmzDate(date: Date): { amzDate: string; dateStamp: string } {
-	const iso = date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+	const iso = date
+		.toISOString()
+		.replace(/[-:]/g, "")
+		.replace(/\.\d{3}Z$/, "Z");
 	return {
 		amzDate: iso,
 		dateStamp: iso.slice(0, 8),
@@ -96,10 +103,7 @@ export async function createPresignedPutUrl(
 
 	const canonicalQueryString = Array.from(queryParams.entries())
 		.sort(([a], [b]) => a.localeCompare(b))
-		.map(
-			([k, v]) =>
-				`${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
-		)
+		.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
 		.join("&");
 
 	const canonicalHeaders = `host:${host}\n`;

@@ -149,10 +149,7 @@ describe("Conversation", () => {
 			{
 				role: "assistant",
 				content: "Done.",
-				thinking: [
-					{ content: "First thought" },
-					{ content: "Second thought" },
-				],
+				thinking: [{ content: "First thought" }, { content: "Second thought" }],
 			},
 		];
 		const result = Conversation({ messages });

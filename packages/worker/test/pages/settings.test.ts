@@ -106,18 +106,15 @@ describe("GET /app/settings", () => {
 describe("POST /app/settings/visibility", () => {
 	it("enables public visibility", async () => {
 		const headers = await sessionCookieHeader();
-		const res = await SELF.fetch(
-			"https://test.local/app/settings/visibility",
-			{
-				method: "POST",
-				headers: {
-					...headers,
-					"Content-Type": "application/x-www-form-urlencoded",
-				},
-				body: "is_public=true",
-				redirect: "manual",
+		const res = await SELF.fetch("https://test.local/app/settings/visibility", {
+			method: "POST",
+			headers: {
+				...headers,
+				"Content-Type": "application/x-www-form-urlencoded",
 			},
-		);
+			body: "is_public=true",
+			redirect: "manual",
+		});
 		expect(res.status).toBe(302);
 		const location = res.headers.get("location") ?? "";
 		expect(location).toContain("/app/settings");
@@ -131,18 +128,15 @@ describe("POST /app/settings/visibility", () => {
 	it("disables public visibility", async () => {
 		await db.setSetting({ key: "is_public", value: "true" });
 		const headers = await sessionCookieHeader();
-		const res = await SELF.fetch(
-			"https://test.local/app/settings/visibility",
-			{
-				method: "POST",
-				headers: {
-					...headers,
-					"Content-Type": "application/x-www-form-urlencoded",
-				},
-				body: "is_public=false",
-				redirect: "manual",
+		const res = await SELF.fetch("https://test.local/app/settings/visibility", {
+			method: "POST",
+			headers: {
+				...headers,
+				"Content-Type": "application/x-www-form-urlencoded",
 			},
-		);
+			body: "is_public=false",
+			redirect: "manual",
+		});
 		expect(res.status).toBe(302);
 		const location = res.headers.get("location") ?? "";
 		expect(location).toContain("private");
@@ -153,17 +147,14 @@ describe("POST /app/settings/visibility", () => {
 
 	it("requires auth even when public", async () => {
 		await db.setSetting({ key: "is_public", value: "true" });
-		const res = await SELF.fetch(
-			"https://test.local/app/settings/visibility",
-			{
-				method: "POST",
-				headers: {
-					"Content-Type": "application/x-www-form-urlencoded",
-				},
-				body: "is_public=false",
-				redirect: "manual",
+		const res = await SELF.fetch("https://test.local/app/settings/visibility", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/x-www-form-urlencoded",
 			},
-		);
+			body: "is_public=false",
+			redirect: "manual",
+		});
 		expect(res.status).toBe(302);
 		expect(res.headers.get("location")).toBe("/app/login");
 	});

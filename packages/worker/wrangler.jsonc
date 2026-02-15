@@ -4,16 +4,16 @@
 	"main": "src/index.tsx",
 	"compatibility_date": "2025-02-14",
 	"observability": {
-		"enabled": true,
+		"enabled": true
 	},
 	"assets": {
-		"directory": "./public",
+		"directory": "./public"
 	},
 	"vars": {
 		"ADMIN_USERNAME": "your-admin-username",
 		"R2_ACCESS_KEY_ID": "your-r2-access-key-id",
 		"R2_ACCOUNT_ID": "your-r2-account-id",
-		"R2_BUCKET_NAME": "residue",
+		"R2_BUCKET_NAME": "residue"
 	},
 	"d1_databases": [
 		{
@@ -21,15 +21,15 @@
 			"database_name": "residue-app",
 			"database_id": "your-database-id",
 			"migrations_dir": "migrations",
-			"remote": true,
-		},
+			"remote": true
+		}
 	],
 	"r2_buckets": [
 		{
 			"binding": "BUCKET",
 			"bucket_name": "residue",
-			"remote": true,
-		},
+			"remote": true
+		}
 	],
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": ["nodejs_compat"]
 }

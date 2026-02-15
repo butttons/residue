@@ -96,7 +96,6 @@ pages.get("/", async (c) => {
 		<Layout title="residue" username={username}>
 			<h1 class="text-2xl font-bold mb-6 text-zinc-100">residue</h1>
 
-
 			{orgs.length === 0 ? (
 				<p class="text-zinc-400">
 					No sessions uploaded yet. Run{" "}
@@ -148,7 +147,11 @@ pages.get("/:org", async (c) => {
 
 	if (repos.length === 0) {
 		return c.html(
-			<Layout title={`${org} — residue`} username={username} breadcrumbs={[{ label: "residue", href: "/app" }]}>
+			<Layout
+				title={`${org} — residue`}
+				username={username}
+				breadcrumbs={[{ label: "residue", href: "/app" }]}
+			>
 				<p class="text-zinc-400">No data found for this organization.</p>
 			</Layout>,
 			404,
@@ -156,8 +159,11 @@ pages.get("/:org", async (c) => {
 	}
 
 	return c.html(
-		<Layout title={`${org} — residue`} username={username} breadcrumbs={[{ label: "residue", href: "/app" }, { label: org }]}>
-
+		<Layout
+			title={`${org} — residue`}
+			username={username}
+			breadcrumbs={[{ label: "residue", href: "/app" }, { label: org }]}
+		>
 			<ActivityGraph dailyCounts={dailyCounts} />
 
 			<div class="flex flex-col gap-3">
@@ -210,10 +216,14 @@ pages.get("/:org/:repo", async (c) => {
 
 	if (rows.length === 0 && !cursorParam) {
 		return c.html(
-			<Layout title={`${org}/${repo} — residue`} username={username} breadcrumbs={[
-				{ label: "residue", href: "/app" },
-				{ label: org, href: `/app/${org}` },
-			]}>
+			<Layout
+				title={`${org}/${repo} — residue`}
+				username={username}
+				breadcrumbs={[
+					{ label: "residue", href: "/app" },
+					{ label: org, href: `/app/${org}` },
+				]}
+			>
 				<p class="text-zinc-400">No data found for this repository.</p>
 			</Layout>,
 			404,
@@ -229,12 +239,15 @@ pages.get("/:org/:repo", async (c) => {
 			: null;
 
 	return c.html(
-		<Layout title={`${org}/${repo} — residue`} username={username} breadcrumbs={[
-			{ label: "residue", href: "/app" },
-			{ label: org, href: `/app/${org}` },
-			{ label: repo },
-		]}>
-
+		<Layout
+			title={`${org}/${repo} — residue`}
+			username={username}
+			breadcrumbs={[
+				{ label: "residue", href: "/app" },
+				{ label: org, href: `/app/${org}` },
+				{ label: repo },
+			]}
+		>
 			<ActivityGraph dailyCounts={dailyCounts} org={org} repo={repo} />
 
 			<CommitGraph data={graphData} org={org} repo={repo} />
@@ -263,11 +276,15 @@ pages.get("/:org/:repo/:sha", async (c) => {
 
 	if (rows.length === 0) {
 		return c.html(
-			<Layout title="Not found — residue" username={username} breadcrumbs={[
-				{ label: "residue", href: "/app" },
-				{ label: org, href: `/app/${org}` },
-				{ label: repo, href: `/app/${org}/${repo}` },
-			]}>
+			<Layout
+				title="Not found — residue"
+				username={username}
+				breadcrumbs={[
+					{ label: "residue", href: "/app" },
+					{ label: org, href: `/app/${org}` },
+					{ label: repo, href: `/app/${org}/${repo}` },
+				]}
+			>
 				<p class="text-zinc-400">Commit not found.</p>
 			</Layout>,
 			404,
@@ -371,13 +388,16 @@ pages.get("/:org/:repo/:sha", async (c) => {
 	const allModels = [...new Set(sessionsData.flatMap((d) => d.models))];
 
 	return c.html(
-		<Layout title={`${sha.slice(0, 7)} — ${org}/${repo} — residue`} username={username} breadcrumbs={[
-			{ label: "residue", href: "/app" },
-			{ label: org, href: `/app/${org}` },
-			{ label: repo, href: `/app/${org}/${repo}` },
-			{ label: sha.slice(0, 7) },
-		]}>
-
+		<Layout
+			title={`${sha.slice(0, 7)} — ${org}/${repo} — residue`}
+			username={username}
+			breadcrumbs={[
+				{ label: "residue", href: "/app" },
+				{ label: org, href: `/app/${org}` },
+				{ label: repo, href: `/app/${org}/${repo}` },
+				{ label: sha.slice(0, 7) },
+			]}
+		>
 			{/* Commit header */}
 			<div class="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-6">
 				<div class="flex items-center justify-between gap-2 mb-2">

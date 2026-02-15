@@ -78,8 +78,6 @@ describe("POST /app/login", () => {
 		});
 		expect(res.status).toBe(400);
 	});
-
-
 });
 
 describe("POST /app/logout", () => {

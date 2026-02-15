@@ -127,7 +127,9 @@ const Conversation: FC<ConversationProps> = ({
 										<span class="italic">thinking</span>
 									</summary>
 									<div class="p-3 text-xs bg-zinc-950 border-t border-zinc-800">
-										<pre class="text-zinc-500 overflow-x-auto whitespace-pre-wrap break-all max-h-96 overflow-y-auto">{tb.content}</pre>
+										<pre class="text-zinc-500 overflow-x-auto whitespace-pre-wrap break-all max-h-96 overflow-y-auto">
+											{tb.content}
+										</pre>
 									</div>
 								</details>
 							))}

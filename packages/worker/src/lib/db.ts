@@ -460,7 +460,9 @@ export class DB {
 
 	async listUsers(): Promise<UserRow[]> {
 		const result = await this.db
-			.prepare("SELECT id, username, created_at FROM users ORDER BY created_at ASC")
+			.prepare(
+				"SELECT id, username, created_at FROM users ORDER BY created_at ASC",
+			)
 			.all<UserRow>();
 		return result.results;
 	}
@@ -490,7 +492,13 @@ export class DB {
 		return row?.value ?? null;
 	}
 
-	async setSetting({ key, value }: { key: string; value: string }): Promise<void> {
+	async setSetting({
+		key,
+		value,
+	}: {
+		key: string;
+		value: string;
+	}): Promise<void> {
 		await this.db
 			.prepare(
 				"INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
