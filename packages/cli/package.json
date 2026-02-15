@@ -1,7 +1,7 @@
 {
-	"name": "residue",
+	"name": "@residue/cli",
 	"version": "0.0.1",
-	"private": true,
+
 	"type": "module",
 	"bin": {
 		"residue": "./dist/index.js"

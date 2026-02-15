@@ -7,7 +7,7 @@ Quick walkthrough to test residue end-to-end in a scratch repo.
 ```bash
 # Build and link the CLI
 cd packages/cli && bun run build
-# Make sure `residue` is on PATH (npm link or alias to dist/index.js)
+# Make sure `residue` is on PATH (bun link or alias to dist/index.js)
 residue --version
 ```
 

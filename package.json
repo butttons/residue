@@ -2,9 +2,9 @@
   "name": "residue-dev",
   "private": true,
   "scripts": {
-    "dev:cli": "pnpm --filter cli dev",
+    "dev:cli": "pnpm --filter @residue/cli dev",
     "dev:worker": "pnpm --filter worker dev",
-    "build:cli": "pnpm --filter cli build",
+    "build:cli": "pnpm --filter @residue/cli build",
     "build:worker": "pnpm --filter worker build",
     "deploy:worker": "pnpm --filter worker deploy",
     "build": "pnpm -r build",

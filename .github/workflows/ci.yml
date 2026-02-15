@@ -30,7 +30,7 @@ jobs:
         run: pnpm install
 
       - name: Type check CLI
-        run: pnpm --filter residue typecheck
+        run: pnpm --filter @residue/cli typecheck
 
       - name: Type check Worker
         run: pnpm --filter worker typecheck

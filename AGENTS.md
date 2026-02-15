@@ -8,7 +8,7 @@ An open-source CLI + self-hosted backend that captures AI agent conversations an
 
 ```
 packages/
-  cli/                → "residue" npm package, built with bun
+  cli/                → "@residue/cli" npm package, built with bun
     adapters/
       pi/             → pi coding agent extension (embedded at build time)
   worker/             → Cloudflare Worker (Hono + JSX), one-click deploy template
@@ -84,7 +84,7 @@ The presigned URL generation uses lightweight AWS SigV4 signing with the Web Cry
 
 - **Runtime:** Bun
 - **Language:** TypeScript
-- **Published as:** `residue` on npm
+- **Published as:** `@residue/cli` on npm (via `bun publish`)
 
 ### Commands
 
@@ -426,11 +426,11 @@ The user gets back a worker URL and a token. That's all they need to run `residu
 pnpm install
 
 # Dev
-pnpm --filter cli dev
+pnpm --filter @residue/cli dev
 pnpm --filter worker dev    # wrangler dev
 
 # Build
-pnpm --filter cli build
+pnpm --filter @residue/cli build
 
 # Test
 pnpm --filter worker test

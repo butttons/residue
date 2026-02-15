@@ -15,7 +15,7 @@ Cloudflare Worker that serves as the backend for residue. Stores AI session data
 ### Prerequisites
 
 - Node.js 18+
-- Wrangler CLI: `npm i -g wrangler`
+- Wrangler CLI: `bun add -g wrangler`
 - Cloudflare account: `wrangler login`
 - **R2 bucket with S3 API credentials** (see below)
 

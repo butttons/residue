@@ -35,7 +35,7 @@ A single conversation can span multiple commits. The full session is stored once
 
 ```
 packages/
-  cli/              -> "residue" npm package
+  cli/              -> "@residue/cli" npm package
   worker/           -> Cloudflare Worker (Hono + JSX)
 ```
 
@@ -142,7 +142,7 @@ At the end of either option you should have:
 ### Step 3: Install the CLI
 
 ```bash
-npm install -g residue
+bun add -g @residue/cli
 ```
 
 ### Step 4: Configure a repository
@@ -220,7 +220,7 @@ pnpm run dev:worker
 pnpm run build:cli
 
 # Run tests
-pnpm --filter residue test      # CLI tests
+pnpm --filter @residue/cli test      # CLI tests
 pnpm --filter worker test       # worker tests
 ```
 
