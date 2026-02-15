@@ -24,9 +24,10 @@ program
 	.description("Save worker URL and auth token")
 	.requiredOption("--url <worker_url>", "Worker URL")
 	.requiredOption("--token <auth_token>", "Auth token")
+	.option("--local", "Save config to this project instead of globally")
 	.action(
-		wrapCommand((opts: { url: string; token: string }) =>
-			login({ url: opts.url, token: opts.token }),
+		wrapCommand((opts: { url: string; token: string; local?: boolean }) =>
+			login({ url: opts.url, token: opts.token, isLocal: opts.local }),
 		),
 	);
 

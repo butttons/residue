@@ -1,11 +1,15 @@
 /**
  * Config management for the residue CLI.
- * Manages ~/.residue/config (JSON file).
+ * Global config: ~/.residue/config
+ * Local (per-project) config: .residue/config (in project root)
+ *
+ * resolveConfig() checks local first, then falls back to global.
  */
 
 import { mkdir } from "fs/promises";
-import { ResultAsync } from "neverthrow";
+import { okAsync, ResultAsync } from "neverthrow";
 import { join } from "path";
+import { getProjectRoot } from "@/lib/pending";
 import type { CliError } from "@/utils/errors";
 import { toCliError } from "@/utils/errors";
 
@@ -26,11 +30,12 @@ export function getConfigPath(): string {
 	return join(getConfigDir(), "config");
 }
 
-export function readConfig(): ResultAsync<ResidueConfig | null, CliError> {
+function readConfigFromPath(
+	configPath: string,
+): ResultAsync<ResidueConfig | null, CliError> {
 	return ResultAsync.fromPromise(
 		(async () => {
-			const path = getConfigPath();
-			const file = Bun.file(path);
+			const file = Bun.file(configPath);
 			const isExists = await file.exists();
 			if (!isExists) return null;
 			const text = await file.text();
@@ -40,17 +45,72 @@ export function readConfig(): ResultAsync<ResidueConfig | null, CliError> {
 	);
 }
 
-export function writeConfig(
-	config: ResidueConfig,
-): ResultAsync<void, CliError> {
+function writeConfigToPath(opts: {
+	configPath: string;
+	config: ResidueConfig;
+}): ResultAsync<void, CliError> {
 	return ResultAsync.fromPromise(
 		(async () => {
-			const dir = getConfigDir();
+			const dir = join(opts.configPath, "..");
 			await mkdir(dir, { recursive: true });
-			await Bun.write(getConfigPath(), JSON.stringify(config, null, 2));
+			await Bun.write(opts.configPath, JSON.stringify(opts.config, null, 2));
 		})(),
 		toCliError({ message: "Failed to write config", code: "CONFIG_ERROR" }),
 	);
+}
+
+/**
+ * Read the global config from ~/.residue/config.
+ */
+export function readConfig(): ResultAsync<ResidueConfig | null, CliError> {
+	return readConfigFromPath(getConfigPath());
+}
+
+/**
+ * Write the global config to ~/.residue/config.
+ */
+export function writeConfig(
+	config: ResidueConfig,
+): ResultAsync<void, CliError> {
+	return writeConfigToPath({ configPath: getConfigPath(), config });
+}
+
+/**
+ * Read the local (per-project) config from .residue/config.
+ */
+export function readLocalConfig(
+	projectRoot: string,
+): ResultAsync<ResidueConfig | null, CliError> {
+	return readConfigFromPath(join(projectRoot, ".residue", "config"));
+}
+
+/**
+ * Write the local (per-project) config to .residue/config.
+ */
+export function writeLocalConfig(opts: {
+	projectRoot: string;
+	config: ResidueConfig;
+}): ResultAsync<void, CliError> {
+	return writeConfigToPath({
+		configPath: join(opts.projectRoot, ".residue", "config"),
+		config: opts.config,
+	});
+}
+
+/**
+ * Resolve config by checking local (per-project) first, then global.
+ * Returns the first one found, or null if neither exists.
+ */
+export function resolveConfig(): ResultAsync<ResidueConfig | null, CliError> {
+	return getProjectRoot()
+		.andThen((projectRoot) => readLocalConfig(projectRoot))
+		.orElse(() => okAsync(null as ResidueConfig | null))
+		.andThen((localConfig) => {
+			if (localConfig !== null) {
+				return okAsync(localConfig as ResidueConfig | null);
+			}
+			return readConfig();
+		});
 }
 
 export function configExists(): ResultAsync<boolean, CliError> {

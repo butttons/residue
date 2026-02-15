@@ -1,5 +1,5 @@
 import { err, ok, okAsync, ResultAsync, safeTry } from "neverthrow";
-import { readConfig } from "@/lib/config";
+import { resolveConfig } from "@/lib/config";
 import { getCommitMeta, getRemoteUrl, parseRemote } from "@/lib/git";
 import type { CommitRef, PendingSession } from "@/lib/pending";
 import {
@@ -320,7 +320,7 @@ export function sync(opts?: {
 	remoteUrl?: string;
 }): ResultAsync<void, CliError> {
 	return safeTry(async function* () {
-		const config = yield* readConfig();
+		const config = yield* resolveConfig();
 		if (!config) {
 			return err(
 				new CliError({
