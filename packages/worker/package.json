@@ -5,7 +5,7 @@
 	"scripts": {
 		"build:assets": "vite build",
 		"dev:assets": "vite build --watch",
-		"deploy": "wrangler deploy",
+		"deploy": "pnpm run db:migrate && wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
 		"test": "vitest",

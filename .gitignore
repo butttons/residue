@@ -12,3 +12,4 @@ dist/
 .playwright-cli
 .tmp-build
 .residue/
+wrangler.local.jsonc
