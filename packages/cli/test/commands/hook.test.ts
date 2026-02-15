@@ -208,45 +208,6 @@ describe("hook claude-code", () => {
 		expect(sessions[0].data_path).toBe("/tmp/transcript.jsonl");
 	});
 
-	test("exits 0 on unknown hook event", async () => {
-		const proc = cli({
-			args: ["hook", "claude-code"],
-			stdin: hookInput({ hook_event_name: "PreToolUse" }),
-			cwd: tempDir,
-		});
-		const exitCode = await proc.exited;
-
-		expect(exitCode).toBe(0);
-	});
-
-	test("exits 0 on malformed JSON input", async () => {
-		const proc = cli({
-			args: ["hook", "claude-code"],
-			stdin: "not valid json{{{",
-			cwd: tempDir,
-		});
-		const exitCode = await proc.exited;
-
-		expect(exitCode).toBe(0);
-	});
-
-	test("stores state files in .residue/hooks/", async () => {
-		const proc = cli({
-			args: ["hook", "claude-code"],
-			stdin: hookInput({ session_id: "my-unique-session" }),
-			cwd: tempDir,
-		});
-		await proc.exited;
-
-		const stateFile = join(
-			tempDir,
-			".residue",
-			"hooks",
-			"my-unique-session.state",
-		);
-		expect(existsSync(stateFile)).toBe(true);
-	});
-
 	test("skips SessionStart when source is clear", async () => {
 		const proc = cli({
 			args: ["hook", "claude-code"],

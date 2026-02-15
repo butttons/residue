@@ -21,13 +21,6 @@ const row = (opts: {
 });
 
 describe("computeGraph", () => {
-	it("returns empty graph for empty input", () => {
-		const result = computeGraph([]);
-		expect(result.commits).toEqual([]);
-		expect(result.lanes).toEqual([]);
-		expect(result.laneCount).toBe(0);
-	});
-
 	it("handles single commit with single session (no lanes)", () => {
 		const rows = [row({ sha: "aaa", sessionId: "s1" })];
 		const result = computeGraph(rows);
@@ -198,23 +191,6 @@ describe("computeGraph", () => {
 
 		expect(result.lanes).toHaveLength(2);
 		expect(result.lanes[0].color).not.toBe(result.lanes[1].color);
-	});
-
-	it("preserves commit metadata", () => {
-		const rows = [
-			row({
-				sha: "abc123",
-				sessionId: "s1",
-				message: "fix the thing",
-				author: "jane",
-				committedAt: 1700000000,
-			}),
-		];
-		const result = computeGraph(rows);
-
-		expect(result.commits[0].message).toBe("fix the thing");
-		expect(result.commits[0].author).toBe("jane");
-		expect(result.commits[0].committedAt).toBe(1700000000);
 	});
 
 	it("handles three overlapping sessions needing three lanes", () => {

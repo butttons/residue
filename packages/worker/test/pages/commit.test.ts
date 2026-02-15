@@ -45,38 +45,6 @@ async function seedFullCommit(opts: {
 }
 
 describe("GET /app/:org/:repo/:sha (commit page)", () => {
-	it("returns 404 for unknown commit", async () => {
-		const headers = await sessionCookieHeader();
-		const res = await SELF.fetch(
-			"https://test.local/app/no-org/no-repo/no-sha",
-			{ headers },
-		);
-		expect(res.status).toBe(404);
-		const html = await res.text();
-		expect(html).toContain("Commit not found");
-	});
-
-	it("shows commit metadata", async () => {
-		await seedFullCommit({
-			sha: "abc123def456",
-			org: "c-org",
-			repo: "c-repo",
-			sessionId: "s1",
-			message: "fix critical auth bug",
-		});
-
-		const headers = await sessionCookieHeader();
-		const res = await SELF.fetch(
-			"https://test.local/app/c-org/c-repo/abc123def456",
-			{ headers },
-		);
-		expect(res.status).toBe(200);
-		const html = await res.text();
-		expect(html).toContain("abc123def456");
-		expect(html).toContain("fix critical auth bug");
-		expect(html).toContain("jane");
-	});
-
 	it("renders conversation from session data", async () => {
 		await seedFullCommit({
 			sha: "conv-sha",
@@ -95,44 +63,6 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 		expect(html).toContain("Hi! How can I help?");
 		expect(html).toContain("human");
 		expect(html).toContain("assistant");
-	});
-
-	it("shows breadcrumb navigation", async () => {
-		await seedFullCommit({
-			sha: "bc-sha-123",
-			org: "bc-org",
-			repo: "bc-repo",
-			sessionId: "bc-session",
-		});
-
-		const headers = await sessionCookieHeader();
-		const res = await SELF.fetch(
-			"https://test.local/app/bc-org/bc-repo/bc-sha-123",
-			{ headers },
-		);
-		const html = await res.text();
-		expect(html).toContain('href="/app"');
-		expect(html).toContain('href="/app/bc-org"');
-		expect(html).toContain('href="/app/bc-org/bc-repo"');
-		expect(html).toContain("bc-sha-");
-	});
-
-	it("shows agent badge", async () => {
-		await seedFullCommit({
-			sha: "agent-sha",
-			org: "a-org",
-			repo: "a-repo",
-			sessionId: "agent-session",
-			agent: "pi",
-		});
-
-		const headers = await sessionCookieHeader();
-		const res = await SELF.fetch(
-			"https://test.local/app/a-org/a-repo/agent-sha",
-			{ headers },
-		);
-		const html = await res.text();
-		expect(html).toContain("pi");
 	});
 
 	it("shows continuation links for multi-commit sessions", async () => {

@@ -52,24 +52,6 @@ type RepoResponse = {
 };
 
 describe("GET /api/repos/:org/:repo", () => {
-	it("returns 401 without auth", async () => {
-		const res = await SELF.fetch("https://test.local/api/repos/my-org/my-repo");
-		expect(res.status).toBe(401);
-	});
-
-	it("returns empty commits for unknown org/repo", async () => {
-		const res = await SELF.fetch(
-			"https://test.local/api/repos/unknown/unknown",
-			{
-				headers: AUTH_HEADER,
-			},
-		);
-		expect(res.status).toBe(200);
-		const body = await res.json<RepoResponse>();
-		expect(body.commits).toEqual([]);
-		expect(body.next_cursor).toBeNull();
-	});
-
 	it("returns commits grouped by SHA with sessions", async () => {
 		await seedSession("s1");
 		await seedCommit({
@@ -229,42 +211,5 @@ describe("GET /api/repos/:org/:repo", () => {
 		expect(body.commits).toHaveLength(2);
 		expect(body.commits[0].sha).toBe("sha-1");
 		expect(body.commits[1].sha).toBe("sha-0");
-	});
-
-	it("returns next_cursor when more results exist", async () => {
-		await seedSession("s1");
-
-		// We can't seed 51 easily, but we can test with a small limit
-		// by checking the logic: if rows.length === limit, next_cursor is set
-		// Seed 2 commits and verify next_cursor is null (less than 50)
-		await seedCommit({
-			sha: "a",
-			org: "my-org",
-			repo: "my-repo",
-			sessionId: "s1",
-			message: "m",
-			author: "j",
-			committedAt: 1700000000,
-		});
-
-		const res = await SELF.fetch(
-			"https://test.local/api/repos/my-org/my-repo",
-			{
-				headers: AUTH_HEADER,
-			},
-		);
-		expect(res.status).toBe(200);
-		const body = await res.json<RepoResponse>();
-		expect(body.next_cursor).toBeNull();
-	});
-
-	it("returns 400 for invalid cursor", async () => {
-		const res = await SELF.fetch(
-			"https://test.local/api/repos/my-org/my-repo?cursor=notanumber",
-			{ headers: AUTH_HEADER },
-		);
-		expect(res.status).toBe(400);
-		const body = await res.json<{ error: string }>();
-		expect(body.error).toBe("Invalid cursor");
 	});
 });

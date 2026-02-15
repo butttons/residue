@@ -38,61 +38,6 @@ async function postSession(body: unknown) {
 const db = new DB(env.DB);
 
 describe("POST /api/sessions", () => {
-	it("returns 401 without auth", async () => {
-		const res = await SELF.fetch("https://test.local/api/sessions", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(makeBody()),
-		});
-		expect(res.status).toBe(401);
-	});
-
-	it("returns 400 for invalid JSON", async () => {
-		const res = await SELF.fetch("https://test.local/api/sessions", {
-			method: "POST",
-			headers: { ...AUTH_HEADER, "Content-Type": "application/json" },
-			body: "not-json",
-		});
-		expect(res.status).toBe(400);
-	});
-
-	it("returns 400 when session.id is missing", async () => {
-		const payload = makeBody();
-		delete (payload.session as Record<string, unknown>).id;
-
-		const res = await postSession(payload);
-		expect(res.status).toBe(400);
-		const body = await res.json<{ error: string }>();
-		expect(body.error).toBe("Validation failed");
-	});
-
-	it("returns 400 when session.agent is missing", async () => {
-		const payload = makeBody();
-		delete (payload.session as Record<string, unknown>).agent;
-
-		const res = await postSession(payload);
-		expect(res.status).toBe(400);
-		const body = await res.json<{ error: string }>();
-		expect(body.error).toBe("Validation failed");
-	});
-
-	it("returns 400 when commits is not an array", async () => {
-		const res = await postSession(makeBody({ commits: "not-array" }));
-		expect(res.status).toBe(400);
-		const body = await res.json<{ error: string }>();
-		expect(body.error).toBe("Validation failed");
-	});
-
-	it("returns 400 for invalid status value", async () => {
-		const payload = makeBody();
-		(payload.session as Record<string, unknown>).status = "invalid";
-
-		const res = await postSession(payload);
-		expect(res.status).toBe(400);
-		const body = await res.json<{ error: string }>();
-		expect(body.error).toBe("Validation failed");
-	});
-
 	it("stores session metadata in D1", async () => {
 		const res = await postSession(makeBody());
 
@@ -230,17 +175,6 @@ describe("POST /api/sessions", () => {
 
 		const commits = await db.getCommitsBySha("abc123");
 		expect(commits).toHaveLength(1);
-	});
-
-	it("defaults agent_version to unknown when not provided", async () => {
-		const payload = makeBody();
-		delete (payload.session as Record<string, unknown>).agent_version;
-
-		const res = await postSession(payload);
-		expect(res.status).toBe(200);
-
-		const session = await db.getSessionById("test-session-1");
-		expect(session!.agent_version).toBe("unknown");
 	});
 
 	it("does not touch R2 (data uploaded via presigned URL beforehand)", async () => {

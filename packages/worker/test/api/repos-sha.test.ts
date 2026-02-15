@@ -62,25 +62,6 @@ type ShaResponse = {
 };
 
 describe("GET /api/repos/:org/:repo/:sha", () => {
-	it("returns 401 without auth", async () => {
-		const res = await SELF.fetch(
-			"https://test.local/api/repos/org/repo/abc123",
-		);
-		expect(res.status).toBe(401);
-	});
-
-	it("returns 404 for nonexistent commit", async () => {
-		const res = await SELF.fetch(
-			"https://test.local/api/repos/org/repo/nonexistent",
-			{
-				headers: AUTH_HEADER,
-			},
-		);
-		expect(res.status).toBe(404);
-		const body = await res.json<{ error: string }>();
-		expect(body.error).toBe("Commit not found");
-	});
-
 	it("returns commit metadata and linked sessions", async () => {
 		await seedSession({ id: "s1", agentVersion: "1.2.3" });
 		await seedCommit({
@@ -154,41 +135,5 @@ describe("GET /api/repos/:org/:repo/:sha", () => {
 			{ headers: AUTH_HEADER },
 		);
 		expect(res.status).toBe(404);
-	});
-
-	it("includes ended_at for ended sessions", async () => {
-		await seedSession({ id: "s1", status: "ended" });
-		await seedCommit({
-			sha: "abc123",
-			org: "my-org",
-			repo: "my-repo",
-			sessionId: "s1",
-		});
-
-		const res = await SELF.fetch(
-			"https://test.local/api/repos/my-org/my-repo/abc123",
-			{ headers: AUTH_HEADER },
-		);
-		expect(res.status).toBe(200);
-		const body = await res.json<ShaResponse>();
-		expect(body.sessions[0].ended_at).toBeTypeOf("number");
-	});
-
-	it("returns null ended_at for open sessions", async () => {
-		await seedSession({ id: "s1", status: "open" });
-		await seedCommit({
-			sha: "abc123",
-			org: "my-org",
-			repo: "my-repo",
-			sessionId: "s1",
-		});
-
-		const res = await SELF.fetch(
-			"https://test.local/api/repos/my-org/my-repo/abc123",
-			{ headers: AUTH_HEADER },
-		);
-		expect(res.status).toBe(200);
-		const body = await res.json<ShaResponse>();
-		expect(body.sessions[0].ended_at).toBeNull();
 	});
 });

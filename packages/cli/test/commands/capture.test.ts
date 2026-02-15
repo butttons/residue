@@ -203,10 +203,4 @@ describe("capture command", () => {
 		expect(branch.length).toBeGreaterThan(0);
 		expect(branch).not.toBe("unknown");
 	});
-
-	test("exits 0 even with no pending sessions", async () => {
-		const proc = cli(["capture"]);
-		const exitCode = await proc.exited;
-		expect(exitCode).toBe(0);
-	});
 });

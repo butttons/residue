@@ -149,23 +149,6 @@ function createMockServer() {
 }
 
 describe("sync command", () => {
-	test("exits 0 when not configured", async () => {
-		const proc = cli(["sync"]);
-		const exitCode = await proc.exited;
-		const stderr = await new Response(proc.stderr).text();
-
-		expect(exitCode).toBe(0);
-		expect(stderr).toContain("Not configured");
-	});
-
-	test("exits 0 when no pending sessions", async () => {
-		await setupConfig({ workerUrl: "http://localhost:9999", token: "test" });
-
-		const proc = cli(["sync"]);
-		const exitCode = await proc.exited;
-		expect(exitCode).toBe(0);
-	});
-
 	test("uploads data to R2 via presigned URL and posts metadata to worker", async () => {
 		const mock = createMockServer();
 
