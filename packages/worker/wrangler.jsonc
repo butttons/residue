@@ -4,21 +4,21 @@
 	"main": "src/index.tsx",
 	"compatibility_date": "2025-02-14",
 	"observability": {
-		"enabled": true
+		"enabled": true,
 	},
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "residue-db",
-			"database_id": "YOUR_D1_DATABASE_ID",
-			"migrations_dir": "migrations"
-		}
+			"database_name": "residue-app",
+			"database_id": "your-database-id",
+			"migrations_dir": "migrations",
+		},
 	],
 	"r2_buckets": [
 		{
 			"binding": "BUCKET",
-			"bucket_name": "residue-sessions"
-		}
+			"bucket_name": "residue",
+		},
 	],
-	"compatibility_flags": ["nodejs_compat"]
+	"compatibility_flags": ["nodejs_compat"],
 }
