@@ -85,6 +85,7 @@ const Layout: FC<LayoutProps> = ({ title, username, children }) => {
 					username
 						? html`<div class="max-w-4xl mx-auto px-4 pt-4 flex justify-end items-center gap-3">
             <span class="text-xs text-zinc-500">${username}</span>
+            <a href="/app/settings/users" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">settings</a>
             <form method="POST" action="/app/logout" class="inline">
               <button type="submit" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">sign out</button>
             </form>
