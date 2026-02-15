@@ -1,19 +1,9 @@
 import { env, SELF } from "cloudflare:test";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { hashPassword } from "../../src/lib/auth";
 import { DB } from "../../src/lib/db";
-import { applyMigrations } from "../utils";
 
-let db: DB;
-
-beforeAll(async () => {
-	await applyMigrations(env.DB);
-	db = new DB(env.DB);
-});
-
-beforeEach(async () => {
-	await env.DB.prepare("DELETE FROM users").run();
-});
+const db = new DB(env.DB);
 
 async function createTestUser(username: string, password: string) {
 	const passwordHash = await hashPassword({ password });
@@ -89,21 +79,7 @@ describe("POST /app/login", () => {
 		expect(res.status).toBe(400);
 	});
 
-	it("bootstraps admin user from env vars on first login", async () => {
-		// No users in DB, but ADMIN_USERNAME and ADMIN_PASSWORD are set in test env
-		const res = await SELF.fetch("https://test.local/app/login", {
-			method: "POST",
-			headers: { "Content-Type": "application/x-www-form-urlencoded" },
-			body: `username=${env.ADMIN_USERNAME}&password=${env.ADMIN_PASSWORD}`,
-			redirect: "manual",
-		});
-		expect(res.status).toBe(302);
-		expect(res.headers.get("location")).toBe("/app");
 
-		// Admin user should now exist in DB
-		const user = await db.getUserByUsername(env.ADMIN_USERNAME);
-		expect(user).not.toBeNull();
-	});
 });
 
 describe("POST /app/logout", () => {

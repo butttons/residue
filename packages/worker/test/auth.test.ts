@@ -1,14 +1,6 @@
 import { env, SELF } from "cloudflare:test";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { applyMigrations, sessionCookieHeader } from "./utils";
-
-beforeAll(async () => {
-	await applyMigrations(env.DB);
-});
-
-beforeEach(async () => {
-	await env.DB.prepare("DELETE FROM users").run();
-});
+import { describe, expect, it } from "vitest";
+import { sessionCookieHeader } from "./utils";
 
 describe("API auth middleware", () => {
 	it("returns 401 when no Authorization header is provided", async () => {

@@ -1,9 +1,8 @@
 import { env, SELF } from "cloudflare:test";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { DB } from "../../src/lib/db";
-import { applyMigrations } from "../utils";
 
-let db: DB;
+const db = new DB(env.DB);
 
 function authHeaders(body?: Record<string, unknown>): Record<string, string> {
 	const headers: Record<string, string> = {
@@ -14,15 +13,6 @@ function authHeaders(body?: Record<string, unknown>): Record<string, string> {
 	}
 	return headers;
 }
-
-beforeAll(async () => {
-	await applyMigrations(env.DB);
-	db = new DB(env.DB);
-});
-
-beforeEach(async () => {
-	await env.DB.prepare("DELETE FROM users").run();
-});
 
 describe("POST /api/users", () => {
 	it("creates a user", async () => {

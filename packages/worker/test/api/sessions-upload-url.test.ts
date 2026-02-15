@@ -1,12 +1,7 @@
 import { env, SELF } from "cloudflare:test";
-import { beforeAll, describe, expect, it } from "vitest";
-import { applyMigrations } from "../utils";
+import { describe, expect, it } from "vitest";
 
 const AUTH_HEADER = { Authorization: `Bearer ${env.AUTH_TOKEN}` };
-
-beforeAll(async () => {
-	await applyMigrations(env.DB);
-});
 
 describe("POST /api/sessions/upload-url", () => {
 	it("returns 401 without auth", async () => {

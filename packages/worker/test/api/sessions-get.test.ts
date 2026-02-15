@@ -1,6 +1,5 @@
 import { env, SELF } from "cloudflare:test";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { applyMigrations } from "../utils";
+import { describe, expect, it } from "vitest";
 
 const AUTH_HEADER = { Authorization: `Bearer ${env.AUTH_TOKEN}` };
 
@@ -29,15 +28,6 @@ async function seedSession(opts: {
 		}),
 	});
 }
-
-beforeAll(async () => {
-	await applyMigrations(env.DB);
-});
-
-beforeEach(async () => {
-	await env.DB.prepare("DELETE FROM commits").run();
-	await env.DB.prepare("DELETE FROM sessions").run();
-});
 
 describe("GET /api/sessions/:id", () => {
 	it("returns 401 without auth", async () => {

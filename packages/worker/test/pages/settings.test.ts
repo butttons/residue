@@ -1,19 +1,9 @@
 import { env, SELF } from "cloudflare:test";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { DB } from "../../src/lib/db";
-import { applyMigrations, sessionCookieHeader } from "../utils";
+import { sessionCookieHeader } from "../utils";
 
-let db: DB;
-
-beforeAll(async () => {
-	await applyMigrations(env.DB);
-	db = new DB(env.DB);
-});
-
-beforeEach(async () => {
-	await env.DB.prepare("DELETE FROM users").run();
-	await env.DB.prepare("DELETE FROM settings").run();
-});
+const db = new DB(env.DB);
 
 describe("GET /app/settings", () => {
 	it("redirects to login without authentication", async () => {

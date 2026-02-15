@@ -1,21 +1,10 @@
 import { env, SELF } from "cloudflare:test";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { DB } from "../../src/lib/db";
-import { applyMigrations } from "../utils";
 
 const AUTH_HEADER = { Authorization: `Bearer ${env.AUTH_TOKEN}` };
 
-let db: DB;
-
-beforeAll(async () => {
-	await applyMigrations(env.DB);
-	db = new DB(env.DB);
-});
-
-beforeEach(async () => {
-	await env.DB.prepare("DELETE FROM commits").run();
-	await env.DB.prepare("DELETE FROM sessions").run();
-});
+const db = new DB(env.DB);
 
 async function seedSession(opts: {
 	id: string;
