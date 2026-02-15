@@ -1,4 +1,4 @@
-import { errAsync, okAsync, ResultAsync } from "neverthrow";
+import { err, errAsync, ok, okAsync, ResultAsync, safeTry } from "neverthrow";
 import { readConfig } from "@/lib/config";
 import { getCommitMeta, getRemoteUrl, parseRemote } from "@/lib/git";
 import type { CommitRef, PendingSession } from "@/lib/pending";
@@ -240,9 +240,10 @@ function resolveRemote(
 export function sync(opts?: {
 	remoteUrl?: string;
 }): ResultAsync<void, CliError> {
-	return readConfig().andThen((config) => {
+	return safeTry(async function* () {
+		const config = yield* readConfig();
 		if (!config) {
-			return errAsync(
+			return err(
 				new CliError({
 					message: "Not configured. Run 'residue login' first.",
 					code: "CONFIG_MISSING",
@@ -250,29 +251,25 @@ export function sync(opts?: {
 			);
 		}
 
-		return getProjectRoot()
-			.andThen(getPendingPath)
-			.andThen((pendingPath) =>
-				readPending(pendingPath).andThen((sessions) => {
-					if (sessions.length === 0) {
-						return okAsync(undefined);
-					}
+		const projectRoot = yield* getProjectRoot();
+		const pendingPath = yield* getPendingPath(projectRoot);
+		const sessions = yield* readPending(pendingPath);
 
-					return closeStaleOpenSessions({ sessions }).andThen(
-						(updatedSessions) =>
-							resolveRemote(opts?.remoteUrl).andThen(({ org, repo }) =>
-								syncSessions({
-									sessions: updatedSessions,
-									workerUrl: config.worker_url,
-									token: config.token,
-									org,
-									repo,
-								}).andThen((remaining) =>
-									writePending({ path: pendingPath, sessions: remaining }),
-								),
-							),
-					);
-				}),
-			);
+		if (sessions.length === 0) {
+			return ok(undefined);
+		}
+
+		const updatedSessions = yield* closeStaleOpenSessions({ sessions });
+		const { org, repo } = yield* resolveRemote(opts?.remoteUrl);
+		const remaining = yield* syncSessions({
+			sessions: updatedSessions,
+			workerUrl: config.worker_url,
+			token: config.token,
+			org,
+			repo,
+		});
+
+		yield* writePending({ path: pendingPath, sessions: remaining });
+		return ok(undefined);
 	});
 }

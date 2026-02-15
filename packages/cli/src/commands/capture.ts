@@ -1,12 +1,7 @@
-import { ResultAsync } from "neverthrow";
+import { ok, ResultAsync, safeTry } from "neverthrow";
 import { getCurrentBranch, getCurrentSha } from "@/lib/git";
 import type { PendingSession } from "@/lib/pending";
-import {
-	getPendingPath,
-	getProjectRoot,
-	readPending,
-	writePending,
-} from "@/lib/pending";
+import { getPendingPath, getProjectRoot, readPending, writePending } from "@/lib/pending";
 import type { CliError } from "@/utils/errors";
 
 /**
@@ -26,23 +21,24 @@ function shouldTag(session: PendingSession): boolean {
 }
 
 export function capture(): ResultAsync<void, CliError> {
-	return ResultAsync.combine([getCurrentSha(), getCurrentBranch()]).andThen(
-		([sha, branch]) =>
-			getProjectRoot()
-				.andThen(getPendingPath)
-				.andThen((pendingPath) =>
-					readPending(pendingPath).andThen((sessions) => {
-						for (const session of sessions) {
-							if (!shouldTag(session)) continue;
-							const isAlreadyTagged = session.commits.some(
-								(c) => c.sha === sha,
-							);
-							if (!isAlreadyTagged) {
-								session.commits.push({ sha, branch });
-							}
-						}
-						return writePending({ path: pendingPath, sessions });
-					}),
-				),
-	);
+	return safeTry(async function* () {
+		const [sha, branch] = yield* ResultAsync.combine([
+			getCurrentSha(),
+			getCurrentBranch(),
+		]);
+		const projectRoot = yield* getProjectRoot();
+		const pendingPath = yield* getPendingPath(projectRoot);
+		const sessions = yield* readPending(pendingPath);
+
+		for (const session of sessions) {
+			if (!shouldTag(session)) continue;
+			const isAlreadyTagged = session.commits.some((c) => c.sha === sha);
+			if (!isAlreadyTagged) {
+				session.commits.push({ sha, branch });
+			}
+		}
+
+		yield* writePending({ path: pendingPath, sessions });
+		return ok(undefined);
+	});
 }

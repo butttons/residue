@@ -1,4 +1,4 @@
-import { errAsync, ResultAsync } from "neverthrow";
+import { err, ok, ResultAsync, safeTry } from "neverthrow";
 import { isGitRepo } from "@/lib/git";
 import { getProjectRoot, getResidueDir } from "@/lib/pending";
 import { CliError, toCliError } from "@/utils/errors";
@@ -98,46 +98,49 @@ function ensureGitignore(projectRoot: string): ResultAsync<void, CliError> {
 }
 
 export function init(): ResultAsync<void, CliError> {
-	return isGitRepo().andThen((isRepo) => {
+	return safeTry(async function* () {
+		const isRepo = yield* isGitRepo();
 		if (!isRepo) {
-			return errAsync(
+			return err(
 				new CliError({ message: "not a git repository", code: "GIT_ERROR" }),
 			);
 		}
 
-		return ResultAsync.combine([getProjectRoot(), getGitDirForInit()]).andThen(
-			([projectRoot, gitDir]) => {
-				const hooksDir = join(gitDir, "hooks");
+		const [projectRoot, gitDir] = yield* ResultAsync.combine([
+			getProjectRoot(),
+			getGitDirForInit(),
+		]);
 
-				return ResultAsync.combine([
-					getResidueDir(projectRoot),
-					ResultAsync.fromPromise(
-						mkdir(hooksDir, { recursive: true }),
-						toCliError({
-							message: "Failed to create hooks directory",
-							code: "IO_ERROR",
-						}),
-					),
-				]).andThen(() =>
-					ResultAsync.combine([
-						installHook({
-							hooksDir,
-							filename: "post-commit",
-							line: POST_COMMIT_LINE,
-						}),
-						installHook({
-							hooksDir,
-							filename: "pre-push",
-							line: PRE_PUSH_LINE,
-						}),
-						ensureGitignore(projectRoot),
-					]).map(([postCommit, prePush]) => {
-						log.info("Initialized residue in this repository.");
-						log.info(`  ${postCommit}`);
-						log.info(`  ${prePush}`);
-					}),
-				);
-			},
-		);
+		const hooksDir = join(gitDir, "hooks");
+
+		yield* ResultAsync.combine([
+			getResidueDir(projectRoot),
+			ResultAsync.fromPromise(
+				mkdir(hooksDir, { recursive: true }),
+				toCliError({
+					message: "Failed to create hooks directory",
+					code: "IO_ERROR",
+				}),
+			),
+		]);
+
+		const [postCommit, prePush] = yield* ResultAsync.combine([
+			installHook({
+				hooksDir,
+				filename: "post-commit",
+				line: POST_COMMIT_LINE,
+			}),
+			installHook({
+				hooksDir,
+				filename: "pre-push",
+				line: PRE_PUSH_LINE,
+			}),
+			ensureGitignore(projectRoot),
+		]);
+
+		log.info("Initialized residue in this repository.");
+		log.info(`  ${postCommit}`);
+		log.info(`  ${prePush}`);
+		return ok(undefined);
 	});
 }

@@ -1,4 +1,4 @@
-import { okAsync, Result, ResultAsync } from "neverthrow";
+import { ok, okAsync, Result, ResultAsync, safeTry } from "neverthrow";
 import {
 	addSession,
 	getPendingPath,
@@ -82,68 +82,80 @@ function getHooksDir(projectRoot: string): ResultAsync<string, CliError> {
 	);
 }
 
+function fileExists(path: string): ResultAsync<boolean, CliError> {
+	return ResultAsync.fromPromise(
+		(async () => {
+			try {
+				await stat(path);
+				return true;
+			} catch {
+				return false;
+			}
+		})(),
+		toCliError({
+			message: "Failed to check file existence",
+			code: "IO_ERROR",
+		}),
+	);
+}
+
+function readFileContent(path: string): ResultAsync<string, CliError> {
+	return ResultAsync.fromPromise(
+		readFile(path, "utf-8"),
+		toCliError({ message: "Failed to read file", code: "IO_ERROR" }),
+	);
+}
+
 function handleSessionStart(opts: {
 	input: ClaudeHookInput;
 	projectRoot: string;
 }): ResultAsync<void, CliError> {
 	const { input, projectRoot } = opts;
 
-	// Only track new sessions (source=startup)
-	if (input.source !== "startup") {
-		return okAsync(undefined);
-	}
-
-	// Skip if transcript_path is missing or empty
-	if (!input.transcript_path) {
-		return okAsync(undefined);
-	}
-
-	const claudeSessionId = input.session_id;
-	if (!claudeSessionId) {
-		return okAsync(undefined);
-	}
+	if (input.source !== "startup") return okAsync(undefined);
+	if (!input.transcript_path) return okAsync(undefined);
+	if (!input.session_id) return okAsync(undefined);
 
 	const residueSessionId = crypto.randomUUID();
+	const claudeSessionId = input.session_id;
 
-	return getPendingPath(projectRoot)
-		.andThen((pendingPath) =>
-			addSession({
-				path: pendingPath,
-				session: {
-					id: residueSessionId,
-					agent: "claude-code",
-					agent_version: "unknown",
-					status: "open",
-					data_path: input.transcript_path!,
-					commits: [],
-				},
-			}),
-		)
-		.andThen(() => detectClaudeVersion())
-		.andThen((version) =>
-			// Update agent_version after detecting it
-			getPendingPath(projectRoot).andThen((pendingPath) =>
-				updateSession({
-					path: pendingPath,
-					id: residueSessionId,
-					updates: { agent_version: version },
-				}),
-			),
-		)
-		.andThen(() => getHooksDir(projectRoot))
-		.andThen((hooksDir) => {
-			const stateFile = join(hooksDir, `${claudeSessionId}.state`);
-			return ResultAsync.fromPromise(
-				writeFile(stateFile, residueSessionId),
-				toCliError({
-					message: "Failed to write hook state file",
-					code: "IO_ERROR",
-				}),
-			);
-		})
-		.map(() => {
-			log.debug("session started for claude-code");
+	return safeTry(async function* () {
+		const pendingPath = yield* getPendingPath(projectRoot);
+
+		yield* addSession({
+			path: pendingPath,
+			session: {
+				id: residueSessionId,
+				agent: "claude-code",
+				agent_version: "unknown",
+				status: "open",
+				data_path: input.transcript_path!,
+				commits: [],
+			},
 		});
+
+		const version = yield* detectClaudeVersion();
+
+		yield* updateSession({
+			path: pendingPath,
+			id: residueSessionId,
+			updates: { agent_version: version },
+		});
+
+		const hooksDir = yield* getHooksDir(projectRoot);
+		const stateFile = join(hooksDir, `${claudeSessionId}.state`);
+
+		yield* ResultAsync.fromPromise(
+			writeFile(stateFile, residueSessionId),
+			toCliError({
+				message: "Failed to write hook state file",
+				code: "IO_ERROR",
+			}),
+		);
+
+		log.debug("session started for claude-code");
+		return ok(undefined);
+	});
 }
 
 function handleSessionEnd(opts: {
@@ -153,93 +165,58 @@ function handleSessionEnd(opts: {
 	const { input, projectRoot } = opts;
 	const claudeSessionId = input.session_id;
 
-	if (!claudeSessionId) {
-		return okAsync(undefined);
-	}
+	if (!claudeSessionId) return okAsync(undefined);
 
-	return getHooksDir(projectRoot).andThen((hooksDir) => {
+	return safeTry(async function* () {
+		const hooksDir = yield* getHooksDir(projectRoot);
 		const stateFile = join(hooksDir, `${claudeSessionId}.state`);
 
-		return ResultAsync.fromPromise(
-			(async () => {
-				let isExists = false;
-				try {
-					await stat(stateFile);
-					isExists = true;
-				} catch {
-					// state file does not exist
-				}
-				return isExists;
-			})(),
+		const isExists = yield* fileExists(stateFile);
+		if (!isExists) return ok(undefined);
+
+		const rawId = yield* readFileContent(stateFile);
+		const trimmedId = rawId.trim();
+		if (!trimmedId) return ok(undefined);
+
+		const pendingPath = yield* getPendingPath(projectRoot);
+		const session = yield* getSession({ path: pendingPath, id: trimmedId });
+
+		if (session) {
+			yield* updateSession({
+				path: pendingPath,
+				id: trimmedId,
+				updates: { status: "ended" },
+			});
+		}
+
+		yield* ResultAsync.fromPromise(
+			rm(stateFile, { force: true }),
 			toCliError({
-				message: "Failed to check hook state file",
+				message: "Failed to remove hook state file",
 				code: "IO_ERROR",
 			}),
-		).andThen((isExists) => {
-			if (!isExists) {
-				// No state file means we never tracked this session (e.g. resumed)
-				return okAsync(undefined);
-			}
+		);
 
-			return ResultAsync.fromPromise(
-				readFile(stateFile, "utf-8"),
-				toCliError({
-					message: "Failed to read hook state file",
-					code: "IO_ERROR",
-				}),
-			).andThen((residueSessionId) => {
-				const trimmedId = residueSessionId.trim();
-				if (!trimmedId) {
-					return okAsync(undefined);
-				}
-
-				return getPendingPath(projectRoot)
-					.andThen((pendingPath) =>
-						getSession({ path: pendingPath, id: trimmedId }).andThen(
-							(session) => {
-								if (!session) {
-									// Session was already removed (e.g. synced)
-									return okAsync(undefined);
-								}
-								return updateSession({
-									path: pendingPath,
-									id: trimmedId,
-									updates: { status: "ended" },
-								});
-							},
-						),
-					)
-					.andThen(() =>
-						ResultAsync.fromPromise(
-							rm(stateFile, { force: true }),
-							toCliError({
-								message: "Failed to remove hook state file",
-								code: "IO_ERROR",
-							}),
-						),
-					)
-					.map(() => {
-						log.debug("session %s ended", trimmedId);
-					});
-			});
-		});
+		log.debug("session %s ended", trimmedId);
+		return ok(undefined);
 	});
 }
 
 export function hookClaudeCode(): ResultAsync<void, CliError> {
-	return readStdin()
-		.andThen(parseInput)
-		.andThen((input) =>
-			getProjectRoot().andThen((projectRoot) => {
-				switch (input.hook_event_name) {
-					case "SessionStart":
-						return handleSessionStart({ input, projectRoot });
-					case "SessionEnd":
-						return handleSessionEnd({ input, projectRoot });
-					default:
-						// Unknown hook events are silently ignored
-						return okAsync(undefined);
-				}
-			}),
-		);
+	return safeTry(async function* () {
+		const raw = yield* readStdin();
+		const input = yield* parseInput(raw);
+		const projectRoot = yield* getProjectRoot();
+
+		switch (input.hook_event_name) {
+			case "SessionStart":
+				yield* handleSessionStart({ input, projectRoot });
+				break;
+			case "SessionEnd":
+				yield* handleSessionEnd({ input, projectRoot });
+				break;
+		}
+
+		return ok(undefined);
+	});
 }
