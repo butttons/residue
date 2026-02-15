@@ -112,7 +112,11 @@ const pages = new Hono<{ Bindings: Env; Variables: { username: string } }>();
 // Home page — list orgs
 pages.get("/", async (c) => {
 	const db = new DB(c.env.DB);
-	const orgs = await db.getOrgList();
+	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
+	const [orgs, dailyCounts] = await Promise.all([
+		db.getOrgList(),
+		db.getDailyActivityCountsGlobal({ since: oneYearAgo }),
+	]);
 	const username = c.get("username");
 
 	return c.html(
@@ -128,26 +132,30 @@ pages.get("/", async (c) => {
 					in a repo to get started.
 				</p>
 			) : (
-				<div class="flex flex-col gap-3">
-					{orgs.map((org) => (
-						<a
-							href={`/app/${org.org}`}
-							class="block bg-zinc-900 border border-zinc-800 rounded-md p-4 hover:border-zinc-700 transition-colors"
-						>
-							<div class="flex items-center justify-between">
-								<span class="text-zinc-100 font-medium">{org.org}</span>
-								<span class="text-zinc-400 text-sm">
-									{org.repo_count} {org.repo_count === 1 ? "repo" : "repos"}
-								</span>
-							</div>
-							{org.last_activity && (
-								<span class="text-zinc-500 text-xs mt-1 block">
-									{relativeTime(org.last_activity)}
-								</span>
-							)}
-						</a>
-					))}
-				</div>
+				<>
+					<ActivityGraph dailyCounts={dailyCounts} />
+
+					<div class="flex flex-col gap-3">
+						{orgs.map((org) => (
+							<a
+								href={`/app/${org.org}`}
+								class="block bg-zinc-900 border border-zinc-800 rounded-md p-4 hover:border-zinc-700 transition-colors"
+							>
+								<div class="flex items-center justify-between">
+									<span class="text-zinc-100 font-medium">{org.org}</span>
+									<span class="text-zinc-400 text-sm">
+										{org.repo_count} {org.repo_count === 1 ? "repo" : "repos"}
+									</span>
+								</div>
+								{org.last_activity && (
+									<span class="text-zinc-500 text-xs mt-1 block">
+										{relativeTime(org.last_activity)}
+									</span>
+								)}
+							</a>
+						))}
+					</div>
+				</>
 			)}
 		</Layout>,
 	);
@@ -157,7 +165,11 @@ pages.get("/", async (c) => {
 pages.get("/:org", async (c) => {
 	const org = c.req.param("org");
 	const db = new DB(c.env.DB);
-	const repos = await db.getReposByOrg(org);
+	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
+	const [repos, dailyCounts] = await Promise.all([
+		db.getReposByOrg(org),
+		db.getDailyActivityCountsByOrg({ org, since: oneYearAgo }),
+	]);
 	const username = c.get("username");
 
 	if (repos.length === 0) {
@@ -175,6 +187,8 @@ pages.get("/:org", async (c) => {
 			<Breadcrumb
 				items={[{ label: "residue", href: "/app" }, { label: org }]}
 			/>
+
+			<ActivityGraph dailyCounts={dailyCounts} />
 
 			<div class="flex flex-col gap-3">
 				{repos.map((repo) => (

@@ -3,8 +3,8 @@ import type { DailyActivityCount } from "../lib/db";
 
 type ActivityGraphProps = {
 	dailyCounts: DailyActivityCount[];
-	org: string;
-	repo: string;
+	org?: string;
+	repo?: string;
 };
 
 const CELL_SIZE = 11;
@@ -53,6 +53,13 @@ const formatDate = (dateStr: string): string => {
 	return `${monthName} ${Number.parseInt(day, 10)}, ${year}`;
 };
 
+const toUTCDateStr = (d: Date): string => {
+	const year = d.getUTCFullYear();
+	const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+	const day = String(d.getUTCDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
+};
+
 const buildGrid = (dailyCounts: DailyActivityCount[]): Cell[] => {
 	const countMap = new Map<
 		string,
@@ -65,21 +72,22 @@ const buildGrid = (dailyCounts: DailyActivityCount[]): Cell[] => {
 		});
 	}
 
-	const today = new Date();
-	today.setHours(0, 0, 0, 0);
-	const todayDay = today.getDay();
+	const now = new Date();
+	const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+	const today = new Date(todayUTC);
+	const todayDay = today.getUTCDay();
 
-	const startDate = new Date(today);
-	startDate.setDate(startDate.getDate() - (52 * 7 + todayDay));
+	const startDate = new Date(todayUTC);
+	startDate.setUTCDate(startDate.getUTCDate() - (52 * 7 + todayDay));
 
 	const totalDays = 52 * 7 + todayDay + 1;
 	const cells: Cell[] = [];
 
 	for (let i = 0; i < totalDays; i++) {
 		const d = new Date(startDate);
-		d.setDate(d.getDate() + i);
-		const dateStr = d.toISOString().split("T")[0];
-		const dayOfWeek = d.getDay();
+		d.setUTCDate(d.getUTCDate() + i);
+		const dateStr = toUTCDateStr(d);
+		const dayOfWeek = d.getUTCDay();
 		const week = Math.floor(i / 7);
 		const counts = countMap.get(dateStr);
 		cells.push({

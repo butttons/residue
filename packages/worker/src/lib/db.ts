@@ -392,6 +392,49 @@ export class DB {
 		return result.results;
 	}
 
+	async getDailyActivityCountsByOrg(opts: {
+		org: string;
+		since: number;
+	}): Promise<DailyActivityCount[]> {
+		const result = await this.db
+			.prepare(
+				`SELECT
+           DATE(c.committed_at, 'unixepoch') as date,
+           COUNT(DISTINCT s.id) as sessionCount,
+           COUNT(DISTINCT c.commit_sha) as commitCount
+         FROM commits c
+         JOIN sessions s ON s.id = c.session_id
+         WHERE c.org = ? AND c.committed_at >= ?
+         GROUP BY date
+         ORDER BY date ASC`,
+			)
+			.bind(opts.org, opts.since)
+			.all<DailyActivityCount>();
+
+		return result.results;
+	}
+
+	async getDailyActivityCountsGlobal(opts: {
+		since: number;
+	}): Promise<DailyActivityCount[]> {
+		const result = await this.db
+			.prepare(
+				`SELECT
+           DATE(c.committed_at, 'unixepoch') as date,
+           COUNT(DISTINCT s.id) as sessionCount,
+           COUNT(DISTINCT c.commit_sha) as commitCount
+         FROM commits c
+         JOIN sessions s ON s.id = c.session_id
+         WHERE c.committed_at >= ?
+         GROUP BY date
+         ORDER BY date ASC`,
+			)
+			.bind(opts.since)
+			.all<DailyActivityCount>();
+
+		return result.results;
+	}
+
 	// --- User management ---
 
 	async createUser(params: {
