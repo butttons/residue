@@ -253,6 +253,37 @@ describe("POST /api/sessions", () => {
 		const session = await db.getSessionById("test-session-1");
 		expect(session!.agent_version).toBe("unknown");
 	});
+
+	it("does not touch R2 (data uploaded via presigned URL beforehand)", async () => {
+		// Pre-populate R2 as if the CLI uploaded via presigned URL
+		await env.BUCKET.put(
+			"sessions/presigned-session.json",
+			'{"messages": ["direct upload"]}',
+			{ httpMetadata: { contentType: "application/json" } },
+		);
+
+		const payload = makeBody({
+			session: {
+				id: "presigned-session",
+				agent: "claude-code",
+				agent_version: "1.0.0",
+				status: "ended",
+			},
+		});
+
+		const res = await postSession(payload);
+		expect(res.status).toBe(200);
+
+		// D1 metadata should be stored
+		const session = await db.getSessionById("presigned-session");
+		expect(session).not.toBeNull();
+		expect(session!.agent).toBe("claude-code");
+		expect(session!.r2_key).toBe("sessions/presigned-session.json");
+
+		// R2 data should be untouched
+		const r2Object = await env.BUCKET.get("sessions/presigned-session.json");
+		expect(r2Object).not.toBeNull();
+		const text = await r2Object!.text();
+		expect(text).toBe('{"messages": ["direct upload"]}');
+	});
 });
-
-

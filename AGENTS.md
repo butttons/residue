@@ -45,20 +45,22 @@ Agent Adapter                   Git Hooks
 2. User has a conversation with the AI agent
 3. Agent adapter triggers a session end -> CLI marks session as ended in the pending queue
 4. User commits -> post-commit hook runs `residue capture` -> pending sessions get tagged with the commit SHA
-5. User pushes -> pre-push hook runs `residue sync` -> CLI reads raw session data from disk, POSTs it inline to the worker API, worker writes to R2 and D1
+5. User pushes -> pre-push hook runs `residue sync` -> CLI uploads session data directly to R2 via presigned URL, then POSTs metadata to worker API
 
 ### Upload Flow
 
-The CLI uploads session data **through the worker API**, not directly to R2. The flow is:
+Session data is uploaded **directly to R2** via presigned PUT URLs, bypassing the worker's request body size limits entirely. The worker only receives lightweight metadata.
 
 ```
-CLI (reads data_path from disk)
-  -> POST /api/sessions (session data sent inline as JSON string)
-    -> Worker writes to R2 (via BUCKET binding)
-    -> Worker upserts D1 metadata
+CLI
+  -> POST /api/sessions/upload-url (request presigned PUT URL)
+  <- Worker generates presigned R2 PUT URL using AWS SigV4
+  -> PUT <presigned-url> (upload raw session data directly to R2)
+  -> POST /api/sessions (metadata only, no session data)
+    -> Worker upserts D1 metadata (does not touch R2)
 ```
 
-There is no presigned URL flow. The worker's R2 bucket binding handles all R2 writes server-side.
+The presigned URL generation uses lightweight AWS SigV4 signing with the Web Crypto API -- no AWS SDK dependency. It requires R2 S3 API credentials configured on the worker: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`.
 
 ### Key Design Decisions
 
@@ -100,7 +102,7 @@ There is no presigned URL flow. The worker's R2 bucket binding handles all R2 wr
 | Command           | Description                                                                                  |
 | ----------------- | -------------------------------------------------------------------------------------------- |
 | `residue capture` | Called by post-commit hook. Tags pending sessions with the current commit SHA and branch     |
-| `residue sync`    | Called by pre-push hook. Accepts `--remote-url` to derive org/repo. Uploads session data inline to worker API, clears ended sessions from local state |
+| `residue sync`    | Called by pre-push hook. Accepts `--remote-url` to derive org/repo. Uploads session data directly to R2 via presigned URL, then POSTs metadata to worker API, clears ended sessions from local state |
 
 **Hook-invoked (agent adapters):**
 
@@ -175,7 +177,9 @@ Hook state: `.residue/hooks/` (maps agent session IDs to residue session IDs)
 - For each session with commits:
   - Reads raw session data directly from `data_path` (no local copies)
   - Reads commit metadata (message, author, timestamp) from git log for each associated SHA
-  - POSTs to `POST /api/sessions` on the worker: session metadata + raw data inline + commit payloads
+  - Requests a presigned PUT URL from `POST /api/sessions/upload-url`
+  - Uploads raw session data directly to R2 via the presigned URL
+  - POSTs metadata only to `POST /api/sessions` (no inline session data)
   - If session is `ended`: removes from pending.json
   - If session is `open`: keeps in pending.json (will re-upload with updated data on next push)
 - Sessions with zero commits are kept as-is (nothing to upload yet)
@@ -258,18 +262,29 @@ A session is stored once. Multiple commits can reference the same session. Org a
 
 Key format: `sessions/<session-id>.json`
 
-The blob is the raw, unmodified agent session data. The worker writes to R2 via its `BUCKET` binding when it receives a `POST /api/sessions` request with inline data. For open sessions that span multiple pushes, the key stays the same and the blob is overwritten with the latest state.
+The blob is the raw, unmodified agent session data. The CLI uploads directly to R2 via presigned PUT URLs (bypassing the worker). For open sessions that span multiple pushes, the key stays the same and the blob is overwritten with the latest state.
 
 ### API Routes
 
 ```
-POST   /api/sessions                -> Receive session data inline + commit mappings, write to R2 and D1
+POST   /api/sessions/upload-url     -> Generate a presigned R2 PUT URL for direct upload
+POST   /api/sessions                -> Receive session metadata + commit mappings, write to D1
 GET    /api/sessions/:id            -> Fetch session metadata + raw data from R2
 GET    /api/repos/:org/:repo        -> List commits with sessions (from D1, paginated via ?cursor=)
 GET    /api/repos/:org/:repo/:sha   -> Get sessions for a specific commit
 ```
 
-**POST /api/sessions** request body:
+**POST /api/sessions/upload-url** request body:
+
+```json
+{
+  "session_id": "session-uuid-1"
+}
+```
+
+Returns `{"url": "<presigned PUT URL>", "r2_key": "sessions/session-uuid-1.json"}`. The CLI PUTs the raw session data directly to this URL.
+
+**POST /api/sessions** request body (metadata only, session data already in R2):
 
 ```json
 {
@@ -277,8 +292,7 @@ GET    /api/repos/:org/:repo/:sha   -> Get sessions for a specific commit
     "id": "session-uuid-1",
     "agent": "claude-code",
     "agent_version": "1.2.3",
-    "status": "ended",
-    "data": "<raw session content as string>"
+    "status": "ended"
   },
   "commits": [
     {
@@ -294,11 +308,11 @@ GET    /api/repos/:org/:repo/:sha   -> Get sessions for a specific commit
 }
 ```
 
-Worker behavior on POST:
+Worker behavior on POST /api/sessions:
 
-1. If `session.data` is provided, write it to R2 at `sessions/<session-id>.json`
-2. Upsert session row in D1 (update `ended_at` if status is ended)
-3. Insert commit rows in D1 (skip duplicates via `ON CONFLICT DO NOTHING`)
+1. Upsert session row in D1 (update `ended_at` if status is ended)
+2. Insert commit rows in D1 (skip duplicates via `ON CONFLICT DO NOTHING`)
+3. Does NOT write to R2 -- session data is already there via presigned URL
 
 ### Conversation Rendering
 
@@ -398,9 +412,10 @@ The worker repo includes a "Deploy to Cloudflare" button that:
 
 1. Forks/clones the worker package
 2. Creates a D1 database and runs the migration
-3. Creates an R2 bucket
-4. Generates a secret token and sets it as an env var
-5. Deploys the worker
+3. Creates an R2 bucket and generates S3 API credentials for it
+4. Generates a secret auth token and sets it as an env var
+5. Sets R2 S3 API credentials as env vars (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`)
+6. Deploys the worker
 
 The user gets back a worker URL and a token. That's all they need to run `residue login`.
 

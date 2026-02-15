@@ -1,4 +1,4 @@
-import { err, errAsync, ok, okAsync, ResultAsync, safeTry } from "neverthrow";
+import { err, ok, okAsync, ResultAsync, safeTry } from "neverthrow";
 import { readConfig } from "@/lib/config";
 import { getCommitMeta, getRemoteUrl, parseRemote } from "@/lib/git";
 import type { CommitRef, PendingSession } from "@/lib/pending";
@@ -27,7 +27,56 @@ type CommitPayload = {
 	branch: string;
 };
 
-function postSession(opts: {
+type UploadUrlResponse = {
+	url: string;
+	r2_key: string;
+};
+
+function requestUploadUrl(opts: {
+	workerUrl: string;
+	token: string;
+	sessionId: string;
+}): ResultAsync<UploadUrlResponse, CliError> {
+	return ResultAsync.fromPromise(
+		fetch(`${opts.workerUrl}/api/sessions/upload-url`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${opts.token}`,
+			},
+			body: JSON.stringify({ session_id: opts.sessionId }),
+		}).then(async (response) => {
+			if (!response.ok) {
+				throw new Error(`HTTP ${response.status}`);
+			}
+			return response.json() as Promise<UploadUrlResponse>;
+		}),
+		toCliError({
+			message: "Failed to request upload URL",
+			code: "NETWORK_ERROR",
+		}),
+	);
+}
+
+function uploadToPresignedUrl(opts: {
+	url: string;
+	data: string;
+}): ResultAsync<void, CliError> {
+	return ResultAsync.fromPromise(
+		fetch(opts.url, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: opts.data,
+		}).then((response) => {
+			if (!response.ok) {
+				throw new Error(`R2 upload failed: HTTP ${response.status}`);
+			}
+		}),
+		toCliError({ message: "Direct R2 upload failed", code: "NETWORK_ERROR" }),
+	);
+}
+
+function postSessionMetadata(opts: {
 	workerUrl: string;
 	token: string;
 	session: {
@@ -35,7 +84,6 @@ function postSession(opts: {
 		agent: string;
 		agent_version: string;
 		status: string;
-		data: string;
 	};
 	commits: CommitPayload[];
 }): ResultAsync<void, CliError> {
@@ -55,7 +103,7 @@ function postSession(opts: {
 				throw new Error(`HTTP ${response.status}`);
 			}
 		}),
-		toCliError({ message: "Upload failed", code: "NETWORK_ERROR" }),
+		toCliError({ message: "Metadata upload failed", code: "NETWORK_ERROR" }),
 	);
 }
 
@@ -192,7 +240,39 @@ function syncSessions(opts: {
 					continue;
 				}
 
-				const uploadResult = await postSession({
+				// Step 1: Get a presigned URL from the worker
+				const uploadUrlResult = await requestUploadUrl({
+					workerUrl: opts.workerUrl,
+					token: opts.token,
+					sessionId: session.id,
+				});
+
+				if (uploadUrlResult.isErr()) {
+					log.warn(
+						`failed to get upload URL for session ${session.id}: ${uploadUrlResult.error.message}`,
+					);
+					remaining.push(session);
+					continue;
+				}
+
+				// Step 2: Upload session data directly to R2
+				const directUploadResult = await uploadToPresignedUrl({
+					url: uploadUrlResult.value.url,
+					data,
+				});
+
+				if (directUploadResult.isErr()) {
+					log.warn(
+						`R2 upload failed for session ${session.id}: ${directUploadResult.error.message}`,
+					);
+					remaining.push(session);
+					continue;
+				}
+
+				log.debug("uploaded session %s data directly to R2", session.id);
+
+				// Step 3: POST metadata only (no inline data)
+				const metadataResult = await postSessionMetadata({
 					workerUrl: opts.workerUrl,
 					token: opts.token,
 					session: {
@@ -200,14 +280,13 @@ function syncSessions(opts: {
 						agent: session.agent,
 						agent_version: session.agent_version,
 						status: session.status,
-						data,
 					},
 					commits: commitsResult.value,
 				});
 
-				if (uploadResult.isErr()) {
+				if (metadataResult.isErr()) {
 					log.warn(
-						`upload failed for session ${session.id}: ${uploadResult.error.message}`,
+						`metadata upload failed for session ${session.id}: ${metadataResult.error.message}`,
 					);
 					remaining.push(session);
 					continue;

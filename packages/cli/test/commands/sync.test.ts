@@ -67,25 +67,68 @@ type RequestLog = {
 	auth: string | null;
 };
 
+type R2Upload = {
+	key: string;
+	body: string;
+};
+
 function createMockServer() {
 	const requests: RequestLog[] = [];
+	const r2Uploads: R2Upload[] = [];
 
-	// Worker mock — single POST /api/sessions with inline data
+	// Mock R2 endpoint that receives PUT requests (simulates presigned URL target)
+	const r2Server = Bun.serve({
+		port: 0,
+		fetch(req) {
+			return (async () => {
+				if (req.method === "PUT") {
+					const url = new URL(req.url);
+					const body = await req.text();
+					r2Uploads.push({ key: url.pathname, body });
+					return new Response("", { status: 200 });
+				}
+				return new Response("method not allowed", { status: 405 });
+			})();
+		},
+	});
+
+	const r2BaseUrl = `http://localhost:${r2Server.port}`;
+
+	// Worker mock that returns presigned URLs pointing to the mock R2
 	const workerServer = Bun.serve({
 		port: 0,
 		fetch(req) {
 			return (async () => {
 				const url = new URL(req.url);
-				const body = await req.json();
 
-				requests.push({
-					method: req.method,
-					url: url.pathname,
-					body,
-					auth: req.headers.get("authorization"),
-				});
+				if (url.pathname === "/api/sessions/upload-url") {
+					const body = (await req.json()) as { session_id: string };
+					const r2Key = `sessions/${body.session_id}.json`;
+
+					requests.push({
+						method: req.method,
+						url: url.pathname,
+						body,
+						auth: req.headers.get("authorization"),
+					});
+
+					return new Response(
+						JSON.stringify({
+							url: `${r2BaseUrl}/${r2Key}`,
+							r2_key: r2Key,
+						}),
+						{ status: 200 },
+					);
+				}
 
 				if (url.pathname === "/api/sessions") {
+					const body = await req.json();
+					requests.push({
+						method: req.method,
+						url: url.pathname,
+						body,
+						auth: req.headers.get("authorization"),
+					});
 					return new Response(JSON.stringify({ ok: true }), { status: 200 });
 				}
 
@@ -97,8 +140,10 @@ function createMockServer() {
 	return {
 		workerUrl: `http://localhost:${workerServer.port}`,
 		requests,
+		r2Uploads,
 		stop() {
 			workerServer.stop();
+			r2Server.stop();
 		},
 	};
 }
@@ -121,7 +166,7 @@ describe("sync command", () => {
 		expect(exitCode).toBe(0);
 	});
 
-	test("uploads session data to R2 and metadata to worker, removes ended session", async () => {
+	test("uploads data to R2 via presigned URL and posts metadata to worker", async () => {
 		const mock = createMockServer();
 
 		try {
@@ -154,13 +199,16 @@ describe("sync command", () => {
 			const stderr = await new Response(syncProc.stderr).text();
 
 			expect(exitCode).toBe(0);
+			expect(stderr).toContain("uploaded session");
+			expect(stderr).toContain("directly to R2");
 			expect(stderr).toContain("synced session");
 			expect(stderr).toContain(sessionId);
 
-			// Should have 1 request: POST /api/sessions with inline data
-			expect(mock.requests).toHaveLength(1);
+			// Should have 2 worker requests: upload-url + POST metadata
+			expect(mock.requests).toHaveLength(2);
+			expect(mock.requests[0].url).toBe("/api/sessions/upload-url");
 
-			const req = mock.requests[0];
+			const req = mock.requests[1];
 			expect(req.url).toBe("/api/sessions");
 			expect(req.method).toBe("POST");
 			expect(req.auth).toBe("Bearer my-token");
@@ -172,12 +220,19 @@ describe("sync command", () => {
 			expect(body.session.id).toBe(sessionId);
 			expect(body.session.agent).toBe("claude-code");
 			expect(body.session.status).toBe("ended");
-			expect(body.session.data).toBe('{"role":"user","content":"hello"}');
+			// Metadata POST must NOT contain inline data
+			expect(body.session.data).toBeUndefined();
 			expect(body.commits).toHaveLength(1);
 			expect(body.commits[0].org).toBe("my-org");
 			expect(body.commits[0].repo).toBe("my-repo");
 			expect(typeof body.commits[0].branch).toBe("string");
 			expect((body.commits[0].branch as string).length).toBeGreaterThan(0);
+
+			// R2 should have received the data directly
+			expect(mock.r2Uploads).toHaveLength(1);
+			expect(mock.r2Uploads[0].body).toBe(
+				'{"role":"user","content":"hello"}',
+			);
 
 			// Ended session removed from pending
 			const pendingPath = join(tempDir, ".residue/pending.json");
@@ -261,9 +316,9 @@ describe("sync command", () => {
 			const exitCode = await syncProc.exited;
 
 			expect(exitCode).toBe(0);
-			expect(mock.requests).toHaveLength(1);
+			expect(mock.requests).toHaveLength(2);
 
-			const body = mock.requests[0].body as {
+			const body = mock.requests[1].body as {
 				commits: Array<{ org: string; repo: string; branch: string }>;
 			};
 			expect(body.commits[0].org).toBe("other-org");
@@ -309,9 +364,9 @@ describe("sync command", () => {
 			const exitCode = await syncProc.exited;
 
 			expect(exitCode).toBe(0);
-			expect(mock.requests).toHaveLength(1);
+			expect(mock.requests).toHaveLength(2);
 
-			const body = mock.requests[0].body as {
+			const body = mock.requests[1].body as {
 				commits: Array<{ org: string; repo: string }>;
 			};
 			expect(body.commits[0].org).toBe("my-org");
@@ -364,8 +419,8 @@ describe("sync command", () => {
 			expect(sessions).toHaveLength(0);
 
 			// Verify the upload sent status "ended"
-			expect(mock.requests).toHaveLength(1);
-			const body = mock.requests[0].body as { session: { status: string } };
+			expect(mock.requests).toHaveLength(2);
+			const body = mock.requests[1].body as { session: { status: string } };
 			expect(body.session.status).toBe("ended");
 		} finally {
 			mock.stop();
@@ -452,7 +507,7 @@ describe("sync command", () => {
 	});
 
 	test("keeps session on upload failure", async () => {
-		// Worker that returns 500 for upload-url
+		// Worker that returns 500 for everything
 		const server = Bun.serve({
 			port: 0,
 			fetch() {
@@ -492,7 +547,7 @@ describe("sync command", () => {
 			const stderr = await new Response(syncProc.stderr).text();
 
 			expect(exitCode).toBe(0);
-			expect(stderr).toContain("upload failed");
+			expect(stderr).toContain("failed to get upload URL");
 
 			const pendingPath = join(tempDir, ".residue/pending.json");
 			const sessions = (await readPending(pendingPath))._unsafeUnwrap();
