@@ -1,5 +1,6 @@
 import { isGitRepo } from "@/lib/git";
 import { getProjectRoot, getResidueDir } from "@/lib/pending";
+import { CliError, toCliError } from "@/utils/errors";
 import { errAsync, ResultAsync } from "neverthrow";
 import { mkdir, readFile, writeFile, chmod, stat, appendFile } from "fs/promises";
 import { join } from "path";
@@ -11,7 +12,7 @@ function installHook(opts: {
   hooksDir: string;
   filename: string;
   line: string;
-}): ResultAsync<string, string> {
+}): ResultAsync<string, CliError> {
   const hookPath = join(opts.hooksDir, opts.filename);
 
   return ResultAsync.fromPromise(
@@ -38,11 +39,14 @@ function installHook(opts: {
       await chmod(hookPath, 0o755);
       return `${opts.filename}: created`;
     })(),
-    (e) => (e instanceof Error ? e.message : `Failed to install hook ${opts.filename}`)
+    toCliError({
+      message: `Failed to install hook ${opts.filename}`,
+      code: "IO_ERROR",
+    })
   );
 }
 
-function getGitDirForInit(): ResultAsync<string, string> {
+function getGitDirForInit(): ResultAsync<string, CliError> {
   return ResultAsync.fromPromise(
     (async () => {
       const proc = Bun.spawn(["git", "rev-parse", "--git-dir"], {
@@ -52,11 +56,11 @@ function getGitDirForInit(): ResultAsync<string, string> {
       await proc.exited;
       return (await new Response(proc.stdout).text()).trim();
     })(),
-    (e) => (e instanceof Error ? e.message : "Failed to get git directory")
+    toCliError({ message: "Failed to get git directory", code: "GIT_ERROR" })
   );
 }
 
-function ensureGitignore(projectRoot: string): ResultAsync<void, string> {
+function ensureGitignore(projectRoot: string): ResultAsync<void, CliError> {
   const gitignorePath = join(projectRoot, ".gitignore");
 
   return ResultAsync.fromPromise(
@@ -77,14 +81,16 @@ function ensureGitignore(projectRoot: string): ResultAsync<void, string> {
         : ".residue/\n";
       await appendFile(gitignorePath, line);
     })(),
-    (e) => (e instanceof Error ? e.message : "Failed to update .gitignore")
+    toCliError({ message: "Failed to update .gitignore", code: "IO_ERROR" })
   );
 }
 
-export function init(): ResultAsync<void, string> {
+export function init(): ResultAsync<void, CliError> {
   return isGitRepo().andThen((isRepo) => {
     if (!isRepo) {
-      return errAsync("not a git repository");
+      return errAsync(
+        new CliError({ message: "not a git repository", code: "GIT_ERROR" })
+      );
     }
 
     return ResultAsync.combine([getProjectRoot(), getGitDirForInit()]).andThen(
@@ -95,7 +101,10 @@ export function init(): ResultAsync<void, string> {
           getResidueDir(projectRoot),
           ResultAsync.fromPromise(
             mkdir(hooksDir, { recursive: true }),
-            (e) => (e instanceof Error ? e.message : "Failed to create hooks directory")
+            toCliError({
+              message: "Failed to create hooks directory",
+              code: "IO_ERROR",
+            })
           ),
         ]).andThen(() =>
           ResultAsync.combine([

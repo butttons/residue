@@ -2,9 +2,10 @@
  * Pending queue management for the residue CLI.
  * Manages .residue/pending.json in the project root.
  */
-import { ok, err, errAsync, Result, ResultAsync } from "neverthrow";
+import { errAsync, ResultAsync } from "neverthrow";
 import { join } from "path";
 import { mkdir } from "fs/promises";
+import { CliError, toCliError } from "@/utils/errors";
 
 export type CommitRef = {
   sha: string;
@@ -23,7 +24,7 @@ export type PendingSession = {
 /**
  * Get the project root via git rev-parse --show-toplevel.
  */
-export function getProjectRoot(): ResultAsync<string, string> {
+export function getProjectRoot(): ResultAsync<string, CliError> {
   return ResultAsync.fromPromise(
     (async () => {
       const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -32,34 +33,35 @@ export function getProjectRoot(): ResultAsync<string, string> {
       });
       const exitCode = await proc.exited;
       if (exitCode !== 0) {
-        throw new Error("Not a git repository");
+        throw new Error("not a git repository");
       }
-      const text = await new Response(proc.stdout).text();
-      return text.trim();
+      return (await new Response(proc.stdout).text()).trim();
     })(),
-    (e) => (e instanceof Error ? e.message : "Failed to get project root")
+    toCliError({ message: "Not a git repository", code: "GIT_ERROR" })
   );
 }
 
 /**
  * Get the .residue directory path, creating it if needed.
  */
-export function getResidueDir(projectRoot: string): ResultAsync<string, string> {
+export function getResidueDir(projectRoot: string): ResultAsync<string, CliError> {
   const residueDir = join(projectRoot, ".residue");
   return ResultAsync.fromPromise(
     (async () => {
       await mkdir(residueDir, { recursive: true });
       return residueDir;
     })(),
-    (e) =>
-      e instanceof Error ? e.message : "Failed to create .residue directory"
+    toCliError({
+      message: "Failed to create .residue directory",
+      code: "IO_ERROR",
+    })
   );
 }
 
 /**
  * Get the path to .residue/pending.json, creating the directory if needed.
  */
-export function getPendingPath(projectRoot: string): ResultAsync<string, string> {
+export function getPendingPath(projectRoot: string): ResultAsync<string, CliError> {
   return getResidueDir(projectRoot).map((residueDir) =>
     join(residueDir, "pending.json")
   );
@@ -84,7 +86,7 @@ function migratePending(sessions: PendingSession[]): PendingSession[] {
  * Read pending sessions from disk. Returns [] if file doesn't exist.
  * Handles backward compat: old format had commits as string[] (just SHAs).
  */
-export function readPending(pendingPath: string): ResultAsync<PendingSession[], string> {
+export function readPending(pendingPath: string): ResultAsync<PendingSession[], CliError> {
   return ResultAsync.fromPromise(
     (async () => {
       const file = Bun.file(pendingPath);
@@ -94,7 +96,7 @@ export function readPending(pendingPath: string): ResultAsync<PendingSession[], 
       const sessions = JSON.parse(text) as PendingSession[];
       return migratePending(sessions);
     })(),
-    (e) => (e instanceof Error ? e.message : "Failed to read pending queue")
+    toCliError({ message: "Failed to read pending queue", code: "STATE_ERROR" })
   );
 }
 
@@ -104,12 +106,12 @@ export function readPending(pendingPath: string): ResultAsync<PendingSession[], 
 export function writePending(opts: {
   path: string;
   sessions: PendingSession[];
-}): ResultAsync<void, string> {
+}): ResultAsync<void, CliError> {
   return ResultAsync.fromPromise(
     (async () => {
       await Bun.write(opts.path, JSON.stringify(opts.sessions, null, 2));
     })(),
-    (e) => (e instanceof Error ? e.message : "Failed to write pending queue")
+    toCliError({ message: "Failed to write pending queue", code: "STATE_ERROR" })
   );
 }
 
@@ -119,7 +121,7 @@ export function writePending(opts: {
 export function addSession(opts: {
   path: string;
   session: PendingSession;
-}): ResultAsync<void, string> {
+}): ResultAsync<void, CliError> {
   return readPending(opts.path).andThen((sessions) => {
     sessions.push(opts.session);
     return writePending({ path: opts.path, sessions });
@@ -133,11 +135,16 @@ export function updateSession(opts: {
   path: string;
   id: string;
   updates: Partial<PendingSession>;
-}): ResultAsync<void, string> {
+}): ResultAsync<void, CliError> {
   return readPending(opts.path).andThen((sessions) => {
     const index = sessions.findIndex((s) => s.id === opts.id);
     if (index === -1) {
-      return errAsync(`Session not found: ${opts.id}`);
+      return errAsync(
+        new CliError({
+          message: `Session not found: ${opts.id}`,
+          code: "SESSION_NOT_FOUND",
+        })
+      );
     }
     sessions[index] = { ...sessions[index], ...opts.updates };
     return writePending({ path: opts.path, sessions });
@@ -150,7 +157,7 @@ export function updateSession(opts: {
 export function removeSession(opts: {
   path: string;
   id: string;
-}): ResultAsync<void, string> {
+}): ResultAsync<void, CliError> {
   return readPending(opts.path).andThen((sessions) => {
     const filtered = sessions.filter((s) => s.id !== opts.id);
     return writePending({ path: opts.path, sessions: filtered });
@@ -163,7 +170,7 @@ export function removeSession(opts: {
 export function getSession(opts: {
   path: string;
   id: string;
-}): ResultAsync<PendingSession | undefined, string> {
+}): ResultAsync<PendingSession | undefined, CliError> {
   return readPending(opts.path).map((sessions) =>
     sessions.find((s) => s.id === opts.id)
   );

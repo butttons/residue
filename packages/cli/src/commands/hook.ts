@@ -1,12 +1,12 @@
 import {
   getProjectRoot,
-  getResidueDir,
   getPendingPath,
   addSession,
   getSession,
   updateSession,
 } from "@/lib/pending";
-import { okAsync, ResultAsync } from "neverthrow";
+import { CliError, toCliError } from "@/utils/errors";
+import { okAsync, Result, ResultAsync } from "neverthrow";
 import { join } from "path";
 import { mkdir, readFile, writeFile, rm, stat } from "fs/promises";
 
@@ -19,7 +19,7 @@ type ClaudeHookInput = {
   [key: string]: unknown;
 };
 
-function readStdin(): ResultAsync<string, string> {
+function readStdin(): ResultAsync<string, CliError> {
   return ResultAsync.fromPromise(
     (async () => {
       const chunks: Uint8Array[] = [];
@@ -31,24 +31,18 @@ function readStdin(): ResultAsync<string, string> {
       }
       return Buffer.concat(chunks).toString("utf-8");
     })(),
-    (e) => (e instanceof Error ? e.message : "Failed to read stdin")
+    toCliError({ message: "Failed to read stdin", code: "IO_ERROR" })
   );
 }
 
-function parseInput(raw: string): ResultAsync<ClaudeHookInput, string> {
-  return ResultAsync.fromPromise(
-    new Promise<ClaudeHookInput>((resolve, reject) => {
-      try {
-        resolve(JSON.parse(raw) as ClaudeHookInput);
-      } catch (e) {
-        reject(e);
-      }
-    }),
-    () => "Failed to parse hook input JSON"
-  );
+function parseInput(raw: string): Result<ClaudeHookInput, CliError> {
+  return Result.fromThrowable(
+    (input: string) => JSON.parse(input) as ClaudeHookInput,
+    toCliError({ message: "Failed to parse hook input JSON", code: "PARSE_ERROR" })
+  )(raw);
 }
 
-function detectClaudeVersion(): ResultAsync<string, string> {
+function detectClaudeVersion(): ResultAsync<string, CliError> {
   return ResultAsync.fromPromise(
     (async () => {
       const proc = Bun.spawn(["claude", "--version"], {
@@ -60,26 +54,28 @@ function detectClaudeVersion(): ResultAsync<string, string> {
       const output = await new Response(proc.stdout).text();
       return output.trim() || "unknown";
     })(),
-    () => "unknown"
+    toCliError({ message: "Failed to detect Claude version", code: "IO_ERROR" })
   ).orElse(() => okAsync("unknown"));
 }
 
-function getHooksDir(projectRoot: string): ResultAsync<string, string> {
+function getHooksDir(projectRoot: string): ResultAsync<string, CliError> {
   const hooksDir = join(projectRoot, ".residue", "hooks");
   return ResultAsync.fromPromise(
     (async () => {
       await mkdir(hooksDir, { recursive: true });
       return hooksDir;
     })(),
-    (e) =>
-      e instanceof Error ? e.message : "Failed to create hooks state directory"
+    toCliError({
+      message: "Failed to create hooks state directory",
+      code: "IO_ERROR",
+    })
   );
 }
 
 function handleSessionStart(opts: {
   input: ClaudeHookInput;
   projectRoot: string;
-}): ResultAsync<void, string> {
+}): ResultAsync<void, CliError> {
   const { input, projectRoot } = opts;
 
   // Only track new sessions (source=startup)
@@ -129,8 +125,10 @@ function handleSessionStart(opts: {
       const stateFile = join(hooksDir, `${claudeSessionId}.state`);
       return ResultAsync.fromPromise(
         writeFile(stateFile, residueSessionId),
-        (e) =>
-          e instanceof Error ? e.message : "Failed to write hook state file"
+        toCliError({
+          message: "Failed to write hook state file",
+          code: "IO_ERROR",
+        })
       );
     })
     .map(() => {
@@ -141,7 +139,7 @@ function handleSessionStart(opts: {
 function handleSessionEnd(opts: {
   input: ClaudeHookInput;
   projectRoot: string;
-}): ResultAsync<void, string> {
+}): ResultAsync<void, CliError> {
   const { input, projectRoot } = opts;
   const claudeSessionId = input.session_id;
 
@@ -163,8 +161,10 @@ function handleSessionEnd(opts: {
         }
         return isExists;
       })(),
-      (e) =>
-        e instanceof Error ? e.message : "Failed to check hook state file"
+      toCliError({
+        message: "Failed to check hook state file",
+        code: "IO_ERROR",
+      })
     ).andThen((isExists) => {
       if (!isExists) {
         // No state file means we never tracked this session (e.g. resumed)
@@ -173,8 +173,10 @@ function handleSessionEnd(opts: {
 
       return ResultAsync.fromPromise(
         readFile(stateFile, "utf-8"),
-        (e) =>
-          e instanceof Error ? e.message : "Failed to read hook state file"
+        toCliError({
+          message: "Failed to read hook state file",
+          code: "IO_ERROR",
+        })
       ).andThen((residueSessionId) => {
         const trimmedId = residueSessionId.trim();
         if (!trimmedId) {
@@ -198,10 +200,12 @@ function handleSessionEnd(opts: {
             )
           )
           .andThen(() =>
-            ResultAsync.fromPromise(rm(stateFile, { force: true }), (e) =>
-              e instanceof Error
-                ? e.message
-                : "Failed to remove hook state file"
+            ResultAsync.fromPromise(
+              rm(stateFile, { force: true }),
+              toCliError({
+                message: "Failed to remove hook state file",
+                code: "IO_ERROR",
+              })
             )
           )
           .map(() => {
@@ -212,7 +216,7 @@ function handleSessionEnd(opts: {
   });
 }
 
-export function hookClaudeCode(): ResultAsync<void, string> {
+export function hookClaudeCode(): ResultAsync<void, CliError> {
   return readStdin()
     .andThen(parseInput)
     .andThen((input) =>

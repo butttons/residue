@@ -35,7 +35,7 @@ describe("parseRemote", () => {
   test("returns err for invalid URL", () => {
     const result = parseRemote("not-a-url");
     expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr()).toContain("Cannot parse git remote URL");
+    expect(result._unsafeUnwrapErr().code).toBe("GIT_PARSE_ERROR");
   });
 });
 
@@ -55,7 +55,7 @@ describe("getRemoteUrl", () => {
     if (result.isOk()) {
       expect(result._unsafeUnwrap().length).toBeGreaterThan(0);
     } else {
-      expect(result._unsafeUnwrapErr()).toContain("Failed");
+      expect(result._unsafeUnwrapErr().code).toBe("GIT_ERROR");
     }
   });
 });

@@ -1,8 +1,9 @@
 import { getCurrentSha, getCurrentBranch } from "@/lib/git";
 import { getProjectRoot, getPendingPath, readPending, writePending } from "@/lib/pending";
+import type { CliError } from "@/utils/errors";
 import { ResultAsync } from "neverthrow";
 
-export function capture(): ResultAsync<void, string> {
+export function capture(): ResultAsync<void, CliError> {
   return ResultAsync.combine([getCurrentSha(), getCurrentBranch()]).andThen(
     ([sha, branch]) =>
       getProjectRoot()

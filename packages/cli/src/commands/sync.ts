@@ -2,6 +2,7 @@ import { readConfig } from "@/lib/config";
 import { getRemoteUrl, parseRemote, getCommitMeta } from "@/lib/git";
 import { getProjectRoot, getPendingPath, readPending, writePending } from "@/lib/pending";
 import type { PendingSession, CommitRef } from "@/lib/pending";
+import { CliError, toCliError } from "@/utils/errors";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
 import { stat } from "fs/promises";
 
@@ -28,7 +29,7 @@ function postSession(opts: {
     data: string;
   };
   commits: CommitPayload[];
-}): ResultAsync<void, string> {
+}): ResultAsync<void, CliError> {
   return ResultAsync.fromPromise(
     fetch(`${opts.workerUrl}/api/sessions`, {
       method: "POST",
@@ -45,11 +46,11 @@ function postSession(opts: {
         throw new Error(`HTTP ${response.status}`);
       }
     }),
-    (e) => (e instanceof Error ? e.message : "unknown error")
+    toCliError({ message: "Upload failed", code: "NETWORK_ERROR" })
   );
 }
 
-function readSessionData(dataPath: string): ResultAsync<string | null, string> {
+function readSessionData(dataPath: string): ResultAsync<string | null, CliError> {
   return ResultAsync.fromPromise(
     (async () => {
       const file = Bun.file(dataPath);
@@ -57,7 +58,7 @@ function readSessionData(dataPath: string): ResultAsync<string | null, string> {
       if (!isExists) return null;
       return file.text();
     })(),
-    (e) => (e instanceof Error ? e.message : "Failed to read session data")
+    toCliError({ message: "Failed to read session data", code: "IO_ERROR" })
   );
 }
 
@@ -65,14 +66,14 @@ function buildCommitMeta(opts: {
   commitRefs: CommitRef[];
   org: string;
   repo: string;
-}): ResultAsync<CommitPayload[], string> {
+}): ResultAsync<CommitPayload[], CliError> {
   return ResultAsync.fromSafePromise(
     (async () => {
       const commits: CommitPayload[] = [];
       for (const ref of opts.commitRefs) {
         const metaResult = await getCommitMeta(ref.sha);
         if (metaResult.isErr()) {
-          console.error(`Warning: ${metaResult.error}`);
+          console.error(`Warning: ${metaResult.error.message}`);
           continue;
         }
         commits.push({
@@ -90,10 +91,10 @@ function buildCommitMeta(opts: {
   );
 }
 
-function getFileMtimeMs(path: string): ResultAsync<number | null, string> {
+function getFileMtimeMs(path: string): ResultAsync<number | null, CliError> {
   return ResultAsync.fromPromise(
     stat(path).then((s) => s.mtimeMs),
-    () => "stat failed"
+    toCliError({ message: "Failed to stat file", code: "IO_ERROR" })
   ).orElse(() => okAsync(null));
 }
 
@@ -104,7 +105,7 @@ function getFileMtimeMs(path: string): ResultAsync<number | null, string> {
  */
 function closeStaleOpenSessions(opts: {
   sessions: PendingSession[];
-}): ResultAsync<PendingSession[], string> {
+}): ResultAsync<PendingSession[], CliError> {
   const now = Date.now();
   const openSessions = opts.sessions.filter((s) => s.status === "open");
 
@@ -140,7 +141,7 @@ function syncSessions(opts: {
   token: string;
   org: string;
   repo: string;
-}): ResultAsync<PendingSession[], string> {
+}): ResultAsync<PendingSession[], CliError> {
   return ResultAsync.fromSafePromise(
     (async () => {
       const remaining: PendingSession[] = [];
@@ -153,7 +154,7 @@ function syncSessions(opts: {
 
         const dataResult = await readSessionData(session.data_path);
         if (dataResult.isErr()) {
-          console.error(`Warning: ${dataResult.error}`);
+          console.error(`Warning: ${dataResult.error.message}`);
           remaining.push(session);
           continue;
         }
@@ -170,7 +171,7 @@ function syncSessions(opts: {
           repo: opts.repo,
         });
         if (commitsResult.isErr()) {
-          console.error(`Warning: ${commitsResult.error}`);
+          console.error(`Warning: ${commitsResult.error.message}`);
           remaining.push(session);
           continue;
         }
@@ -189,7 +190,7 @@ function syncSessions(opts: {
         });
 
         if (uploadResult.isErr()) {
-          console.error(`Warning: Upload failed for session ${session.id}: ${uploadResult.error}`);
+          console.error(`Warning: Upload failed for session ${session.id}: ${uploadResult.error.message}`);
           remaining.push(session);
           continue;
         }
@@ -206,7 +207,7 @@ function syncSessions(opts: {
   );
 }
 
-function resolveRemote(remoteUrl?: string): ResultAsync<{ org: string; repo: string }, string> {
+function resolveRemote(remoteUrl?: string): ResultAsync<{ org: string; repo: string }, CliError> {
   if (remoteUrl && remoteUrl.length > 0) {
     const result = parseRemote(remoteUrl);
     if (result.isOk()) {
@@ -216,10 +217,15 @@ function resolveRemote(remoteUrl?: string): ResultAsync<{ org: string; repo: str
   return getRemoteUrl().andThen(parseRemote);
 }
 
-export function sync(opts?: { remoteUrl?: string }): ResultAsync<void, string> {
+export function sync(opts?: { remoteUrl?: string }): ResultAsync<void, CliError> {
   return readConfig().andThen((config) => {
     if (!config) {
-      return errAsync("Not configured. Run 'residue login' first.");
+      return errAsync(
+        new CliError({
+          message: "Not configured. Run 'residue login' first.",
+          code: "CONFIG_MISSING",
+        })
+      );
     }
 
     return getProjectRoot()

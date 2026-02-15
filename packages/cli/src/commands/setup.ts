@@ -1,4 +1,5 @@
 import { getProjectRoot } from "@/lib/pending";
+import { CliError, toCliError } from "@/utils/errors";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
 import { join } from "path";
 import { mkdir, readFile, writeFile, stat } from "fs/promises";
@@ -29,7 +30,7 @@ function hasResidueHook(entries: HookEntry[]): boolean {
   );
 }
 
-function setupClaudeCode(projectRoot: string): ResultAsync<void, string> {
+function setupClaudeCode(projectRoot: string): ResultAsync<void, CliError> {
   const claudeDir = join(projectRoot, ".claude");
   const settingsPath = join(claudeDir, "settings.json");
 
@@ -84,11 +85,11 @@ function setupClaudeCode(projectRoot: string): ResultAsync<void, string> {
       await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
       console.log("Configured Claude Code hooks in .claude/settings.json");
     })(),
-    (e) => (e instanceof Error ? e.message : "Failed to setup Claude Code")
+    toCliError({ message: "Failed to setup Claude Code", code: "IO_ERROR" })
   );
 }
 
-function setupPi(projectRoot: string): ResultAsync<void, string> {
+function setupPi(projectRoot: string): ResultAsync<void, CliError> {
   const extensionDir = join(projectRoot, ".pi", "extensions");
   const targetPath = join(extensionDir, "residue.ts");
 
@@ -112,11 +113,11 @@ function setupPi(projectRoot: string): ResultAsync<void, string> {
       await writeFile(targetPath, piAdapterSource);
       console.log("Installed pi extension at .pi/extensions/residue.ts");
     })(),
-    (e) => (e instanceof Error ? e.message : "Failed to setup pi")
+    toCliError({ message: "Failed to setup pi", code: "IO_ERROR" })
   );
 }
 
-export function setup(opts: { agent: string }): ResultAsync<void, string> {
+export function setup(opts: { agent: string }): ResultAsync<void, CliError> {
   return getProjectRoot().andThen((projectRoot) => {
     switch (opts.agent) {
       case "claude-code":
@@ -124,7 +125,12 @@ export function setup(opts: { agent: string }): ResultAsync<void, string> {
       case "pi":
         return setupPi(projectRoot);
       default:
-        return errAsync(`Unknown agent: ${opts.agent}. Supported: claude-code, pi`);
+        return errAsync(
+          new CliError({
+            message: `Unknown agent: ${opts.agent}. Supported: claude-code, pi`,
+            code: "VALIDATION_ERROR",
+          })
+        );
     }
   });
 }

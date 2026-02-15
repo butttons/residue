@@ -1,13 +1,19 @@
 import { getProjectRoot, getPendingPath, getSession, updateSession } from "@/lib/pending";
+import { CliError } from "@/utils/errors";
 import { errAsync, type ResultAsync } from "neverthrow";
 
-export function sessionEnd(opts: { id: string }): ResultAsync<void, string> {
+export function sessionEnd(opts: { id: string }): ResultAsync<void, CliError> {
   return getProjectRoot()
     .andThen(getPendingPath)
     .andThen((pendingPath) =>
       getSession({ path: pendingPath, id: opts.id }).andThen((session) => {
         if (!session) {
-          return errAsync(`Session not found: ${opts.id}`);
+          return errAsync(
+            new CliError({
+              message: `Session not found: ${opts.id}`,
+              code: "SESSION_NOT_FOUND",
+            })
+          );
         }
         return updateSession({
           path: pendingPath,

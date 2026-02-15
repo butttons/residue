@@ -168,7 +168,7 @@ describe("updateSession", () => {
       updates: { status: "ended" },
     });
     expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr()).toContain("Session not found");
+    expect(result._unsafeUnwrapErr().code).toBe("SESSION_NOT_FOUND");
   });
 
   test("preserves other sessions when updating one", async () => {

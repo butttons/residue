@@ -5,6 +5,8 @@
 import { ResultAsync } from "neverthrow";
 import { join } from "path";
 import { mkdir } from "fs/promises";
+import { toCliError } from "@/utils/errors";
+import type { CliError } from "@/utils/errors";
 
 export type ResidueConfig = {
   worker_url: string;
@@ -23,34 +25,34 @@ export function getConfigPath(): string {
   return join(getConfigDir(), "config");
 }
 
-export function readConfig(): ResultAsync<ResidueConfig | null, string> {
+export function readConfig(): ResultAsync<ResidueConfig | null, CliError> {
   return ResultAsync.fromPromise(
     (async () => {
       const path = getConfigPath();
       const file = Bun.file(path);
-      const exists = await file.exists();
-      if (!exists) return null;
+      const isExists = await file.exists();
+      if (!isExists) return null;
       const text = await file.text();
       return JSON.parse(text) as ResidueConfig;
     })(),
-    (e) => (e instanceof Error ? e.message : "Failed to read config")
+    toCliError({ message: "Failed to read config", code: "CONFIG_ERROR" })
   );
 }
 
-export function writeConfig(config: ResidueConfig): ResultAsync<void, string> {
+export function writeConfig(config: ResidueConfig): ResultAsync<void, CliError> {
   return ResultAsync.fromPromise(
     (async () => {
       const dir = getConfigDir();
       await mkdir(dir, { recursive: true });
       await Bun.write(getConfigPath(), JSON.stringify(config, null, 2));
     })(),
-    (e) => (e instanceof Error ? e.message : "Failed to write config")
+    toCliError({ message: "Failed to write config", code: "CONFIG_ERROR" })
   );
 }
 
-export function configExists(): ResultAsync<boolean, string> {
+export function configExists(): ResultAsync<boolean, CliError> {
   return ResultAsync.fromPromise(
     Bun.file(getConfigPath()).exists(),
-    (e) => (e instanceof Error ? e.message : "Failed to check config")
+    toCliError({ message: "Failed to check config", code: "CONFIG_ERROR" })
   );
 }

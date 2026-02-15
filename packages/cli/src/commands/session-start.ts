@@ -1,11 +1,12 @@
 import { getProjectRoot, getPendingPath, addSession } from "@/lib/pending";
+import type { CliError } from "@/utils/errors";
 import type { ResultAsync } from "neverthrow";
 
 export function sessionStart(opts: {
   agent: string;
   data: string;
   agentVersion: string;
-}): ResultAsync<void, string> {
+}): ResultAsync<void, CliError> {
   const id = crypto.randomUUID();
 
   return getProjectRoot()
