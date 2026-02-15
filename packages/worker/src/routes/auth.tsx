@@ -1,12 +1,7 @@
 import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { html } from "hono/html";
-import {
-	createSessionToken,
-	hashPassword,
-	SESSION_TTL,
-	verifyPassword,
-} from "../lib/auth";
+import { createSessionToken, SESSION_TTL, verifyPassword } from "../lib/auth";
 import { DB } from "../lib/db";
 import { SESSION_COOKIE_NAME } from "../middleware/session";
 
@@ -146,18 +141,6 @@ auth.post("/login", async (c) => {
 	}
 
 	const db = new DB(c.env.DB);
-
-	// Bootstrap: if no users exist and ADMIN_USERNAME/ADMIN_PASSWORD are set,
-	// auto-create the admin user on first login attempt
-	const userCount = await db.getUserCount();
-	if (userCount === 0 && c.env.ADMIN_USERNAME && c.env.ADMIN_PASSWORD) {
-		const adminHash = await hashPassword({ password: c.env.ADMIN_PASSWORD });
-		await db.createUser({
-			id: crypto.randomUUID(),
-			username: c.env.ADMIN_USERNAME,
-			passwordHash: adminHash,
-		});
-	}
 
 	const user = await db.getUserByUsername(username);
 	if (!user) {
