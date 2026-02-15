@@ -82,6 +82,13 @@ type CommitShaDetailRow = {
 	branch: string | null;
 };
 
+type UserRow = {
+	id: string;
+	username: string;
+	password_hash: string;
+	created_at: number;
+};
+
 type DailySessionCount = {
 	date: string;
 	count: number;
@@ -103,6 +110,7 @@ export type {
 	SessionCommitRow,
 	DailySessionCount,
 	DailyActivityCount,
+	UserRow,
 };
 
 export class DB {
@@ -382,5 +390,50 @@ export class DB {
 			.all<DailyActivityCount>();
 
 		return result.results;
+	}
+
+	// --- User management ---
+
+	async createUser(params: {
+		id: string;
+		username: string;
+		passwordHash: string;
+	}): Promise<void> {
+		const now = Math.floor(Date.now() / 1000);
+		await this.db
+			.prepare(
+				"INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)",
+			)
+			.bind(params.id, params.username, params.passwordHash, now)
+			.run();
+	}
+
+	async getUserByUsername(username: string): Promise<UserRow | null> {
+		return this.db
+			.prepare("SELECT * FROM users WHERE username = ?")
+			.bind(username)
+			.first<UserRow>();
+	}
+
+	async listUsers(): Promise<UserRow[]> {
+		const result = await this.db
+			.prepare("SELECT id, username, created_at FROM users ORDER BY created_at ASC")
+			.all<UserRow>();
+		return result.results;
+	}
+
+	async deleteUser(id: string): Promise<boolean> {
+		const result = await this.db
+			.prepare("DELETE FROM users WHERE id = ?")
+			.bind(id)
+			.run();
+		return (result.meta?.changes ?? 0) > 0;
+	}
+
+	async getUserCount(): Promise<number> {
+		const row = await this.db
+			.prepare("SELECT COUNT(*) as count FROM users")
+			.first<{ count: number }>();
+		return row?.count ?? 0;
 	}
 }

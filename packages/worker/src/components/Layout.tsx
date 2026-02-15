@@ -3,9 +3,10 @@ import type { FC, PropsWithChildren } from "hono/jsx";
 
 type LayoutProps = PropsWithChildren<{
 	title: string;
+	username?: string;
 }>;
 
-const Layout: FC<LayoutProps> = ({ title, children }) => {
+const Layout: FC<LayoutProps> = ({ title, username, children }) => {
 	return html`<!doctype html>
     <html lang="en" class="dark">
       <head>
@@ -80,6 +81,16 @@ const Layout: FC<LayoutProps> = ({ title, children }) => {
         </style>
       </head>
       <body class="bg-zinc-950 text-zinc-100 min-h-screen antialiased">
+        ${
+					username
+						? html`<div class="max-w-4xl mx-auto px-4 pt-4 flex justify-end items-center gap-3">
+            <span class="text-xs text-zinc-500">${username}</span>
+            <form method="POST" action="/app/logout" class="inline">
+              <button type="submit" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">sign out</button>
+            </form>
+          </div>`
+						: ""
+				}
         <div class="max-w-4xl mx-auto px-4 py-8">${children}</div>
         <script>
           document.addEventListener("DOMContentLoaded", function () {

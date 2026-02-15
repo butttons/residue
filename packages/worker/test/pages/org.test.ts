@@ -1,7 +1,7 @@
 import { env, SELF } from "cloudflare:test";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { DB } from "../../src/lib/db";
-import { applyMigrations, basicAuthHeader } from "../utils";
+import { applyMigrations, sessionCookieHeader } from "../utils";
 
 let db: DB;
 
@@ -13,6 +13,7 @@ beforeAll(async () => {
 beforeEach(async () => {
 	await env.DB.prepare("DELETE FROM commits").run();
 	await env.DB.prepare("DELETE FROM sessions").run();
+	await env.DB.prepare("DELETE FROM users").run();
 });
 
 async function seedRepo(org: string, repo: string, sessions = 1) {
@@ -40,8 +41,9 @@ async function seedRepo(org: string, repo: string, sessions = 1) {
 
 describe("GET /app/:org (org page)", () => {
 	it("returns 404 for unknown org", async () => {
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch("https://test.local/app/unknown-org", {
-			headers: basicAuthHeader(),
+			headers,
 		});
 		expect(res.status).toBe(404);
 		const html = await res.text();
@@ -51,8 +53,9 @@ describe("GET /app/:org (org page)", () => {
 	it("lists repos for the org", async () => {
 		await seedRepo("my-org", "repo-alpha");
 		await seedRepo("my-org", "repo-beta");
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch("https://test.local/app/my-org", {
-			headers: basicAuthHeader(),
+			headers,
 		});
 		expect(res.status).toBe(200);
 		const html = await res.text();
@@ -62,8 +65,9 @@ describe("GET /app/:org (org page)", () => {
 
 	it("shows breadcrumb navigation", async () => {
 		await seedRepo("nav-org", "r");
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch("https://test.local/app/nav-org", {
-			headers: basicAuthHeader(),
+			headers,
 		});
 		const html = await res.text();
 		expect(html).toContain('href="/app"');
@@ -73,8 +77,9 @@ describe("GET /app/:org (org page)", () => {
 
 	it("shows session and commit counts", async () => {
 		await seedRepo("count-org", "counted-repo", 3);
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch("https://test.local/app/count-org", {
-			headers: basicAuthHeader(),
+			headers,
 		});
 		const html = await res.text();
 		expect(html).toContain("3 sessions");
@@ -83,8 +88,9 @@ describe("GET /app/:org (org page)", () => {
 
 	it("links to repo pages under /app", async () => {
 		await seedRepo("link-org", "link-repo");
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch("https://test.local/app/link-org", {
-			headers: basicAuthHeader(),
+			headers,
 		});
 		const html = await res.text();
 		expect(html).toContain('href="/app/link-org/link-repo"');

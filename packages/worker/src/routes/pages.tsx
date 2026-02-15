@@ -107,15 +107,16 @@ const groupCommits = (rows: CommitWithSessionRow[]): GroupedCommit[] => {
 
 // --- Pages app ---
 
-const pages = new Hono<{ Bindings: Env }>();
+const pages = new Hono<{ Bindings: Env; Variables: { username: string } }>();
 
 // Home page — list orgs
 pages.get("/", async (c) => {
 	const db = new DB(c.env.DB);
 	const orgs = await db.getOrgList();
+	const username = c.get("username");
 
 	return c.html(
-		<Layout title="residue">
+		<Layout title="residue" username={username}>
 			<h1 class="text-2xl font-bold mb-6 text-zinc-100">residue</h1>
 
 			{orgs.length === 0 ? (
@@ -157,10 +158,11 @@ pages.get("/:org", async (c) => {
 	const org = c.req.param("org");
 	const db = new DB(c.env.DB);
 	const repos = await db.getReposByOrg(org);
+	const username = c.get("username");
 
 	if (repos.length === 0) {
 		return c.html(
-			<Layout title={`${org} — residue`}>
+			<Layout title={`${org} — residue`} username={username}>
 				<Breadcrumb items={[{ label: "residue", href: "/app" }]} />
 				<p class="text-zinc-400">No data found for this organization.</p>
 			</Layout>,
@@ -169,7 +171,7 @@ pages.get("/:org", async (c) => {
 	}
 
 	return c.html(
-		<Layout title={`${org} — residue`}>
+		<Layout title={`${org} — residue`} username={username}>
 			<Breadcrumb
 				items={[{ label: "residue", href: "/app" }, { label: org }]}
 			/>
@@ -211,6 +213,7 @@ pages.get("/:org/:repo", async (c) => {
 	const repo = c.req.param("repo");
 	const cursorParam = c.req.query("cursor");
 	const cursor = cursorParam ? Number(cursorParam) : undefined;
+	const username = c.get("username");
 
 	const db = new DB(c.env.DB);
 	const commitLimit = 20;
@@ -223,7 +226,7 @@ pages.get("/:org/:repo", async (c) => {
 
 	if (rows.length === 0 && !cursorParam) {
 		return c.html(
-			<Layout title={`${org}/${repo} — residue`}>
+			<Layout title={`${org}/${repo} — residue`} username={username}>
 				<Breadcrumb
 					items={[
 						{ label: "residue", href: "/app" },
@@ -245,7 +248,7 @@ pages.get("/:org/:repo", async (c) => {
 			: null;
 
 	return c.html(
-		<Layout title={`${org}/${repo} — residue`}>
+		<Layout title={`${org}/${repo} — residue`} username={username}>
 			<Breadcrumb
 				items={[
 					{ label: "residue", href: "/app" },
@@ -275,13 +278,14 @@ pages.get("/:org/:repo/:sha", async (c) => {
 	const org = c.req.param("org");
 	const repo = c.req.param("repo");
 	const sha = c.req.param("sha");
+	const username = c.get("username");
 
 	const db = new DB(c.env.DB);
 	const rows = await db.getCommitShaDetail({ sha, org, repo });
 
 	if (rows.length === 0) {
 		return c.html(
-			<Layout title="Not found — residue">
+			<Layout title="Not found — residue" username={username}>
 				<Breadcrumb
 					items={[
 						{ label: "residue", href: "/app" },
@@ -388,7 +392,7 @@ pages.get("/:org/:repo/:sha", async (c) => {
 	);
 
 	return c.html(
-		<Layout title={`${sha.slice(0, 7)} — ${org}/${repo} — residue`}>
+		<Layout title={`${sha.slice(0, 7)} — ${org}/${repo} — residue`} username={username}>
 			<Breadcrumb
 				items={[
 					{ label: "residue", href: "/app" },

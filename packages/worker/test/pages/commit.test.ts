@@ -1,7 +1,7 @@
 import { env, SELF } from "cloudflare:test";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { DB } from "../../src/lib/db";
-import { applyMigrations, basicAuthHeader } from "../utils";
+import { applyMigrations, sessionCookieHeader } from "../utils";
 
 let db: DB;
 
@@ -13,7 +13,8 @@ beforeAll(async () => {
 beforeEach(async () => {
 	await env.DB.prepare("DELETE FROM commits").run();
 	await env.DB.prepare("DELETE FROM sessions").run();
-	// Clear R2 — list and delete all objects
+	await env.DB.prepare("DELETE FROM users").run();
+	// Clear R2
 	const listed = await env.BUCKET.list();
 	for (const obj of listed.objects) {
 		await env.BUCKET.delete(obj.key);
@@ -61,9 +62,10 @@ async function seedFullCommit(opts: {
 
 describe("GET /app/:org/:repo/:sha (commit page)", () => {
 	it("returns 404 for unknown commit", async () => {
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch(
 			"https://test.local/app/no-org/no-repo/no-sha",
-			{ headers: basicAuthHeader() },
+			{ headers },
 		);
 		expect(res.status).toBe(404);
 		const html = await res.text();
@@ -79,13 +81,14 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 			message: "fix critical auth bug",
 		});
 
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch(
 			"https://test.local/app/c-org/c-repo/abc123def456",
-			{ headers: basicAuthHeader() },
+			{ headers },
 		);
 		expect(res.status).toBe(200);
 		const html = await res.text();
-		expect(html).toContain("abc123def456"); // full SHA
+		expect(html).toContain("abc123def456");
 		expect(html).toContain("fix critical auth bug");
 		expect(html).toContain("jane");
 	});
@@ -98,12 +101,12 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 			sessionId: "conv-session",
 		});
 
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch(
 			"https://test.local/app/c-org/c-repo/conv-sha",
-			{ headers: basicAuthHeader() },
+			{ headers },
 		);
 		const html = await res.text();
-		// Should contain mapped messages from PI_SESSION_DATA
 		expect(html).toContain("hello world");
 		expect(html).toContain("Hi! How can I help?");
 		expect(html).toContain("human");
@@ -118,9 +121,10 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 			sessionId: "bc-session",
 		});
 
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch(
 			"https://test.local/app/bc-org/bc-repo/bc-sha-123",
-			{ headers: basicAuthHeader() },
+			{ headers },
 		);
 		const html = await res.text();
 		expect(html).toContain('href="/app"');
@@ -138,9 +142,10 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 			agent: "pi",
 		});
 
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch(
 			"https://test.local/app/a-org/a-repo/agent-sha",
-			{ headers: basicAuthHeader() },
+			{ headers },
 		);
 		const html = await res.text();
 		expect(html).toContain("pi");
@@ -157,7 +162,6 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 		});
 		await env.BUCKET.put(`sessions/${sessionId}.json`, PI_SESSION_DATA);
 
-		// Two commits sharing the same session
 		await db.insertCommit({
 			commitSha: "first-sha",
 			org: "m-org",
@@ -179,27 +183,25 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 			branch: null,
 		});
 
-		// View the second commit — should show "continues from first-sha"
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch(
 			"https://test.local/app/m-org/m-repo/second-sha",
-			{ headers: basicAuthHeader() },
+			{ headers },
 		);
 		const html = await res.text();
 		expect(html).toContain("Continues from");
-		expect(html).toContain("first-s"); // short sha of first-sha
+		expect(html).toContain("first-s");
 
-		// View the first commit — should show "continues in second-sha"
 		const res2 = await SELF.fetch(
 			"https://test.local/app/m-org/m-repo/first-sha",
-			{ headers: basicAuthHeader() },
+			{ headers },
 		);
 		const html2 = await res2.text();
 		expect(html2).toContain("Continues in");
-		expect(html2).toContain("second-"); // short sha of second-sha
+		expect(html2).toContain("second-");
 	});
 
 	it("handles missing R2 data gracefully", async () => {
-		// Seed D1 but NOT R2
 		await db.upsertSession({
 			id: "no-r2",
 			agent: "pi",
@@ -218,9 +220,10 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 			branch: null,
 		});
 
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch(
 			"https://test.local/app/n-org/n-repo/no-r2-sha",
-			{ headers: basicAuthHeader() },
+			{ headers },
 		);
 		expect(res.status).toBe(200);
 		const html = await res.text();

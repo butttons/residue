@@ -1,7 +1,7 @@
 import { env, SELF } from "cloudflare:test";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { DB } from "../../src/lib/db";
-import { applyMigrations, basicAuthHeader } from "../utils";
+import { applyMigrations, sessionCookieHeader } from "../utils";
 
 let db: DB;
 
@@ -13,6 +13,7 @@ beforeAll(async () => {
 beforeEach(async () => {
 	await env.DB.prepare("DELETE FROM commits").run();
 	await env.DB.prepare("DELETE FROM sessions").run();
+	await env.DB.prepare("DELETE FROM users").run();
 });
 
 async function seedSession(id: string, agent = "pi") {
@@ -49,8 +50,9 @@ async function seedCommit(opts: {
 
 describe("GET /app/:org/:repo (repo page)", () => {
 	it("returns 404 for unknown repo", async () => {
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch("https://test.local/app/no-org/no-repo", {
-			headers: basicAuthHeader(),
+			headers,
 		});
 		expect(res.status).toBe(404);
 		const html = await res.text();
@@ -69,8 +71,9 @@ describe("GET /app/:org/:repo (repo page)", () => {
 			committedAt: 1700000000,
 		});
 
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch("https://test.local/app/t-org/t-repo", {
-			headers: basicAuthHeader(),
+			headers,
 		});
 		expect(res.status).toBe(200);
 		const html = await res.text();
@@ -91,8 +94,9 @@ describe("GET /app/:org/:repo (repo page)", () => {
 			committedAt: 1700000000,
 		});
 
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch("https://test.local/app/b-org/b-repo", {
-			headers: basicAuthHeader(),
+			headers,
 		});
 		const html = await res.text();
 		expect(html).toContain("claude-code");
@@ -110,8 +114,9 @@ describe("GET /app/:org/:repo (repo page)", () => {
 			committedAt: 1700000000,
 		});
 
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch("https://test.local/app/l-org/l-repo", {
-			headers: basicAuthHeader(),
+			headers,
 		});
 		const html = await res.text();
 		expect(html).toContain('href="/app/l-org/l-repo/linksha123"');
@@ -129,8 +134,9 @@ describe("GET /app/:org/:repo (repo page)", () => {
 			committedAt: 1700000000,
 		});
 
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch("https://test.local/app/bc-org/bc-repo", {
-			headers: basicAuthHeader(),
+			headers,
 		});
 		const html = await res.text();
 		expect(html).toContain('href="/app"');
@@ -159,8 +165,9 @@ describe("GET /app/:org/:repo (repo page)", () => {
 			committedAt: 1700003600,
 		});
 
+		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch("https://test.local/app/o-org/o-repo", {
-			headers: basicAuthHeader(),
+			headers,
 		});
 		const html = await res.text();
 		const newerIdx = html.indexOf("newer-sh");

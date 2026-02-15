@@ -1,7 +1,7 @@
 import { env, SELF } from "cloudflare:test";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { DB } from "../../src/lib/db";
-import { applyMigrations, basicAuthHeader } from "../utils";
+import { applyMigrations, sessionCookieHeader } from "../utils";
 
 let db: DB;
 
@@ -13,6 +13,7 @@ beforeAll(async () => {
 beforeEach(async () => {
 	await env.DB.prepare("DELETE FROM commits").run();
 	await env.DB.prepare("DELETE FROM sessions").run();
+	await env.DB.prepare("DELETE FROM users").run();
 });
 
 async function seedData(org: string, repo: string) {
@@ -38,17 +39,15 @@ async function seedData(org: string, repo: string) {
 
 describe("GET /app (home page)", () => {
 	it("returns HTML", async () => {
-		const res = await SELF.fetch("https://test.local/app", {
-			headers: basicAuthHeader(),
-		});
+		const headers = await sessionCookieHeader();
+		const res = await SELF.fetch("https://test.local/app", { headers });
 		expect(res.status).toBe(200);
 		expect(res.headers.get("content-type")).toContain("text/html");
 	});
 
 	it("shows empty state when no data", async () => {
-		const res = await SELF.fetch("https://test.local/app", {
-			headers: basicAuthHeader(),
-		});
+		const headers = await sessionCookieHeader();
+		const res = await SELF.fetch("https://test.local/app", { headers });
 		const html = await res.text();
 		expect(html).toContain("No sessions uploaded yet");
 		expect(html).toContain("residue init");
@@ -56,9 +55,8 @@ describe("GET /app (home page)", () => {
 
 	it("lists orgs when data exists", async () => {
 		await seedData("my-org", "my-repo");
-		const res = await SELF.fetch("https://test.local/app", {
-			headers: basicAuthHeader(),
-		});
+		const headers = await sessionCookieHeader();
+		const res = await SELF.fetch("https://test.local/app", { headers });
 		const html = await res.text();
 		expect(html).toContain("my-org");
 		expect(html).toContain("1 repo");
@@ -66,9 +64,8 @@ describe("GET /app (home page)", () => {
 
 	it("links to org pages under /app", async () => {
 		await seedData("test-org", "repo1");
-		const res = await SELF.fetch("https://test.local/app", {
-			headers: basicAuthHeader(),
-		});
+		const headers = await sessionCookieHeader();
+		const res = await SELF.fetch("https://test.local/app", { headers });
 		const html = await res.text();
 		expect(html).toContain('href="/app/test-org"');
 	});
@@ -76,9 +73,8 @@ describe("GET /app (home page)", () => {
 	it("shows multiple orgs", async () => {
 		await seedData("org-a", "repo1");
 		await seedData("org-b", "repo2");
-		const res = await SELF.fetch("https://test.local/app", {
-			headers: basicAuthHeader(),
-		});
+		const headers = await sessionCookieHeader();
+		const res = await SELF.fetch("https://test.local/app", { headers });
 		const html = await res.text();
 		expect(html).toContain("org-a");
 		expect(html).toContain("org-b");
@@ -87,9 +83,8 @@ describe("GET /app (home page)", () => {
 	it("shows repo count per org", async () => {
 		await seedData("multi", "repo1");
 		await seedData("multi", "repo2");
-		const res = await SELF.fetch("https://test.local/app", {
-			headers: basicAuthHeader(),
-		});
+		const headers = await sessionCookieHeader();
+		const res = await SELF.fetch("https://test.local/app", { headers });
 		const html = await res.text();
 		expect(html).toContain("2 repos");
 	});
