@@ -1,19 +1,5 @@
 ---
-import {
-	ArrowRight,
-	BookOpen,
-	Cloud,
-	Eye,
-	GitCommit,
-	Github,
-	Link,
-	Lock,
-	MessageSquare,
-	Server,
-	Terminal,
-	Upload,
-	Zap,
-} from "lucide-astro";
+import { BookOpen, GitCommit, Github, Zap } from "lucide-astro";
 import FlowDiagram from "../components/FlowDiagram.astro";
 import QuickStart from "../components/QuickStart.astro";
 import Layout from "../layouts/Layout.astro";
@@ -26,9 +12,6 @@ import Layout from "../layouts/Layout.astro";
     <div class="max-w-5xl mx-auto px-6 py-20">
         <!-- Hero -->
         <div class="text-center mb-16 md:mb-20">
-            <div class="text-xs text-zinc-500 mb-8 px-3 py-1">
-                open source / self-hosted / agent-agnostic
-            </div>
             <h1
                 class="text-4xl md:text-5xl font-bold mb-4 md:mb-6 text-amber-500 flex items-center justify-center gap-3"
             >
@@ -36,11 +19,11 @@ import Layout from "../layouts/Layout.astro";
                 <span>residue</span>
             </h1>
             <p
-                class="text-sm md:text-base text-zinc-400 mb-8 max-w-2xl mx-auto leading-relaxed"
+                class="text-sm md:text-base text-zinc-400 mb-8 max-w-xl mx-auto leading-relaxed"
             >
-                Capture AI agent conversations and link them to git commits.
-                Every push uploads the conversations that informed your code
-                changes, creating a searchable record of <em>how</em> code was written.
+                Every commit tells you <em>what</em> changed.
+                Residue tells you <em>why</em> -- by linking AI agent
+                conversations to the commits they produced.
             </p>
 
             <div class="flex gap-3 justify-center flex-wrap">
@@ -61,230 +44,10 @@ import Layout from "../layouts/Layout.astro";
             </div>
         </div>
 
-        <!-- What it does -->
-        <div class="mb-20">
-            <div
-                class="bg-amber-950/20 border border-amber-900/50 rounded-lg p-8 max-w-4xl mx-auto"
-            >
-                <h2 class="text-xl font-bold mb-4 text-amber-300">The problem</h2>
-                <p class="text-zinc-300 text-sm leading-relaxed">
-                    You use AI agents to write code. The conversations contain
-                    valuable context: why a decision was made, what
-                    alternatives were considered, what constraints existed.
-                    But that context lives in ephemeral chat sessions that
-                    disappear. Residue captures it and ties it to the commits
-                    it produced.
-                </p>
-            </div>
-        </div>
-
         <!-- How it works -->
         <div class="mb-20">
             <h2 class="text-2xl font-bold mb-8 text-center">How it works</h2>
-            <div class="max-w-4xl mx-auto space-y-8">
-                <FlowDiagram />
-
-                <div class="grid md:grid-cols-3 gap-6">
-                    <div class="text-center">
-                        <div
-                            class="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center mb-4 mx-auto"
-                        >
-                            <span class="text-lg font-bold text-zinc-950">1</span>
-                        </div>
-                        <h3 class="font-semibold mb-2">Capture</h3>
-                        <p class="text-zinc-400 text-xs leading-relaxed">
-                            Agent adapters call the CLI when conversations start
-                            and end. Git hooks tag sessions with commit SHAs.
-                        </p>
-                    </div>
-
-                    <div class="text-center">
-                        <div
-                            class="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center mb-4 mx-auto"
-                        >
-                            <span class="text-lg font-bold text-zinc-950">2</span>
-                        </div>
-                        <h3 class="font-semibold mb-2">Push</h3>
-                        <p class="text-zinc-400 text-xs leading-relaxed">
-                            On git push, session data uploads directly to R2 via
-                            presigned URLs. Commit metadata goes to the worker.
-                        </p>
-                    </div>
-
-                    <div class="text-center">
-                        <div
-                            class="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center mb-4 mx-auto"
-                        >
-                            <span class="text-lg font-bold text-zinc-950">3</span>
-                        </div>
-                        <h3 class="font-semibold mb-2">Browse</h3>
-                        <p class="text-zinc-400 text-xs leading-relaxed">
-                            View conversations alongside commits in a timeline.
-                            See what the AI discussed for each change.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Features -->
-        <div class="mb-20">
-            <h2 class="text-2xl font-bold mb-8 text-center">Design decisions</h2>
-            <div class="grid md:grid-cols-2 gap-4 max-w-4xl mx-auto">
-                <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-                    <div class="flex items-center gap-3 mb-3">
-                        <Server class="w-5 h-5 text-amber-400" />
-                        <h3 class="font-semibold text-sm">Self-hosted</h3>
-                    </div>
-                    <p class="text-zinc-400 text-xs leading-relaxed">
-                        Deploy your own Cloudflare Worker. No multi-tenant
-                        backend, no data privacy concerns, no hosting costs
-                        for us. Your data, your infrastructure.
-                    </p>
-                </div>
-
-                <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-                    <div class="flex items-center gap-3 mb-3">
-                        <Upload class="w-5 h-5 text-amber-400" />
-                        <h3 class="font-semibold text-sm">Direct R2 upload</h3>
-                    </div>
-                    <p class="text-zinc-400 text-xs leading-relaxed">
-                        Session data uploads directly to R2 via presigned PUT
-                        URLs, bypassing the worker's size limits. The worker
-                        only handles lightweight metadata.
-                    </p>
-                </div>
-
-                <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-                    <div class="flex items-center gap-3 mb-3">
-                        <Link class="w-5 h-5 text-amber-400" />
-                        <h3 class="font-semibold text-sm">Multi-commit sessions</h3>
-                    </div>
-                    <p class="text-zinc-400 text-xs leading-relaxed">
-                        A conversation can span multiple commits. If a session
-                        is still open when you commit, it gets linked. The full
-                        session is stored once; multiple commits reference it.
-                    </p>
-                </div>
-
-                <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-                    <div class="flex items-center gap-3 mb-3">
-                        <Eye class="w-5 h-5 text-amber-400" />
-                        <h3 class="font-semibold text-sm">No normalization</h3>
-                    </div>
-                    <p class="text-zinc-400 text-xs leading-relaxed">
-                        Raw agent data is stored as-is in R2. The UI knows how
-                        to render each agent's format. Adding a new agent means
-                        writing a mapper, not changing the schema.
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Architecture -->
-        <div class="mb-20">
-            <h2 class="text-2xl font-bold mb-8 text-center">Architecture</h2>
-            <div class="max-w-4xl mx-auto">
-                <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-6 font-mono text-xs sm:text-sm">
-                    <pre class="text-zinc-400 leading-relaxed"><span class="text-zinc-100">packages/</span>
-  <span class="text-amber-400">cli/</span>              <span class="text-zinc-500">-> "residue" npm package, built with bun</span>
-    <span class="text-amber-400">adapters/</span>       <span class="text-zinc-500">-> agent adapters (embedded at build time)</span>
-      <span class="text-emerald-400">pi/</span>           <span class="text-zinc-500">-> pi coding agent extension</span>
-  <span class="text-amber-400">worker/</span>           <span class="text-zinc-500">-> Cloudflare Worker (Hono + JSX)</span></pre>
-                </div>
-
-                <div class="grid md:grid-cols-3 gap-4 mt-6">
-                    <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-                        <h3 class="font-semibold text-amber-400 text-sm mb-2">CLI</h3>
-                        <ul class="text-zinc-400 text-xs space-y-1">
-                            <li>Session lifecycle management</li>
-                            <li>Git hook integration</li>
-                            <li>Direct R2 upload via presigned URLs</li>
-                            <li>Org/repo inferred from remote</li>
-                        </ul>
-                    </div>
-
-                    <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-                        <h3 class="font-semibold text-amber-400 text-sm mb-2">Worker</h3>
-                        <ul class="text-zinc-400 text-xs space-y-1">
-                            <li>Hono + JSX server-rendered</li>
-                            <li>R2 for session blobs</li>
-                            <li>D1 for query index</li>
-                            <li>Presigned URL generation</li>
-                        </ul>
-                    </div>
-
-                    <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-                        <h3 class="font-semibold text-amber-400 text-sm mb-2">Adapters</h3>
-                        <ul class="text-zinc-400 text-xs space-y-1">
-                            <li>Claude Code (hooks system)</li>
-                            <li>pi (extension system)</li>
-                            <li>Detect session start/end</li>
-                            <li>Locate raw session files</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- CLI Commands -->
-        <div class="mb-20">
-            <h2 class="text-2xl font-bold mb-8 text-center">CLI commands</h2>
-            <div class="max-w-4xl mx-auto space-y-6">
-                <div>
-                    <h3 class="text-sm font-semibold text-zinc-400 mb-3">User-facing</h3>
-                    <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-4 font-mono text-sm space-y-2">
-                        <div>
-                            <span class="text-amber-300">residue login</span>
-                            <span class="text-zinc-500 ml-4"># save worker URL + auth token</span>
-                        </div>
-                        <div>
-                            <span class="text-amber-300">residue init</span>
-                            <span class="text-zinc-500 ml-5"># install git hooks in current repo</span>
-                        </div>
-                        <div>
-                            <span class="text-amber-300">residue setup &lt;agent&gt;</span>
-                            <span class="text-zinc-500 ml-1"># configure agent adapter (claude-code, pi)</span>
-                        </div>
-                        <div>
-                            <span class="text-amber-300">residue push</span>
-                            <span class="text-zinc-500 ml-5"># manually upload pending sessions</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-sm font-semibold text-zinc-400 mb-3">Automatic (git hooks)</h3>
-                    <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-4 font-mono text-sm space-y-2">
-                        <div>
-                            <span class="text-amber-300">residue capture</span>
-                            <span class="text-zinc-500 ml-2"># post-commit: tag sessions with SHA</span>
-                        </div>
-                        <div>
-                            <span class="text-amber-300">residue sync</span>
-                            <span class="text-zinc-500 ml-5"># pre-push: upload to R2 + worker</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-sm font-semibold text-zinc-400 mb-3">Agent adapters</h3>
-                    <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-4 font-mono text-sm space-y-2">
-                        <div>
-                            <span class="text-amber-300">residue session start</span>
-                            <span class="text-zinc-500 ml-2"># called when conversation begins</span>
-                        </div>
-                        <div>
-                            <span class="text-amber-300">residue session end</span>
-                            <span class="text-zinc-500 ml-4"># called when conversation ends</span>
-                        </div>
-                        <div>
-                            <span class="text-amber-300">residue hook claude-code</span>
-                            <span class="text-zinc-500 ml-1"># Claude Code hook handler (stdin)</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <FlowDiagram />
         </div>
 
         <!-- Quick Start -->
@@ -294,10 +57,10 @@ import Layout from "../layouts/Layout.astro";
         <div class="border-t border-zinc-800 mt-20">
             <div class="max-w-4xl mx-auto py-16 text-center">
                 <h3 class="text-xl font-bold mb-4">
-                    Stop losing your AI conversations
+                    Open source and self-hosted
                 </h3>
-                <p class="text-zinc-400 mb-8 text-sm">
-                    Every commit tells you <em>what</em> changed. Residue tells you <em>why</em>.
+                <p class="text-zinc-400 mb-8 text-sm max-w-lg mx-auto">
+                    Deploy your own Cloudflare Worker. Your conversations stay on your infrastructure.
                 </p>
                 <div class="flex flex-wrap gap-4 justify-center">
                     <a

@@ -1,17 +1,58 @@
 ---
+import { Eye, GitCommit, MessageSquare, Upload } from "lucide-astro";
 ---
 
-<div class="bg-zinc-900 border border-zinc-800 rounded-lg p-6 font-mono text-xs sm:text-sm overflow-x-auto">
-    <pre class="text-zinc-400 leading-relaxed"><span class="text-emerald-400">Agent Adapter</span>                   <span class="text-amber-400">Git Hooks</span>
-    |                               |
-    |-- <span class="text-amber-400">session start</span> --+             |
-    |                  v             |
-    |              <span class="text-zinc-100">LOCAL STATE</span>       |
-    |              <span class="text-zinc-500">(pending queue)</span>   |
-    |-- <span class="text-amber-400">session end</span> ----+             |
-    |                               |-- <span class="text-amber-400">post-commit</span> -> capture
-    |                               |   <span class="text-zinc-500">(tag sessions with SHA)</span>
-    |                               |
-    |                               |-- <span class="text-amber-400">pre-push</span> -> sync
-    |                               |   <span class="text-zinc-500">(upload to R2 + worker)</span></pre>
+<div class="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-4 max-w-4xl mx-auto">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-5 text-center flex-1 min-w-0">
+        <div class="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto mb-3">
+            <MessageSquare class="w-5 h-5 text-amber-400" />
+        </div>
+        <h3 class="text-sm font-semibold mb-1">Chat</h3>
+        <p class="text-zinc-500 text-xs">You talk to an AI agent. Residue quietly tracks the session.</p>
+    </div>
+
+    <svg class="hidden md:block shrink-0 text-zinc-600" width="32" height="12" viewBox="0 0 32 12" fill="none">
+        <path d="M0 6H28M28 6L22 1M28 6L22 11" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <svg class="block md:hidden shrink-0 text-zinc-600" width="12" height="24" viewBox="0 0 12 24" fill="none">
+        <path d="M6 0V20M6 20L1 14M6 20L11 14" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+
+    <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-5 text-center flex-1 min-w-0">
+        <div class="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto mb-3">
+            <GitCommit class="w-5 h-5 text-amber-400" />
+        </div>
+        <h3 class="text-sm font-semibold mb-1">Commit</h3>
+        <p class="text-zinc-500 text-xs">A git hook links pending conversations to the commit SHA.</p>
+    </div>
+
+    <svg class="hidden md:block shrink-0 text-zinc-600" width="32" height="12" viewBox="0 0 32 12" fill="none">
+        <path d="M0 6H28M28 6L22 1M28 6L22 11" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <svg class="block md:hidden shrink-0 text-zinc-600" width="12" height="24" viewBox="0 0 12 24" fill="none">
+        <path d="M6 0V20M6 20L1 14M6 20L11 14" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+
+    <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-5 text-center flex-1 min-w-0">
+        <div class="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto mb-3">
+            <Upload class="w-5 h-5 text-amber-400" />
+        </div>
+        <h3 class="text-sm font-semibold mb-1">Push</h3>
+        <p class="text-zinc-500 text-xs">On git push, sessions upload to your self-hosted worker.</p>
+    </div>
+
+    <svg class="hidden md:block shrink-0 text-zinc-600" width="32" height="12" viewBox="0 0 32 12" fill="none">
+        <path d="M0 6H28M28 6L22 1M28 6L22 11" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <svg class="block md:hidden shrink-0 text-zinc-600" width="12" height="24" viewBox="0 0 12 24" fill="none">
+        <path d="M6 0V20M6 20L1 14M6 20L11 14" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+
+    <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-5 text-center flex-1 min-w-0">
+        <div class="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto mb-3">
+            <Eye class="w-5 h-5 text-amber-400" />
+        </div>
+        <h3 class="text-sm font-semibold mb-1">Browse</h3>
+        <p class="text-zinc-500 text-xs">See every conversation alongside the commits it produced.</p>
+    </div>
 </div>
