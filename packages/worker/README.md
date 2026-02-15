@@ -21,52 +21,36 @@ Cloudflare Worker that serves as the backend for residue. Stores AI session data
 
 ### Step 1: Create an R2 bucket and S3 API token
 
-The CLI uploads session data directly to R2 via presigned PUT URLs. This bypasses the worker entirely for large payloads. You need to create the bucket and an S3 API token before deploying.
+The CLI uploads session data directly to R2 via presigned PUT URLs. You need to create the bucket and an S3 API token before deploying.
 
-1. Go to the [Cloudflare dashboard](https://dash.cloudflare.com)
-2. Navigate to **R2 Object Storage** in the sidebar
-3. Click **Create bucket** and name it (e.g. `residue`)
-4. Go to **R2 Object Storage > API Tokens** (the R2-specific tokens page, not the main Cloudflare API tokens)
-5. Click **Create API Token**
-6. Set permissions to **Object Read & Write**, scoped to the bucket you created
-7. Note the following values:
-   - **Access Key ID**
-   - **Secret Access Key**
-   - **Account ID** (visible in your Cloudflare dashboard URL or the R2 overview)
-   - **Bucket name**
+Create an R2 bucket: [dash.cloudflare.com/?to=/:account/r2/new](https://dash.cloudflare.com/?to=/:account/r2/new)
+
+Create an S3 API token with read/write access to your bucket: [dash.cloudflare.com/?to=/:account/r2/api-tokens](https://dash.cloudflare.com/?to=/:account/r2/api-tokens)
+
+Save these values -- you will need them in step 2:
+
+| Value | Source |
+|---|---|
+| `R2_ACCESS_KEY_ID` | from the API token |
+| `R2_SECRET_ACCESS_KEY` | from the API token |
+| `R2_ACCOUNT_ID` | your Cloudflare account ID |
+| `R2_BUCKET_NAME` | the bucket you just created |
 
 ### Step 2: Deploy
 
-**Option A: Automated**
+**Option A: Deploy to Cloudflare**
 
-```bash
-bash setup.sh
-```
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/butttons/residue/tree/main/packages/worker)
 
-The script creates a D1 database, runs migrations, generates an auth token, and deploys. After it finishes, set the R2 credentials:
+During deploy, you will be prompted for these secrets:
 
-```bash
-# Set the secret access key (not safe to put in wrangler.jsonc)
-wrangler secret put R2_SECRET_ACCESS_KEY
-```
+| Secret | Value |
+|---|---|
+| `AUTH_TOKEN` | generate a random string -- this is your CLI auth token |
+| `R2_SECRET_ACCESS_KEY` | from step 1 |
+| `ADMIN_PASSWORD` | password for the web UI |
 
-Update `wrangler.jsonc` with the non-secret R2 values:
-
-```jsonc
-{
-  "vars": {
-    "R2_ACCESS_KEY_ID": "<your access key id>",
-    "R2_ACCOUNT_ID": "<your account id>",
-    "R2_BUCKET_NAME": "<your bucket name>"
-  }
-}
-```
-
-Redeploy:
-
-```bash
-wrangler deploy
-```
+The R2 vars from step 1 (`R2_ACCESS_KEY_ID`, `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`) go into the worker environment variables.
 
 **Option B: Manual**
 
