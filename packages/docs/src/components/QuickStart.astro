@@ -9,48 +9,56 @@
             <div class="font-mono text-sm space-y-6">
                 <div>
                     <div class="text-zinc-400 text-xs mb-2">
-                        1. Deploy your worker (one click)
+                        1. Create an R2 bucket + S3 API token in the Cloudflare dashboard
                     </div>
                     <div class="bg-zinc-950 rounded p-3 text-zinc-300">
                         <a
-                            href="https://deploy.workers.cloudflare.com"
+                            href="https://dash.cloudflare.com"
                             target="_blank"
                             rel="noopener noreferrer"
                             class="text-amber-400 hover:underline"
                         >
-                            deploy.workers.cloudflare.com
+                            dash.cloudflare.com
                         </a>
-                        <span class="text-zinc-500"> (sets up R2 + D1 + generates a token)</span>
+                        <span class="text-zinc-500"> -> R2 Object Storage -> Create bucket -> API Tokens</span>
                     </div>
+                    <p class="text-zinc-500 text-xs mt-2">
+                        You need the Access Key ID, Secret Access Key, Account ID, and bucket name.
+                        <a href="/docs#setup" class="text-amber-400 hover:underline">See detailed instructions.</a>
+                    </p>
                 </div>
 
                 <div>
                     <div class="text-zinc-400 text-xs mb-2">
-                        2. Install the CLI
+                        2. Deploy the worker
+                    </div>
+                    <pre class="bg-zinc-950 rounded p-3 overflow-x-auto text-zinc-300"><code>cd packages/worker
+bash setup.sh</code></pre>
+                    <p class="text-zinc-500 text-xs mt-2">
+                        Creates D1 database, sets secrets (including R2 credentials), and deploys.
+                        Outputs a worker URL and auth token.
+                    </p>
+                </div>
+
+                <div>
+                    <div class="text-zinc-400 text-xs mb-2">
+                        3. Install the CLI
                     </div>
                     <pre class="bg-zinc-950 rounded p-3 overflow-x-auto text-zinc-300"><code>npm install -g residue</code></pre>
                 </div>
 
                 <div>
                     <div class="text-zinc-400 text-xs mb-2">
-                        3. Login with your worker URL and token
+                        4. Login, init, and set up an adapter
                     </div>
-                    <pre class="bg-zinc-950 rounded p-3 overflow-x-auto text-zinc-300"><code>residue login</code></pre>
-                </div>
-
-                <div>
-                    <div class="text-zinc-400 text-xs mb-2">
-                        4. Initialize in your repo
-                    </div>
-                    <pre class="bg-zinc-950 rounded p-3 overflow-x-auto text-zinc-300"><code>cd your-project
-residue init</code></pre>
+                    <pre class="bg-zinc-950 rounded p-3 overflow-x-auto text-zinc-300"><code>residue login --url https://your-worker.workers.dev --token YOUR_TOKEN
+cd your-project
+residue init
+residue setup claude-code   <span class="text-zinc-500"># or: residue setup pi</span></code></pre>
                     <p class="text-zinc-500 text-xs mt-2">
-                        Installs git hooks and detects available agent adapters.
+                        Installs git hooks and configures your agent adapter.
+                        Commit and push as usual -- conversations are captured automatically.
                     </p>
-                </div>
-
-                <div class="text-zinc-500 text-xs mt-4 pt-4 border-t border-zinc-800">
-                    That's it. Commit and push as usual. Conversations are captured automatically.
                 </div>
             </div>
         </div>

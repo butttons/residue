@@ -19,15 +19,15 @@ import Layout from "../layouts/Layout.astro";
         <div class="mb-16">
             <h2 class="text-2xl font-bold mb-6 text-amber-400">Overview</h2>
             <p class="text-zinc-300 text-sm leading-relaxed mb-4">
-                Residue has three components: a <strong>CLI</strong> that runs
-                locally, a <strong>Cloudflare Worker</strong> that stores and
-                serves data, and <strong>agent adapters</strong> that hook into
-                AI agents.
+                Residue has two packages: a <strong>CLI</strong> that runs
+                locally and a <strong>Cloudflare Worker</strong> that stores and
+                serves data. Agent adapters are built into the CLI.
             </p>
             <p class="text-zinc-300 text-sm leading-relaxed">
                 The CLI manages local state, installs git hooks, and handles
-                syncing. The worker provides both an API and a web UI. Adapters
-                are thin plugins that detect when conversations start and end.
+                syncing. Session data is uploaded directly to R2 via presigned
+                URLs. The worker provides an API for metadata and presigned URL
+                generation, plus a web UI for browsing conversations.
             </p>
         </div>
 
@@ -39,44 +39,97 @@ import Layout from "../layouts/Layout.astro";
                     <li><strong>Node.js</strong> 18+ (for npm install)</li>
                     <li><strong>Git</strong> (hooks are installed in .git/hooks/)</li>
                     <li><strong>Cloudflare account</strong> (for deploying the worker)</li>
-                    <li><strong>A supported AI agent</strong> (Claude Code currently)</li>
+                    <li><strong>A supported AI agent:</strong> Claude Code or pi</li>
                 </ul>
             </div>
         </div>
 
         <!-- Setup -->
-        <div class="mb-16">
+        <div id="setup" class="mb-16">
             <h2 class="text-2xl font-bold mb-6 text-amber-400">Setup</h2>
+
+            <p class="text-zinc-300 text-sm leading-relaxed mb-8">
+                Four steps: create the R2 bucket with S3 API credentials, deploy the worker, install the CLI, then configure your repos.
+            </p>
 
             <div class="space-y-8">
                 <div>
                     <h3 class="text-xl font-semibold mb-3 text-amber-300">
-                        1. Deploy the Worker
+                        1. Create an R2 bucket and S3 API token
                     </h3>
-                    <p class="text-zinc-300 text-sm mb-3">
-                        Click the "Deploy to Cloudflare" button on the
-                        <a
-                            href="https://github.com/butttons/residue"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="text-amber-400 hover:underline">GitHub repo</a
-                        >. This will:
+                    <p class="text-zinc-300 text-sm mb-4 leading-relaxed">
+                        The CLI uploads session data directly to R2 via presigned PUT URLs.
+                        This requires an R2 bucket and S3 API credentials. You must set
+                        these up <strong>before</strong> deploying the worker.
                     </p>
-                    <ul class="text-zinc-400 text-sm space-y-1 ml-4 mb-4">
-                        <li>- Create a D1 database and run migrations</li>
-                        <li>- Create an R2 bucket</li>
-                        <li>- Generate a secret token</li>
-                        <li>- Deploy the worker</li>
-                    </ul>
-                    <p class="text-zinc-300 text-sm">
-                        You will get a <strong>worker URL</strong> and a <strong>token</strong>.
-                        Save these for the next step.
-                    </p>
+                    <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+                        <ol class="text-zinc-300 text-sm space-y-3 list-decimal list-inside">
+                            <li>Go to the <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">Cloudflare dashboard</a></li>
+                            <li>Navigate to <strong>R2 Object Storage</strong> in the sidebar</li>
+                            <li>Click <strong>Create bucket</strong> and name it (e.g. <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue</code>)</li>
+                            <li>Go to <strong>R2 Object Storage > API Tokens</strong> (the R2-specific page, not the main Cloudflare API tokens)</li>
+                            <li>Click <strong>Create API Token</strong> with <strong>Object Read & Write</strong> permissions, scoped to your bucket</li>
+                            <li>Save the following values:
+                                <ul class="mt-2 ml-6 space-y-1 text-zinc-400">
+                                    <li>- <strong class="text-zinc-300">Access Key ID</strong></li>
+                                    <li>- <strong class="text-zinc-300">Secret Access Key</strong></li>
+                                    <li>- <strong class="text-zinc-300">Account ID</strong> (visible in the dashboard URL or R2 overview page)</li>
+                                    <li>- <strong class="text-zinc-300">Bucket name</strong> (whatever you named it)</li>
+                                </ul>
+                            </li>
+                        </ol>
+                    </div>
                 </div>
 
                 <div>
                     <h3 class="text-xl font-semibold mb-3 text-amber-300">
-                        2. Install the CLI
+                        2. Deploy the Worker
+                    </h3>
+                    <p class="text-zinc-300 text-sm mb-4 leading-relaxed">
+                        The worker stores commit metadata in D1 and serves the web UI.
+                        Session data lives in R2 (set up in step 1).
+                    </p>
+
+                    <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 mb-4">
+                        <h4 class="font-semibold text-zinc-200 text-sm mb-3">Option A: Automated</h4>
+                        <pre class="bg-zinc-950 rounded p-3 font-mono text-sm overflow-x-auto mb-3"><code class="text-zinc-300">cd packages/worker
+bash setup.sh</code></pre>
+                        <p class="text-zinc-400 text-sm leading-relaxed">
+                            The script prompts for your R2 credentials, creates a D1 database,
+                            runs migrations, generates an auth token, sets all secrets, and deploys.
+                            It outputs a <strong>worker URL</strong> and <strong>auth token</strong>.
+                        </p>
+                    </div>
+
+                    <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+                        <h4 class="font-semibold text-zinc-200 text-sm mb-3">Option B: Manual</h4>
+                        <pre class="bg-zinc-950 rounded p-3 font-mono text-xs overflow-x-auto"><code class="text-zinc-300"><span class="text-zinc-500"># Create D1 database</span>
+wrangler d1 create residue-db
+<span class="text-zinc-500"># Copy the database_id into wrangler.jsonc</span>
+
+<span class="text-zinc-500"># Run migrations</span>
+wrangler d1 execute residue-db --remote --file=migrations/0001_init.sql
+
+<span class="text-zinc-500"># Set secrets</span>
+echo "your-secret-token" | wrangler secret put AUTH_TOKEN
+wrangler secret put ADMIN_PASSWORD
+wrangler secret put R2_SECRET_ACCESS_KEY
+
+<span class="text-zinc-500"># Update wrangler.jsonc with:</span>
+<span class="text-zinc-500">#   d1_databases[0].database_id -> your D1 ID</span>
+<span class="text-zinc-500">#   R2_ACCESS_KEY_ID            -> from step 1</span>
+<span class="text-zinc-500">#   R2_ACCOUNT_ID               -> from step 1</span>
+<span class="text-zinc-500">#   R2_BUCKET_NAME              -> from step 1</span>
+<span class="text-zinc-500">#   ADMIN_USERNAME              -> your choice</span>
+
+<span class="text-zinc-500"># Deploy</span>
+wrangler deploy</code></pre>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-amber-300">
+                        3. Install the CLI
                     </h3>
                     <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
                         <div class="text-zinc-300">npm install -g residue</div>
@@ -85,29 +138,34 @@ import Layout from "../layouts/Layout.astro";
 
                 <div>
                     <h3 class="text-xl font-semibold mb-3 text-amber-300">
-                        3. Login
+                        4. Configure a repository
                     </h3>
-                    <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto mb-3">
-                        <div class="text-zinc-300">residue login</div>
-                    </div>
-                    <p class="text-zinc-400 text-sm">
-                        Enter the worker URL and token. Stored at <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">~/.residue/config</code>.
-                    </p>
-                </div>
-
-                <div>
-                    <h3 class="text-xl font-semibold mb-3 text-amber-300">
-                        4. Initialize in a repo
-                    </h3>
-                    <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto mb-3">
-                        <div class="text-zinc-300">cd your-project</div>
+                    <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4">
+                        <div class="text-zinc-300">residue login --url https://your-worker.workers.dev --token YOUR_TOKEN</div>
+                        <div class="text-zinc-300 mt-2">cd your-project</div>
                         <div class="text-zinc-300">residue init</div>
+                        <div class="text-zinc-300 mt-2">residue setup claude-code   <span class="text-zinc-500"># or: residue setup pi</span></div>
                     </div>
-                    <p class="text-zinc-400 text-sm">
-                        Installs <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">post-commit</code> and
-                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">pre-push</code> hooks.
-                        Detects installed agent adapters.
-                    </p>
+                    <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 space-y-3">
+                        <p class="text-zinc-400 text-sm">
+                            <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue login</code> --
+                            Saves your worker URL and token to <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">~/.residue/config</code>. One-time setup.
+                        </p>
+                        <p class="text-zinc-400 text-sm">
+                            <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue init</code> --
+                            Installs <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">post-commit</code> and
+                            <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">pre-push</code> hooks.
+                            Adds <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.residue/</code> to <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.gitignore</code>.
+                        </p>
+                        <p class="text-zinc-400 text-sm">
+                            <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup claude-code</code> --
+                            Adds hooks to <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.claude/settings.json</code> that call <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue hook claude-code</code>.
+                        </p>
+                        <p class="text-zinc-400 text-sm">
+                            <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup pi</code> --
+                            Installs a pi extension at <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.pi/extensions/residue.ts</code>.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -120,12 +178,26 @@ import Layout from "../layouts/Layout.astro";
                 <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
                     <h3 class="font-semibold text-zinc-200 mb-3">Session Lifecycle</h3>
                     <ol class="text-zinc-300 text-sm space-y-2 list-decimal list-inside">
-                        <li>Agent plugin calls <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session-start</code>. CLI generates a session ID</li>
+                        <li>Agent adapter calls <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session start</code>. CLI generates a session ID</li>
                         <li>User has a conversation with the AI agent</li>
-                        <li>Agent plugin calls <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session-end</code>. CLI marks session as ended</li>
-                        <li>User commits. Post-commit hook runs <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue capture</code>, tags all pending sessions with the commit SHA</li>
-                        <li>User pushes. Pre-push hook runs <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue sync</code>, uploads everything</li>
+                        <li>Agent adapter calls <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session end</code>. CLI marks session as ended</li>
+                        <li>User commits. Post-commit hook runs <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue capture</code>, tags pending sessions with the commit SHA</li>
+                        <li>User pushes. Pre-push hook runs <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue sync</code>, uploads session data to R2 and metadata to the worker</li>
                     </ol>
+                </div>
+
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+                    <h3 class="font-semibold text-zinc-200 mb-3">Upload Flow</h3>
+                    <p class="text-zinc-300 text-sm leading-relaxed mb-3">
+                        Session data is uploaded <strong>directly to R2</strong> via presigned PUT URLs,
+                        bypassing the worker's request body size limits entirely. The worker only
+                        receives lightweight metadata.
+                    </p>
+                    <pre class="bg-zinc-950 rounded p-3 font-mono text-xs overflow-x-auto"><code class="text-zinc-400">CLI
+  -&gt; POST /api/sessions/upload-url <span class="text-zinc-500">(request presigned PUT URL)</span>
+  &lt;- Worker generates presigned R2 PUT URL
+  -&gt; PUT &lt;presigned-url&gt; <span class="text-zinc-500">(upload raw session data directly to R2)</span>
+  -&gt; POST /api/sessions <span class="text-zinc-500">(metadata only, no session data)</span></code></pre>
                 </div>
 
                 <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
@@ -142,8 +214,19 @@ import Layout from "../layouts/Layout.astro";
                     <h3 class="font-semibold text-zinc-200 mb-3">Open Sessions at Push Time</h3>
                     <p class="text-zinc-300 text-sm leading-relaxed">
                         If a session is still open when you push, the current state is
-                        uploaded. On the next push, it gets overwritten with the latest
-                        state. The R2 key stays the same.
+                        uploaded to R2. On the next push, it gets overwritten with the latest
+                        state. The R2 key stays the same. Stale sessions (data file
+                        unmodified for 30+ minutes) are automatically marked as ended.
+                    </p>
+                </div>
+
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+                    <h3 class="font-semibold text-zinc-200 mb-3">Capture Behavior</h3>
+                    <p class="text-zinc-300 text-sm leading-relaxed">
+                        When a commit happens, open sessions always get tagged with the SHA.
+                        Ended sessions with zero commits get tagged once. Ended sessions
+                        that already have commits are skipped to avoid incorrectly linking
+                        unrelated work.
                     </p>
                 </div>
             </div>
@@ -168,7 +251,7 @@ import Layout from "../layouts/Layout.astro";
                 <div>
                     <h3 class="text-lg font-semibold mb-3 text-amber-300">Pending queue</h3>
                     <p class="text-zinc-400 text-sm mb-2">
-                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.git/ai-sessions/pending.json</code>
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.residue/pending.json</code>
                     </p>
                     <pre class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs overflow-x-auto"><code class="text-zinc-300">{JSON.stringify([
                         {
@@ -181,13 +264,21 @@ import Layout from "../layouts/Layout.astro";
                         },
                         {
                             id: "session-uuid-2",
-                            agent: "claude-code",
-                            agent_version: "1.2.3",
+                            agent: "pi",
+                            agent_version: "0.5.0",
                             status: "open",
                             data_path: "/path/to/raw/session/log",
-                            commits: ["abc123"]
+                            commits: [{ sha: "abc123", branch: "feature-auth" }]
                         }
                     ], null, 2)}</code></pre>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 text-amber-300">Hook state</h3>
+                    <p class="text-zinc-400 text-sm">
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.residue/hooks/</code> --
+                        Maps agent session IDs to residue session IDs. Used by the Claude Code hook handler and the pi extension.
+                    </p>
                 </div>
             </div>
         </div>
@@ -202,23 +293,60 @@ import Layout from "../layouts/Layout.astro";
                     <ul class="text-zinc-300 text-sm space-y-1">
                         <li><strong>Framework:</strong> Hono</li>
                         <li><strong>Rendering:</strong> JSX (server-rendered HTML)</li>
-                        <li><strong>Storage:</strong> Cloudflare R2 (blobs) + D1 (query index)</li>
-                        <li><strong>Styling:</strong> Tailwind CSS</li>
+                        <li><strong>Storage:</strong> Cloudflare R2 (blobs, uploaded via presigned URLs) + D1 (query index)</li>
+                        <li><strong>Styling:</strong> Tailwind CSS, JetBrains Mono, Phosphor Icons</li>
                     </ul>
                 </div>
 
                 <div>
+                    <h3 class="text-lg font-semibold mb-3 text-amber-300">Configuration</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-zinc-400 text-xs mb-2">Vars (in wrangler.jsonc)</p>
+                            <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs overflow-x-auto">
+                                <table class="w-full text-zinc-300">
+                                    <tbody>
+                                        <tr><td class="text-amber-300 pr-6 py-1">ADMIN_USERNAME</td><td class="text-zinc-400">Username for the web UI</td></tr>
+                                        <tr><td class="text-amber-300 pr-6 py-1">R2_ACCESS_KEY_ID</td><td class="text-zinc-400">From R2 API Tokens page</td></tr>
+                                        <tr><td class="text-amber-300 pr-6 py-1">R2_ACCOUNT_ID</td><td class="text-zinc-400">Your Cloudflare account ID</td></tr>
+                                        <tr><td class="text-amber-300 pr-6 py-1">R2_BUCKET_NAME</td><td class="text-zinc-400">Name of the R2 bucket</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-zinc-400 text-xs mb-2">Secrets (via wrangler secret put)</p>
+                            <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs overflow-x-auto">
+                                <table class="w-full text-zinc-300">
+                                    <tbody>
+                                        <tr><td class="text-amber-300 pr-6 py-1">AUTH_TOKEN</td><td class="text-zinc-400">Bearer token for CLI API auth</td></tr>
+                                        <tr><td class="text-amber-300 pr-6 py-1">ADMIN_PASSWORD</td><td class="text-zinc-400">Password for the web UI</td></tr>
+                                        <tr><td class="text-amber-300 pr-6 py-1">R2_SECRET_ACCESS_KEY</td><td class="text-zinc-400">From R2 API Tokens page</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
                     <h3 class="text-lg font-semibold mb-3 text-amber-300">API routes</h3>
+                    <p class="text-zinc-400 text-xs mb-2">All routes require Authorization: Bearer &lt;token&gt;</p>
                     <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm space-y-2 overflow-x-auto">
                         <div>
                             <span class="text-emerald-400">POST</span>
+                            <span class="text-zinc-300 ml-2">/api/sessions/upload-url</span>
+                            <span class="text-zinc-500 ml-4"># presigned R2 PUT URL</span>
+                        </div>
+                        <div>
+                            <span class="text-emerald-400">POST</span>
                             <span class="text-zinc-300 ml-2">/api/sessions</span>
-                            <span class="text-zinc-500 ml-4"># upload session + commits</span>
+                            <span class="text-zinc-500 ml-4"># metadata + commit mappings</span>
                         </div>
                         <div>
                             <span class="text-amber-400">GET</span>
                             <span class="text-zinc-300 ml-3">/api/sessions/:id</span>
-                            <span class="text-zinc-500 ml-4"># raw session from R2</span>
+                            <span class="text-zinc-500 ml-4"># session data from R2</span>
                         </div>
                         <div>
                             <span class="text-amber-400">GET</span>
@@ -235,22 +363,23 @@ import Layout from "../layouts/Layout.astro";
 
                 <div>
                     <h3 class="text-lg font-semibold mb-3 text-amber-300">UI pages</h3>
+                    <p class="text-zinc-400 text-xs mb-2">Protected by Basic Auth (ADMIN_USERNAME + ADMIN_PASSWORD). Served under /app</p>
                     <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm space-y-2 overflow-x-auto">
                         <div>
-                            <span class="text-amber-300">/</span>
+                            <span class="text-amber-300">/app</span>
                             <span class="text-zinc-500 ml-12"># list orgs</span>
                         </div>
                         <div>
-                            <span class="text-amber-300">/:org</span>
+                            <span class="text-amber-300">/app/:org</span>
                             <span class="text-zinc-500 ml-8"># list repos</span>
                         </div>
                         <div>
-                            <span class="text-amber-300">/:org/:repo</span>
+                            <span class="text-amber-300">/app/:org/:repo</span>
                             <span class="text-zinc-500 ml-3"># commit timeline with sessions</span>
                         </div>
                         <div>
-                            <span class="text-amber-300">/:org/:repo/:sha</span>
-                            <span class="text-zinc-500 ml-2"># expanded commit + conversations</span>
+                            <span class="text-amber-300">/app/:org/:repo/:sha</span>
+                            <span class="text-zinc-500 ml-2"># commit permalink + conversations</span>
                         </div>
                     </div>
                 </div>
@@ -272,10 +401,16 @@ type Message = {
   role: string;
   content: string;
   timestamp?: string;
+  model?: string;
   tool_calls?: ToolCall[];
 };
 
 type Mapper = (raw: string) => Message[];`}</code></pre>
+                    <p class="text-zinc-400 text-sm mt-3">
+                        Mappers: <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">claude-code.ts</code>,
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">pi.ts</code>.
+                        Adding a new agent means writing one mapper function and registering it.
+                    </p>
                 </div>
             </div>
         </div>
@@ -301,6 +436,7 @@ CREATE TABLE commits (
   author TEXT,
   committed_at INTEGER,
   created_at INTEGER NOT NULL,
+  branch TEXT,
   FOREIGN KEY (session_id) REFERENCES sessions(id)
 );
 
@@ -311,25 +447,49 @@ CREATE INDEX idx_commits_repo
 CREATE INDEX idx_commits_sha
   ON commits(commit_sha);
 CREATE INDEX idx_commits_session
-  ON commits(session_id);`}</code></pre>
+  ON commits(session_id);
+CREATE INDEX idx_commits_branch
+  ON commits(org, repo, branch);`}</code></pre>
         </div>
 
         <!-- Adapters -->
         <div class="mb-16">
             <h2 class="text-2xl font-bold mb-6 text-amber-400">Agent Adapters</h2>
-            <p class="text-zinc-300 text-sm leading-relaxed mb-4">
-                Each adapter hooks into an agent's lifecycle and calls two CLI commands:
+            <p class="text-zinc-300 text-sm leading-relaxed mb-6">
+                Adapters are built into the CLI. They hook into each agent's lifecycle
+                and call <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session start</code> and
+                <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session end</code> to track conversations.
+                Install them with <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup &lt;agent&gt;</code>.
             </p>
-            <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto mb-6">
-                <div class="text-zinc-300">residue session-start --agent &lt;name&gt; --version &lt;semver&gt;</div>
-                <div class="text-zinc-500"># returns session ID to stdout</div>
-                <div class="text-zinc-300 mt-2">residue session-end --id &lt;session-id&gt; --data &lt;path&gt;</div>
+
+            <div class="space-y-6">
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+                    <h3 class="font-semibold text-zinc-200 mb-3">Claude Code</h3>
+                    <p class="text-zinc-300 text-sm leading-relaxed mb-3">
+                        Uses Claude Code's native hook system.
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup claude-code</code>
+                        writes hook entries into <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.claude/settings.json</code>
+                        that pipe session lifecycle events (as JSON on stdin) to
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue hook claude-code</code>.
+                    </p>
+                    <pre class="bg-zinc-950 rounded p-3 font-mono text-sm overflow-x-auto"><code class="text-zinc-300">residue setup claude-code</code></pre>
+                </div>
+
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+                    <h3 class="font-semibold text-zinc-200 mb-3">pi</h3>
+                    <p class="text-zinc-300 text-sm leading-relaxed mb-3">
+                        Uses pi's extension system.
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup pi</code>
+                        installs an extension at <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.pi/extensions/residue.ts</code>
+                        that calls <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session start</code> and
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session end</code> directly.
+                    </p>
+                    <pre class="bg-zinc-950 rounded p-3 font-mono text-sm overflow-x-auto"><code class="text-zinc-300">residue setup pi</code></pre>
+                </div>
             </div>
 
-            <h3 class="text-lg font-semibold mb-3 text-amber-300">Claude Code</h3>
-            <p class="text-zinc-300 text-sm leading-relaxed">
-                The first adapter. Reads session data from <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">~/.claude/projects/</code>.
-                Detects conversation start/end and calls the CLI with the session log path.
+            <p class="text-zinc-400 text-sm mt-4">
+                Both adapters store hook state in <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.residue/hooks/</code> within the project root.
             </p>
         </div>
 
@@ -349,11 +509,14 @@ CREATE INDEX idx_commits_session
                 <div>
                     <div class="text-zinc-500"># Build</div>
                     <div class="text-zinc-300">pnpm --filter cli build</div>
-                    <div class="text-zinc-300">pnpm --filter worker build</div>
                 </div>
                 <div>
-                    <div class="text-zinc-500"># Apply D1 migrations locally</div>
+                    <div class="text-zinc-500"># Apply D1 migrations locally (required before running tests)</div>
                     <div class="text-zinc-300">cd packages/worker && pnpm exec wrangler d1 migrations apply DB --local</div>
+                </div>
+                <div>
+                    <div class="text-zinc-500"># Run tests</div>
+                    <div class="text-zinc-300">pnpm --filter worker test</div>
                 </div>
             </div>
         </div>
