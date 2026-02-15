@@ -33,7 +33,7 @@ jobs:
         run: pnpm --filter @residue/cli typecheck
 
       - name: Type check Worker
-        run: pnpm --filter worker typecheck
+        run: pnpm --filter @residue/worker typecheck
 
   test:
     name: Run tests

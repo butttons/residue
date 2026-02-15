@@ -1,18 +1,18 @@
 {
-  "name": "residue-dev",
-  "private": true,
-  "scripts": {
-    "dev:cli": "pnpm --filter @residue/cli dev",
-    "dev:worker": "pnpm --filter worker dev",
-    "build:cli": "pnpm --filter @residue/cli build",
-    "build:worker": "pnpm --filter worker build",
-    "deploy:worker": "pnpm --filter worker deploy",
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck",
-    "biome:check": "biome check --write packages/*"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.3.11"
-  }
+	"name": "residue-dev",
+	"private": true,
+	"scripts": {
+		"dev:cli": "pnpm --filter @residue/cli dev",
+		"dev:worker": "pnpm --filter @residue/worker dev",
+		"build:cli": "pnpm --filter @residue/cli build",
+		"build:worker": "pnpm --filter @residue/worker build",
+		"deploy:worker": "pnpm --filter @residue/worker deploy",
+		"build": "pnpm -r build",
+		"test": "pnpm -r test",
+		"typecheck": "pnpm -r typecheck",
+		"biome:check": "biome check --write packages/*"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.11"
+	}
 }

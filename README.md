@@ -221,7 +221,7 @@ pnpm run build:cli
 
 # Run tests
 pnpm --filter @residue/cli test      # CLI tests
-pnpm --filter worker test       # worker tests
+pnpm --filter @residue/worker test       # worker tests
 ```
 
 ## Design Decisions

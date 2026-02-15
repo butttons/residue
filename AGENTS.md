@@ -427,16 +427,16 @@ pnpm install
 
 # Dev
 pnpm --filter @residue/cli dev
-pnpm --filter worker dev    # wrangler dev
+pnpm --filter @residue/worker dev    # wrangler dev
 
 # Build
 pnpm --filter @residue/cli build
 
 # Test
-pnpm --filter worker test
+pnpm --filter @residue/worker test
 
 # Deploy worker
-pnpm --filter worker deploy
+pnpm --filter @residue/worker deploy
 
 # Apply D1 migrations locally (required before running worker tests)
 cd packages/worker && pnpm exec wrangler d1 migrations apply DB --local
