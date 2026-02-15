@@ -17,7 +17,8 @@ const TRUNK_GAP = 14;
 
 const laneX = (lane: number): number => lane * LANE_SPACING + LANE_SPACING / 2;
 
-const rowY = (row: number): number => row * ROW_HEIGHT + ROW_HEIGHT / 2;
+const FIRST_LINE_OFFSET = 12;
+const rowY = (row: number): number => row * ROW_HEIGHT + FIRST_LINE_OFFSET;
 
 const trunkX = (laneCount: number): number =>
   laneCount > 0 ? laneCount * LANE_SPACING + TRUNK_GAP : DOT_RADIUS + 2;
@@ -35,21 +36,43 @@ const getAgentCounts = (
   return [...map.entries()].map(([agent, count]) => ({ agent, count }));
 };
 
-const LaneLegend: FC<{ lanes: SessionLane[] }> = ({ lanes }) => {
+type LaneLegendProps = {
+  lanes: SessionLane[];
+  commits: GraphData["commits"];
+  org: string;
+  repo: string;
+};
+
+const LaneLegend: FC<LaneLegendProps> = ({ lanes, commits, org, repo }) => {
   if (lanes.length === 0) return <span />;
 
   return (
     <div class="flex gap-x-4 gap-y-1 mb-4 text-xs text-zinc-500 flex-wrap">
-      {lanes.map((lane) => (
-        <span class="flex items-center gap-1.5">
-          <span
-            class="w-2 h-2 rounded-full flex-shrink-0"
-            style={`background: ${lane.color}`}
-          />
-          <span class="text-zinc-400">{lane.agent}</span>
-          <span class="font-mono text-zinc-600">{lane.sessionId.slice(0, 8)}</span>
-        </span>
-      ))}
+      {lanes.map((lane) => {
+        const firstCommitSha =
+          lane.commitRows.length > 0
+            ? commits[lane.commitRows[0]]?.sha
+            : undefined;
+        const href = firstCommitSha
+          ? `/app/${org}/${repo}/${firstCommitSha}#session-${lane.sessionId}`
+          : undefined;
+
+        return (
+          <a
+            href={href}
+            class="flex items-center gap-1.5 hover:text-zinc-300 transition-colors"
+          >
+            <span
+              class="w-2 h-2 rounded-full flex-shrink-0"
+              style={`background: ${lane.color}`}
+            />
+            <span class="text-zinc-400">{lane.agent}</span>
+            <span class="font-mono text-zinc-600">
+              {lane.sessionId.slice(0, 8)}
+            </span>
+          </a>
+        );
+      })}
     </div>
   );
 };
@@ -71,15 +94,16 @@ const GraphSvg: FC<{
       height={totalHeight}
       style="pointer-events: none"
     >
-      {/* Trunk line */}
+      {/* Trunk line — dashed and subtle so it reads as a timeline, not a session lane */}
       {commits.length > 1 && (
         <line
           x1={trunk}
           y1={rowY(0)}
           x2={trunk}
           y2={rowY(commits.length - 1)}
-          stroke="#3f3f46"
+          stroke="#27272a"
           stroke-width={LINE_WIDTH}
+          stroke-dasharray="3,4"
         />
       )}
 
@@ -125,9 +149,9 @@ const GraphSvg: FC<{
         ))
       )}
 
-      {/* Trunk dots */}
+      {/* Trunk dots — small and muted to not compete with lane dots */}
       {commits.map((_, i) => (
-        <circle cx={trunk} cy={rowY(i)} r={DOT_RADIUS} fill="#3b82f6" />
+        <circle cx={trunk} cy={rowY(i)} r={2} fill="#3f3f46" />
       ))}
     </svg>
   );
@@ -141,7 +165,7 @@ const CommitGraph: FC<CommitGraphProps> = ({ data, org, repo }) => {
 
   return (
     <div>
-      <LaneLegend lanes={lanes} />
+      <LaneLegend lanes={lanes} commits={commits} org={org} repo={repo} />
 
       <div class="relative" style={`min-height: ${totalHeight}px`}>
         <GraphSvg
@@ -163,7 +187,7 @@ const CommitGraph: FC<CommitGraphProps> = ({ data, org, repo }) => {
             return (
               <div
                 style={`height: ${ROW_HEIGHT}px`}
-                class="flex flex-col justify-center"
+                class="flex flex-col justify-start"
               >
                 <div class="flex items-center gap-2 flex-wrap">
                   <a

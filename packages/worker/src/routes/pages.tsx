@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { raw } from "hono/html";
 import type { FC } from "hono/jsx";
 import { DB } from "../lib/db";
 import { relativeTime, formatTimestamp } from "../lib/time";
@@ -19,7 +20,15 @@ const Breadcrumb: FC<{ items: BreadcrumbItem[] }> = ({ items }) => (
     {items.map((item, i) => (
       <span class="flex items-center gap-1.5">
         {i > 0 && <span class="text-zinc-600">/</span>}
-        {item.href ? (
+        {i === 0 && item.href ? (
+          <a
+            href={item.href}
+            class="hover:text-zinc-200 transition-colors flex items-center"
+            title="Home"
+          >
+            <i class="ph ph-house text-base" />
+          </a>
+        ) : item.href ? (
           <a
             href={item.href}
             class="hover:text-zinc-200 transition-colors"
@@ -396,7 +405,7 @@ pages.get("/:org/:repo/:sha", async (c) => {
 
       {/* Sessions - tabbed if multiple */}
       {sessionsData.length === 1 ? (
-        <div>
+        <div id={`session-${sessionsData[0].id}`}>
           <div class="flex items-center gap-2 mb-3">
             <span class="text-xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
               {sessionsData[0].agent}
@@ -406,9 +415,12 @@ pages.get("/:org/:repo/:sha", async (c) => {
                 v{sessionsData[0].agent_version}
               </span>
             )}
-            <span class="text-xs text-zinc-600 font-mono">
+            <a
+              href={`#session-${sessionsData[0].id}`}
+              class="text-xs text-zinc-600 font-mono hover:text-zinc-400 transition-colors"
+            >
               {sessionsData[0].id.slice(0, 8)}
-            </span>
+            </a>
           </div>
           {sessionsData[0].messages.length === 0 ? (
             <p class="text-zinc-500 text-sm">No conversation data available.</p>
@@ -425,13 +437,15 @@ pages.get("/:org/:repo/:sha", async (c) => {
           {/* Tab bar */}
           <div class="flex border-b border-zinc-800 mb-6 pb-0 gap-0 overflow-x-auto">
             {sessionsData.map((session, i) => (
-              <button
+              <a
+                href={`#session-${session.id}`}
                 class={`session-tab px-3 py-1.5 text-xs whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
                   i === 0
                     ? "border-blue-500 text-zinc-100"
                     : "border-transparent text-zinc-500 hover:text-zinc-300"
                 }`}
                 data-tab-index={i}
+                data-session-id={session.id}
                 onclick={`
                   document.querySelectorAll('.session-tab').forEach(t => {
                     t.classList.remove('border-blue-500', 'text-zinc-100');
@@ -440,11 +454,11 @@ pages.get("/:org/:repo/:sha", async (c) => {
                   this.classList.remove('border-transparent', 'text-zinc-500');
                   this.classList.add('border-blue-500', 'text-zinc-100');
                   document.querySelectorAll('.session-panel').forEach(p => p.classList.add('hidden'));
-                  document.getElementById('session-panel-${i}').classList.remove('hidden');
+                  document.getElementById('session-panel-' + this.dataset.tabIndex).classList.remove('hidden');
                 `}
               >
                 {session.agent} <span class="text-zinc-600">{session.id.slice(0, 8)}</span>
-              </button>
+              </a>
             ))}
           </div>
 
@@ -465,6 +479,17 @@ pages.get("/:org/:repo/:sha", async (c) => {
               )}
             </div>
           ))}
+
+          {/* Activate tab from URL hash */}
+          {raw(`<script>
+            (function() {
+              var hash = location.hash;
+              if (!hash || !hash.startsWith('#session-')) return;
+              var sessionId = hash.slice(9);
+              var tab = document.querySelector('.session-tab[data-session-id="' + sessionId + '"]');
+              if (tab) tab.click();
+            })();
+          </script>`)}
         </div>
       )}
     </Layout>
