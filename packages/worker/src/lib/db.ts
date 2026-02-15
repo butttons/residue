@@ -87,6 +87,12 @@ type DailySessionCount = {
 	count: number;
 };
 
+type DailyActivityCount = {
+	date: string;
+	sessionCount: number;
+	commitCount: number;
+};
+
 export type {
 	SessionRow,
 	CommitRow,
@@ -96,6 +102,7 @@ export type {
 	RepoListItem,
 	SessionCommitRow,
 	DailySessionCount,
+	DailyActivityCount,
 };
 
 export class DB {
@@ -350,6 +357,29 @@ export class DB {
 			)
 			.bind(opts.org, opts.repo, opts.since)
 			.all<DailySessionCount>();
+
+		return result.results;
+	}
+
+	async getDailyActivityCounts(opts: {
+		org: string;
+		repo: string;
+		since: number;
+	}): Promise<DailyActivityCount[]> {
+		const result = await this.db
+			.prepare(
+				`SELECT
+           DATE(c.committed_at, 'unixepoch') as date,
+           COUNT(DISTINCT s.id) as sessionCount,
+           COUNT(DISTINCT c.commit_sha) as commitCount
+         FROM commits c
+         JOIN sessions s ON s.id = c.session_id
+         WHERE c.org = ? AND c.repo = ? AND c.committed_at >= ?
+         GROUP BY date
+         ORDER BY date ASC`,
+			)
+			.bind(opts.org, opts.repo, opts.since)
+			.all<DailyActivityCount>();
 
 		return result.results;
 	}

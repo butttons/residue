@@ -1,8 +1,8 @@
 import type { FC } from "hono/jsx";
-import type { DailySessionCount } from "../lib/db";
+import type { DailyActivityCount } from "../lib/db";
 
 type ActivityGraphProps = {
-	dailyCounts: DailySessionCount[];
+	dailyCounts: DailyActivityCount[];
 	org: string;
 	repo: string;
 };
@@ -29,10 +29,10 @@ const MONTH_LABELS = [
 	"Dec",
 ];
 
-const getColor = (count: number, max: number): string => {
-	if (count === 0) return "#27272a";
+const getColor = (sessionCount: number, max: number): string => {
+	if (sessionCount === 0) return "#27272a";
 	if (max === 0) return "#27272a";
-	const ratio = count / max;
+	const ratio = sessionCount / max;
 	if (ratio <= 0.25) return "#451a03";
 	if (ratio <= 0.5) return "#78350f";
 	if (ratio <= 0.75) return "#b45309";
@@ -41,23 +41,34 @@ const getColor = (count: number, max: number): string => {
 
 type Cell = {
 	date: string;
-	count: number;
+	sessionCount: number;
+	commitCount: number;
 	dayOfWeek: number;
 	week: number;
 };
 
-const buildGrid = (dailyCounts: DailySessionCount[]): Cell[] => {
-	const countMap = new Map<string, number>();
+const formatDate = (dateStr: string): string => {
+	const [year, month, day] = dateStr.split("-");
+	const monthName = MONTH_LABELS[Number.parseInt(month, 10) - 1];
+	return `${monthName} ${Number.parseInt(day, 10)}, ${year}`;
+};
+
+const buildGrid = (dailyCounts: DailyActivityCount[]): Cell[] => {
+	const countMap = new Map<
+		string,
+		{ sessionCount: number; commitCount: number }
+	>();
 	for (const dc of dailyCounts) {
-		countMap.set(dc.date, dc.count);
+		countMap.set(dc.date, {
+			sessionCount: dc.sessionCount,
+			commitCount: dc.commitCount,
+		});
 	}
 
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
-	const todayDay = today.getDay(); // 0=Sun, 6=Sat
+	const todayDay = today.getDay();
 
-	// We want 52 full weeks + the partial current week
-	// Start from the Sunday 52 weeks ago
 	const startDate = new Date(today);
 	startDate.setDate(startDate.getDate() - (52 * 7 + todayDay));
 
@@ -70,9 +81,11 @@ const buildGrid = (dailyCounts: DailySessionCount[]): Cell[] => {
 		const dateStr = d.toISOString().split("T")[0];
 		const dayOfWeek = d.getDay();
 		const week = Math.floor(i / 7);
+		const counts = countMap.get(dateStr);
 		cells.push({
 			date: dateStr,
-			count: countMap.get(dateStr) ?? 0,
+			sessionCount: counts?.sessionCount ?? 0,
+			commitCount: counts?.commitCount ?? 0,
 			dayOfWeek,
 			week,
 		});
@@ -99,10 +112,14 @@ const getMonthLabels = (
 	return labels;
 };
 
+const pluralize = (count: number, singular: string): string => {
+	return `${count} ${count === 1 ? singular : `${singular}s`}`;
+};
+
 const ActivityGraph: FC<ActivityGraphProps> = ({ dailyCounts }) => {
 	const cells = buildGrid(dailyCounts);
-	const maxCount = Math.max(...cells.map((c) => c.count), 1);
-	const totalSessions = cells.reduce((sum, c) => sum + c.count, 0);
+	const maxCount = Math.max(...cells.map((c) => c.sessionCount), 1);
+	const totalSessions = cells.reduce((sum, c) => sum + c.sessionCount, 0);
 	const monthLabels = getMonthLabels(cells);
 	const numWeeks = Math.max(...cells.map((c) => c.week)) + 1;
 
@@ -118,7 +135,7 @@ const ActivityGraph: FC<ActivityGraphProps> = ({ dailyCounts }) => {
 					year
 				</span>
 			</div>
-			<div class="overflow-x-auto">
+			<div class="overflow-x-auto activity-graph-container">
 				<svg
 					width={svgWidth}
 					height={svgHeight}
@@ -161,15 +178,37 @@ const ActivityGraph: FC<ActivityGraphProps> = ({ dailyCounts }) => {
 							width={CELL_SIZE}
 							height={CELL_SIZE}
 							rx={2}
-							fill={getColor(cell.count, maxCount)}
-						>
-							<title>
-								{cell.date}: {cell.count}{" "}
-								{cell.count === 1 ? "conversation" : "conversations"}
-							</title>
-						</rect>
+							fill={getColor(cell.sessionCount, maxCount)}
+							data-popover-target={`ag-${cell.date}`}
+						/>
 					))}
 				</svg>
+
+				{/* Popover tooltip elements */}
+				{cells.map((cell) => {
+					const isActive =
+						cell.sessionCount > 0 || cell.commitCount > 0;
+					return (
+						<div
+							popover="manual"
+							id={`ag-${cell.date}`}
+							class="activity-tooltip"
+						>
+							<span class="activity-tooltip-date">
+								{formatDate(cell.date)}
+							</span>
+							{isActive ? (
+								<span class="activity-tooltip-counts">
+									{pluralize(cell.sessionCount, "conversation")}
+									{" / "}
+									{pluralize(cell.commitCount, "commit")}
+								</span>
+							) : (
+								<span class="activity-tooltip-counts">No activity</span>
+							)}
+						</div>
+					);
+				})}
 			</div>
 		</div>
 	);

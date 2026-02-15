@@ -54,10 +54,55 @@ const Layout: FC<LayoutProps> = ({ title, children }) => {
           details[open] summary .ph-caret-right {
             transform: rotate(90deg);
           }
+          .activity-tooltip {
+            margin: 0;
+            padding: 6px 10px;
+            border: 1px solid #3f3f46;
+            border-radius: 6px;
+            background: #18181b;
+            color: #e4e4e7;
+            font-size: 11px;
+            line-height: 1.4;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            inset: unset;
+          }
+          .activity-tooltip-date {
+            display: block;
+            font-weight: 600;
+            color: #a1a1aa;
+          }
+          .activity-tooltip-counts {
+            display: block;
+            color: #e4e4e7;
+          }
         </style>
       </head>
       <body class="bg-zinc-950 text-zinc-100 min-h-screen antialiased">
         <div class="max-w-4xl mx-auto px-4 py-8">${children}</div>
+        <script>
+          document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll("[data-popover-target]").forEach(function (rect) {
+              var id = rect.getAttribute("data-popover-target");
+              var popover = document.getElementById(id);
+              if (!popover) return;
+              rect.style.pointerEvents = "auto";
+              rect.style.cursor = "default";
+              rect.addEventListener("mouseenter", function () {
+                popover.showPopover();
+                var r = rect.getBoundingClientRect();
+                var cx = r.left + r.width / 2;
+                var cy = r.top;
+                popover.style.left = cx - popover.offsetWidth / 2 + "px";
+                popover.style.top = cy - popover.offsetHeight - 6 + "px";
+              });
+              rect.addEventListener("mouseleave", function () {
+                popover.hidePopover();
+              });
+            });
+          });
+        </script>
       </body>
     </html>`;
 };

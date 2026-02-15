@@ -218,7 +218,7 @@ pages.get("/:org/:repo", async (c) => {
 	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
 	const [rows, dailyCounts] = await Promise.all([
 		db.getCommitGraphData({ org, repo, cursor, limit: commitLimit }),
-		db.getDailySessionCounts({ org, repo, since: oneYearAgo }),
+		db.getDailyActivityCounts({ org, repo, since: oneYearAgo }),
 	]);
 
 	if (rows.length === 0 && !cursorParam) {
