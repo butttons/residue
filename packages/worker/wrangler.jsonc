@@ -21,12 +21,14 @@
 			"database_name": "residue-app",
 			"database_id": "your-database-id",
 			"migrations_dir": "migrations",
+			"remote": true,
 		},
 	],
 	"r2_buckets": [
 		{
 			"binding": "BUCKET",
 			"bucket_name": "residue",
+			"remote": true,
 		},
 	],
 	"compatibility_flags": ["nodejs_compat"],
