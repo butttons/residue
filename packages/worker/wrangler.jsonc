@@ -20,7 +20,5 @@
 			"bucket_name": "residue-sessions"
 		}
 	],
-	"compatibility_flags": [
-		"nodejs_compat"
-	]
+	"compatibility_flags": ["nodejs_compat"]
 }

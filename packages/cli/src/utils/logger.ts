@@ -5,8 +5,8 @@ const BASE_NAMESPACE = "residue";
 type Loggable = string | Error;
 
 function formatMessage(value: Loggable): string {
-  if (typeof value === "string") return value;
-  return value.message;
+	if (typeof value === "string") return value;
+	return value.message;
 }
 
 /**
@@ -25,27 +25,27 @@ function formatMessage(value: Loggable): string {
  * data (e.g. session IDs piped back to agent adapters).
  */
 function createLogger(namespace: string) {
-  const debug = createDebug(`${BASE_NAMESPACE}:${namespace}`);
+	const debug = createDebug(`${BASE_NAMESPACE}:${namespace}`);
 
-  return {
-    /** Diagnostic message. Only visible when DEBUG includes this namespace. */
-    debug,
+	return {
+		/** Diagnostic message. Only visible when DEBUG includes this namespace. */
+		debug,
 
-    /** User-facing status message. Always printed to stderr. */
-    info(message: string) {
-      process.stderr.write(`${message}\n`);
-    },
+		/** User-facing status message. Always printed to stderr. */
+		info(message: string) {
+			process.stderr.write(`${message}\n`);
+		},
 
-    /** Warning. Always printed to stderr. Accepts a string or Error. */
-    warn(value: Loggable) {
-      process.stderr.write(`Warning: ${formatMessage(value)}\n`);
-    },
+		/** Warning. Always printed to stderr. Accepts a string or Error. */
+		warn(value: Loggable) {
+			process.stderr.write(`Warning: ${formatMessage(value)}\n`);
+		},
 
-    /** Error. Always printed to stderr. Accepts a string or Error. */
-    error(value: Loggable) {
-      process.stderr.write(`Error: ${formatMessage(value)}\n`);
-    },
-  };
+		/** Error. Always printed to stderr. Accepts a string or Error. */
+		error(value: Loggable) {
+			process.stderr.write(`Error: ${formatMessage(value)}\n`);
+		},
+	};
 }
 
 export { createLogger, type Loggable };

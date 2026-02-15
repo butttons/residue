@@ -2,11 +2,11 @@ import { html } from "hono/html";
 import type { FC, PropsWithChildren } from "hono/jsx";
 
 type LayoutProps = PropsWithChildren<{
-  title: string;
+	title: string;
 }>;
 
 const Layout: FC<LayoutProps> = ({ title, children }) => {
-  return html`<!doctype html>
+	return html`<!doctype html>
     <html lang="en" class="dark">
       <head>
         <meta charset="utf-8" />

@@ -7,14 +7,14 @@ import { defineConfig } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://residue.dev",
-  output: "static",
-  adapter: cloudflare(),
-  integrations: [sitemap()],
-  vite: {
-    plugins: [tailwindcss()],
-  },
-  devToolbar: {
-    enabled: false,
-  },
+	site: "https://residue.dev",
+	output: "static",
+	adapter: cloudflare(),
+	integrations: [sitemap()],
+	vite: {
+		plugins: [tailwindcss()],
+	},
+	devToolbar: {
+		enabled: false,
+	},
 });
