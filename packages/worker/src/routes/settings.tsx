@@ -146,6 +146,7 @@ settings.post("/settings/visibility", async (c) => {
 // List users + create form
 settings.get("/settings/users", async (c) => {
 	const username = c.get("username");
+	const isSuperAdmin = username === c.env.ADMIN_USERNAME;
 	const db = new DB(c.env.DB);
 	const users = await db.listUsers();
 
@@ -164,42 +165,44 @@ settings.get("/settings/users", async (c) => {
 
 			<FlashMessages success={success} error={error} />
 
-			{/* Create user form */}
-			<div class="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-6">
-				<h2 class="text-sm font-medium text-zinc-100 mb-4">Create user</h2>
-				<form
-					method="post"
-					action="/app/settings/users"
-					class="flex flex-col sm:flex-row gap-3"
-				>
-					<div class="flex-1">
-						<input
-							type="text"
-							name="username"
-							placeholder="Username"
-							required
-							autocomplete="off"
-							class="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-blue-500 transition-colors"
-						/>
-					</div>
-					<div class="flex-1">
-						<input
-							type="password"
-							name="password"
-							placeholder="Password"
-							required
-							autocomplete="new-password"
-							class="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-blue-500 transition-colors"
-						/>
-					</div>
-					<button
-						type="submit"
-						class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium py-2 px-4 rounded transition-colors whitespace-nowrap"
+			{/* Create user form -- super admin only */}
+			{isSuperAdmin && (
+				<div class="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-6">
+					<h2 class="text-sm font-medium text-zinc-100 mb-4">Create user</h2>
+					<form
+						method="post"
+						action="/app/settings/users"
+						class="flex flex-col sm:flex-row gap-3"
 					>
-						Create user
-					</button>
-				</form>
-			</div>
+						<div class="flex-1">
+							<input
+								type="text"
+								name="username"
+								placeholder="Username"
+								required
+								autocomplete="off"
+								class="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-blue-500 transition-colors"
+							/>
+						</div>
+						<div class="flex-1">
+							<input
+								type="password"
+								name="password"
+								placeholder="Password"
+								required
+								autocomplete="new-password"
+								class="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-blue-500 transition-colors"
+							/>
+						</div>
+						<button
+							type="submit"
+							class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium py-2 px-4 rounded transition-colors whitespace-nowrap"
+						>
+							Create user
+						</button>
+					</form>
+				</div>
+			)}
 
 			{/* User list */}
 			<div class="bg-zinc-900 border border-zinc-800 rounded-md">
@@ -227,7 +230,7 @@ settings.get("/settings/users", async (c) => {
 											Created {formatTimestamp(user.created_at)}
 										</span>
 									</div>
-									{!isSelf && (
+									{isSuperAdmin && !isSelf && (
 										<form
 											method="post"
 											action={`/app/settings/users/${user.id}/delete`}
@@ -251,8 +254,16 @@ settings.get("/settings/users", async (c) => {
 	);
 });
 
-// Create user
+// Create user -- super admin only
 settings.post("/settings/users", async (c) => {
+	const currentUsername = c.get("username");
+	if (currentUsername !== c.env.ADMIN_USERNAME) {
+		return c.redirect(
+			"/app/settings/users?error=" +
+				encodeURIComponent("Only the super admin can create users."),
+		);
+	}
+
 	const body = await c.req.parseBody();
 	const newUsername =
 		typeof body.username === "string" ? body.username.trim() : "";
@@ -285,10 +296,17 @@ settings.post("/settings/users", async (c) => {
 	);
 });
 
-// Delete user
+// Delete user -- super admin only
 settings.post("/settings/users/:id/delete", async (c) => {
-	const id = c.req.param("id");
 	const currentUsername = c.get("username");
+	if (currentUsername !== c.env.ADMIN_USERNAME) {
+		return c.redirect(
+			"/app/settings/users?error=" +
+				encodeURIComponent("Only the super admin can delete users."),
+		);
+	}
+
+	const id = c.req.param("id");
 	const db = new DB(c.env.DB);
 
 	// Find the target user to check for self-deletion

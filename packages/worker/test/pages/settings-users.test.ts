@@ -2,7 +2,11 @@ import { env, SELF } from "cloudflare:test";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { hashPassword } from "../../src/lib/auth";
 import { DB } from "../../src/lib/db";
-import { applyMigrations, sessionCookieHeader } from "../utils";
+import {
+	applyMigrations,
+	nonAdminSessionCookieHeader,
+	sessionCookieHeader,
+} from "../utils";
 
 let db: DB;
 
@@ -152,6 +156,32 @@ describe("GET /app/settings/users", () => {
 		expect(html).toContain("Settings");
 		expect(html).toContain("Users");
 	});
+
+	it("hides create form for non-admin users", async () => {
+		const headers = await nonAdminSessionCookieHeader({
+			username: "viewer",
+		});
+		const res = await SELF.fetch("https://test.local/app/settings/users", {
+			headers,
+		});
+		const html = await res.text();
+		expect(html).not.toContain("Create user");
+	});
+
+	it("hides delete buttons for non-admin users", async () => {
+		const userId = await createTestUser({
+			username: "target",
+			password: "pass",
+		});
+		const headers = await nonAdminSessionCookieHeader({
+			username: "viewer2",
+		});
+		const res = await SELF.fetch("https://test.local/app/settings/users", {
+			headers,
+		});
+		const html = await res.text();
+		expect(html).not.toContain(`/app/settings/users/${userId}/delete`);
+	});
 });
 
 describe("POST /app/settings/users (create user)", () => {
@@ -241,6 +271,29 @@ describe("POST /app/settings/users (create user)", () => {
 		const user = await db.getUserByUsername("trimmed");
 		expect(user).not.toBeNull();
 	});
+
+	it("rejects create from non-admin user", async () => {
+		const headers = await nonAdminSessionCookieHeader({
+			username: "regular",
+		});
+		const res = await SELF.fetch("https://test.local/app/settings/users", {
+			method: "POST",
+			headers: {
+				...headers,
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			body: "username=sneaky&password=pass",
+			redirect: "manual",
+		});
+		expect(res.status).toBe(302);
+		const location = res.headers.get("location") ?? "";
+		expect(location).toContain("error");
+		expect(location).toContain("super%20admin");
+
+		// Verify user was NOT created
+		const user = await db.getUserByUsername("sneaky");
+		expect(user).toBeNull();
+	});
 });
 
 describe("POST /app/settings/users/:id/delete", () => {
@@ -304,5 +357,31 @@ describe("POST /app/settings/users/:id/delete", () => {
 		const location = res.headers.get("location") ?? "";
 		expect(location).toContain("error");
 		expect(location).toContain("not%20found");
+	});
+
+	it("rejects delete from non-admin user", async () => {
+		const userId = await createTestUser({
+			username: "victim",
+			password: "pass",
+		});
+		const headers = await nonAdminSessionCookieHeader({
+			username: "regular2",
+		});
+		const res = await SELF.fetch(
+			`https://test.local/app/settings/users/${userId}/delete`,
+			{
+				method: "POST",
+				headers,
+				redirect: "manual",
+			},
+		);
+		expect(res.status).toBe(302);
+		const location = res.headers.get("location") ?? "";
+		expect(location).toContain("error");
+		expect(location).toContain("super%20admin");
+
+		// Verify user was NOT deleted
+		const user = await db.getUserByUsername("victim");
+		expect(user).not.toBeNull();
 	});
 });

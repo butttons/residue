@@ -48,3 +48,30 @@ export async function sessionCookieHeader(): Promise<Record<string, string>> {
 
 	return { Cookie: `residue_session=${token}` };
 }
+
+/**
+ * Create a non-admin user in D1 and return a session cookie header for them.
+ */
+export async function nonAdminSessionCookieHeader({
+	username,
+}: {
+	username: string;
+}): Promise<Record<string, string>> {
+	const db = new DB(env.DB);
+	const existing = await db.getUserByUsername(username);
+	if (!existing) {
+		const passwordHash = await hashPassword({ password: "test-password" });
+		await db.createUser({
+			id: crypto.randomUUID(),
+			username,
+			passwordHash,
+		});
+	}
+
+	const token = await createSessionToken({
+		username,
+		secret: env.AUTH_TOKEN,
+	});
+
+	return { Cookie: `residue_session=${token}` };
+}
