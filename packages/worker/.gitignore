@@ -166,5 +166,4 @@ dist
 !.env.example
 .wrangler/
 
-# Built assets
-public/
+
