@@ -436,4 +436,28 @@ export class DB {
 			.first<{ count: number }>();
 		return row?.count ?? 0;
 	}
+
+	// --- Settings ---
+
+	async getSetting(key: string): Promise<string | null> {
+		const row = await this.db
+			.prepare("SELECT value FROM settings WHERE key = ?")
+			.bind(key)
+			.first<{ value: string }>();
+		return row?.value ?? null;
+	}
+
+	async setSetting({ key, value }: { key: string; value: string }): Promise<void> {
+		await this.db
+			.prepare(
+				"INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+			)
+			.bind(key, value)
+			.run();
+	}
+
+	async getIsPublic(): Promise<boolean> {
+		const value = await this.getSetting("is_public");
+		return value === "true";
+	}
 }

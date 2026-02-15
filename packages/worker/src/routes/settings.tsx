@@ -54,6 +54,95 @@ const FlashMessages: FC<FlashProps> = ({ success, error }) => (
 
 const settings = new Hono<{ Bindings: Env; Variables: { username: string } }>();
 
+// Settings index
+settings.get("/settings", async (c) => {
+	const username = c.get("username");
+	const db = new DB(c.env.DB);
+	const isPublic = await db.getIsPublic();
+
+	const success = c.req.query("success");
+	const error = c.req.query("error");
+
+	return c.html(
+		<Layout title="Settings -- residue" username={username}>
+			<Breadcrumb
+				items={[
+					{ label: "residue", href: "/app" },
+					{ label: "Settings" },
+				]}
+			/>
+
+			<FlashMessages success={success} error={error} />
+
+			{/* Visibility */}
+			<div class="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-4">
+				<div class="flex items-center justify-between">
+					<div>
+						<h2 class="text-sm font-medium text-zinc-100 mb-1">
+							Public visibility
+						</h2>
+						<p class="text-xs text-zinc-400">
+							{isPublic
+								? "Anyone can view conversations without signing in. Settings and user management still require authentication."
+								: "Only authenticated users can view conversations. Enable to allow public access."}
+						</p>
+					</div>
+					<form method="POST" action="/app/settings/visibility">
+						<input
+							type="hidden"
+							name="is_public"
+							value={isPublic ? "false" : "true"}
+						/>
+						<button
+							type="submit"
+							class={`text-sm font-medium py-1.5 px-3 rounded transition-colors ${
+								isPublic
+									? "bg-zinc-800 hover:bg-zinc-700 text-zinc-300"
+									: "bg-blue-600 hover:bg-blue-500 text-white"
+							}`}
+						>
+							{isPublic ? "Make private" : "Make public"}
+						</button>
+					</form>
+				</div>
+			</div>
+
+			{/* Navigation to other settings */}
+			<a
+				href="/app/settings/users"
+				class="block bg-zinc-900 border border-zinc-800 rounded-md p-4 hover:border-zinc-700 transition-colors"
+			>
+				<div class="flex items-center justify-between">
+					<div>
+						<h2 class="text-sm font-medium text-zinc-100">Users</h2>
+						<p class="text-xs text-zinc-400 mt-0.5">
+							Manage user accounts and access
+						</p>
+					</div>
+					<i class="ph ph-caret-right text-zinc-500" />
+				</div>
+			</a>
+		</Layout>,
+	);
+});
+
+// Toggle visibility
+settings.post("/settings/visibility", async (c) => {
+	const body = await c.req.parseBody();
+	const isPublic = body.is_public === "true";
+
+	const db = new DB(c.env.DB);
+	await db.setSetting({ key: "is_public", value: isPublic ? "true" : "false" });
+
+	const message = isPublic
+		? "Instance is now publicly visible."
+		: "Instance is now private.";
+
+	return c.redirect(
+		`/app/settings?success=${encodeURIComponent(message)}`,
+	);
+});
+
 // List users + create form
 settings.get("/settings/users", async (c) => {
 	const username = c.get("username");
