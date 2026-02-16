@@ -475,6 +475,18 @@ interface Session { id: string; open: boolean; commits: boolean };
 function writePending(path: string, sessions: PendingSession[])
 ```
 
+## Common Workflows
+
+### Adding a CLI command
+
+1. Create `packages/cli/src/commands/<name>.ts` exporting a function that returns `ResultAsync<void, CliError>`.
+2. Register it in `packages/cli/src/index.ts`: import, add `program.command(...)` with `.action(wrapCommand(...))`.
+3. Use `safeTry` + `yield*` for sequencing multiple `ResultAsync` calls.
+4. Use `createLogger("<name>")` for output. All user-facing output goes through `log.info()` to stderr.
+5. Reuse existing libs (`@/lib/config`, `@/lib/git`, `@/lib/pending`) rather than reimplementing.
+6. Do not add tests for trivial commands.
+7. Smoke-test by running `bun packages/cli/src/index.ts <name>` from the project root.
+
 ## How to use TODO.json
 
 1. When user asks to make changes to the code of plan features, look up the features in the TODO.json file before exploring further to get better context.
