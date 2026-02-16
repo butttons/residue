@@ -475,6 +475,10 @@ interface Session { id: string; open: boolean; commits: boolean };
 function writePending(path: string, sessions: PendingSession[])
 ```
 
+## Versioning
+
+All packages share the same version. When bumping, update `version` in every `package.json` (root, cli, worker, docs) to the same value.
+
 ## Common Workflows
 
 ### Adding a CLI command
