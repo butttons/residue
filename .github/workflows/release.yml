@@ -26,9 +26,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-
-      - name: Update npm
-        run: npm install -g npm@latest
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -41,5 +39,8 @@ jobs:
       - name: Build CLI
         run: pnpm --filter @residue/cli build
 
+      - name: Verify npm version
+        run: npm --version
+
       - name: Publish
-        run: cd packages/cli && npm publish --provenance --access public
+        run: cd packages/cli && npm publish --access public
