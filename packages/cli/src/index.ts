@@ -12,12 +12,14 @@ import { setup } from "@/commands/setup";
 import { sync } from "@/commands/sync";
 import { wrapCommand, wrapHookCommand } from "@/utils/errors";
 
+import packageJson from "../package.json";
+
 const program = new Command();
 
 program
 	.name("residue")
 	.description("Capture AI agent conversations linked to git commits")
-	.version("0.0.1");
+	.version(packageJson.version);
 
 program
 	.command("login")
