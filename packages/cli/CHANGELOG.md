@@ -1,5 +1,11 @@
 # @residue/cli
 
+## 0.0.3
+
+### Patch Changes
+
+- Add status command, common workflows docs, versioning policy.
+
 ## 0.0.2
 
 ### Patch Changes

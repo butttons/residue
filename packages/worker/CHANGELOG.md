@@ -1,5 +1,11 @@
 # @residue/worker
 
+## 0.0.2
+
+### Patch Changes
+
+- Add status command, common workflows docs, versioning policy.
+
 ## 0.0.1
 
 ### Features
