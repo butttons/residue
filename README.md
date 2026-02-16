@@ -8,19 +8,16 @@ There are two event sources: **agent adapters** and **git hooks**.
 
 Agent adapters call into the CLI when conversations start and end. Git hooks call into the CLI when commits and pushes happen. The CLI maintains local state that connects the two.
 
-```
-Agent Adapter                   Git Hooks
-    |                               |
-    |-- session-start --\           |
-    |                    v          |
-    |              LOCAL STATE      |
-    |              (pending queue)  |
-    |-- session-end ----/           |
-    |                               |-- post-commit -> capture
-    |                               |   (tag pending sessions with SHA)
-    |                               |
-    |                               |-- pre-push -> sync
-    |                               |   (upload to worker, clear local state)
+```mermaid
+flowchart TD
+    A[Agent Adapter] -->|session-start| LS[(Local State\npending queue)]
+    A -->|session-end| LS
+
+    G[Git Hooks] -->|post-commit| CAP[residue capture\ntag pending sessions with SHA]
+    CAP --> LS
+
+    G -->|pre-push| SYNC[residue sync\nupload to worker, clear local state]
+    SYNC --> LS
 ```
 
 1. Adapter calls `residue session start` when a conversation begins
@@ -118,6 +115,8 @@ wrangler deploy
 After either option, note your **worker URL** (e.g. `https://residue.your-subdomain.workers.dev`) and **auth token**.
 
 ### Step 3: Install the CLI
+
+Requires [bun](https://bun.sh) as the runtime. Install bun first if you don't have it.
 
 ```bash
 npm install -g @residue/cli

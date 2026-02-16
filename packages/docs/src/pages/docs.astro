@@ -36,7 +36,7 @@ import Layout from "../layouts/Layout.astro";
             <h2 class="text-2xl font-bold mb-6 text-amber-400">Prerequisites</h2>
             <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
                 <ul class="space-y-2 text-zinc-300 text-sm">
-                    <li><strong>Bun</strong> or <strong>Node.js</strong> 18+ (for installing the CLI)</li>
+                    <li><strong><a href="https://bun.sh" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">Bun</a></strong> (required runtime for the CLI)</li>
                     <li><strong>Git</strong> (hooks are installed in .git/hooks/)</li>
                     <li><strong>Cloudflare account</strong> (for deploying the worker)</li>
                     <li><strong>A supported AI agent:</strong> Claude Code or pi</li>
@@ -196,6 +196,9 @@ wrangler deploy</code></pre>
                     <h3 class="text-xl font-semibold mb-3 text-amber-300">
                         3. Install the CLI
                     </h3>
+                    <p class="text-zinc-400 text-sm mb-3">
+                        Requires <a href="https://bun.sh" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">bun</a> as the runtime. Install bun first if you don't have it.
+                    </p>
                     <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
                         <div class="text-zinc-300">npm install -g @residue/cli</div>
                     </div>
