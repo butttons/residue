@@ -9,6 +9,7 @@ import { push } from "@/commands/push";
 import { sessionEnd } from "@/commands/session-end";
 import { sessionStart } from "@/commands/session-start";
 import { setup } from "@/commands/setup";
+import { status } from "@/commands/status";
 import { sync } from "@/commands/sync";
 import { wrapCommand, wrapHookCommand } from "@/utils/errors";
 
@@ -98,5 +99,10 @@ program
 	.command("push")
 	.description("Upload pending sessions to worker (manual trigger)")
 	.action(wrapCommand(() => push()));
+
+program
+	.command("status")
+	.description("Show current residue state for this project")
+	.action(wrapCommand(() => status()));
 
 program.parse();
