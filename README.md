@@ -215,6 +215,20 @@ pnpm --filter @residue/worker test       # worker tests
 - **Single auth token.** Set at deploy time as an environment variable. No user management.
 - **Never block git.** Hooks exit 0 even on errors. Session capture and sync are best-effort.
 
+## Troubleshooting
+
+### `R2 upload failed` / `SignatureDoesNotMatch`
+
+The presigned URL signing is failing because the R2 S3 API credentials on the worker are stale. This happens when the R2 API token is regenerated in the Cloudflare dashboard but the worker secret is not updated.
+
+Fix: update the `R2_SECRET_ACCESS_KEY` secret on the worker.
+
+```bash
+echo "<new-secret>" | npx wrangler secret put R2_SECRET_ACCESS_KEY --name residue
+```
+
+If the access key ID also changed, update `R2_ACCESS_KEY_ID` in `wrangler.jsonc` vars and redeploy.
+
 ## License
 
 MIT
