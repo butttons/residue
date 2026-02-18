@@ -4,6 +4,9 @@ type UpsertSessionParams = {
 	agentVersion: string;
 	status: string;
 	r2Key: string;
+	dataPath?: string | null;
+	firstMessage?: string | null;
+	sessionName?: string | null;
 };
 
 type InsertCommitParams = {
@@ -24,6 +27,9 @@ type SessionRow = {
 	created_at: number;
 	ended_at: number | null;
 	r2_key: string;
+	data_path: string | null;
+	first_message: string | null;
+	session_name: string | null;
 };
 
 type CommitRow = {
@@ -122,11 +128,14 @@ export class DB {
 
 		await this.db
 			.prepare(
-				`INSERT INTO sessions (id, agent, agent_version, created_at, ended_at, r2_key)
-         VALUES (?, ?, ?, ?, ?, ?)
+				`INSERT INTO sessions (id, agent, agent_version, created_at, ended_at, r2_key, data_path, first_message, session_name)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            ended_at = COALESCE(excluded.ended_at, sessions.ended_at),
-           r2_key = excluded.r2_key`,
+           r2_key = excluded.r2_key,
+           data_path = COALESCE(excluded.data_path, sessions.data_path),
+           first_message = COALESCE(excluded.first_message, sessions.first_message),
+           session_name = COALESCE(excluded.session_name, sessions.session_name)`,
 			)
 			.bind(
 				params.id,
@@ -135,6 +144,9 @@ export class DB {
 				now,
 				endedAt,
 				params.r2Key,
+				params.dataPath ?? null,
+				params.firstMessage ?? null,
+				params.sessionName ?? null,
 			)
 			.run();
 	}
