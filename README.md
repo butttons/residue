@@ -45,7 +45,7 @@ Monorepo managed with pnpm workspaces. Runtime is bun.
 
 ## Setup
 
-There are four steps: create the R2 bucket and its S3 API credentials, deploy the worker, install the CLI, then configure your repos.
+There are six steps: create the R2 bucket and its S3 API credentials, deploy the worker, set up AI Search, install the CLI, then configure your repos.
 
 ---
 
@@ -89,32 +89,67 @@ The R2 vars from step 1 (`R2_ACCESS_KEY_ID`, `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`) 
 **Option B: Manual**
 
 ```bash
+# Clone the repo and install dependencies
+git clone https://github.com/butttons/residue.git
+cd residue
+pnpm install
+cd packages/worker
+
+# Login to Cloudflare
+npx wrangler login
+
 # Create D1 database
-wrangler d1 create residue-db
+npx wrangler d1 create residue-db
 # Copy the database_id into wrangler.jsonc
 
+# Update wrangler.jsonc with:
+#   d1_databases[0].database_id  -> your D1 ID
+#   r2_buckets[0].bucket_name    -> from step 1
+#   R2_ACCESS_KEY_ID             -> from step 1
+#   R2_ACCOUNT_ID                -> from step 1
+#   R2_BUCKET_NAME               -> from step 1
+#   ADMIN_USERNAME               -> your choice
+
 # Run migrations
-wrangler d1 execute residue-db --remote --file=migrations/0001_init.sql
+npm run db:migrate
 
 # Set secrets
-echo "your-secret-token" | wrangler secret put AUTH_TOKEN
-wrangler secret put ADMIN_PASSWORD
-wrangler secret put R2_SECRET_ACCESS_KEY
-
-# Update wrangler.jsonc with:
-#   d1_databases[0].database_id -> your D1 ID
-#   R2_ACCESS_KEY_ID            -> from step 1
-#   R2_ACCOUNT_ID               -> from step 1
-#   R2_BUCKET_NAME              -> from step 1
-#   ADMIN_USERNAME              -> your choice
+echo "your-secret-token" | npx wrangler secret put AUTH_TOKEN
+npx wrangler secret put ADMIN_PASSWORD
+npx wrangler secret put R2_SECRET_ACCESS_KEY
 
 # Deploy
-wrangler deploy
+npx wrangler deploy
 ```
 
 After either option, note your **worker URL** (e.g. `https://residue.your-subdomain.workers.dev`) and **auth token**.
 
-### Step 3: Install the CLI
+### Step 3: Set up AI Search
+
+Search requires a Cloudflare AI Search instance connected to your R2 bucket. Without this, the `residue search` and `residue query` commands will not work.
+
+Go to **Compute & AI > AI Search** in the Cloudflare dashboard: [dash.cloudflare.com/?to=/:account/ai/ai-search](https://dash.cloudflare.com/?to=/:account/ai/ai-search)
+
+1. Select **Create**, then **Get Started**
+2. Choose your R2 bucket as the data source
+3. Leave chunking, embedding, and retrieval settings at their defaults
+4. Name the instance **`residue-search`**
+5. Complete the setup
+
+After creation, configure path filters so only search-optimized text files are indexed (not raw session data):
+
+Go to the **Settings** tab of your instance: [dash.cloudflare.com/?to=/:account/ai/ai-search/instance/residue-search/settings](https://dash.cloudflare.com/?to=/:account/ai/ai-search/instance/residue-search/settings)
+
+Under **Resources > Path Filters**:
+
+| Filter | Value |
+|---|---|
+| **Include** | `search/**` |
+| **Exclude** | `sessions/**` |
+
+For more details, see the [Cloudflare AI Search docs](https://developers.cloudflare.com/ai-search/get-started/dashboard/).
+
+### Step 4: Install the CLI
 
 Requires [bun](https://bun.sh) as the runtime. Install bun first if you don't have it.
 
@@ -122,7 +157,7 @@ Requires [bun](https://bun.sh) as the runtime. Install bun first if you don't ha
 npm install -g @residue/cli
 ```
 
-### Step 4: Login
+### Step 5: Login
 
 ```bash
 residue login --url https://residue.your-subdomain.workers.dev --token YOUR_AUTH_TOKEN
@@ -130,11 +165,17 @@ residue login --url https://residue.your-subdomain.workers.dev --token YOUR_AUTH
 
 Saves credentials to `~/.residue/config`. One-time.
 
+Use `--local` to save credentials to `.residue/config` in the current project instead of globally. Useful when different repos connect to different workers.
+
+```bash
+residue login --url https://residue.your-subdomain.workers.dev --token YOUR_AUTH_TOKEN --local
+```
+
 ---
 
 **Per-project setup**
 
-### Step 5: Configure a repository
+### Step 6: Configure a repository
 
 Run these in any git repo you want to track:
 
@@ -156,7 +197,7 @@ That's it. Commit and push as usual -- conversations are captured and uploaded a
 
 | Command | Description |
 |---|---|
-| `residue login` | Save worker URL + auth token to `~/.residue/config` |
+| `residue login` | Save worker URL + auth token to `~/.residue/config`. Use `--local` for per-project config |
 | `residue init` | Install git hooks in current repo |
 | `residue setup <agent>` | Configure an agent adapter (`claude-code` or `pi`) |
 | `residue push` | Manually upload pending sessions |

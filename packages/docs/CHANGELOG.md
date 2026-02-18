@@ -1,5 +1,11 @@
 # @residue/docs
 
+## 0.0.6
+
+### Patch Changes
+
+- 07f8138: Update setup guide with AI Search instructions, `--local` login flag, and corrected manual deploy steps.
+
 ## 0.0.5
 
 ## 0.0.4
