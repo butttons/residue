@@ -12,4 +12,5 @@ dist/
 .playwright-cli
 .tmp-build
 .residue/
+.pi/skills/worker-ops/
 wrangler.local.*

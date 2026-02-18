@@ -9,12 +9,14 @@ type LayoutProps = PropsWithChildren<{
 	title: string;
 	username?: string;
 	breadcrumbs?: BreadcrumbItem[];
+	searchQuery?: string;
 }>;
 
 const Layout: FC<LayoutProps> = ({
 	title,
 	username,
 	breadcrumbs,
+	searchQuery,
 	children,
 }) => {
 	return html`<!doctype html>
@@ -51,6 +53,18 @@ const Layout: FC<LayoutProps> = ({
 							}
 						</div>
 						<div class="flex items-center gap-3">
+							<form action="/app/search" method="GET" class="inline-flex">
+								<div class="relative flex items-center">
+									<i class="ph ph-magnifying-glass absolute left-2 text-zinc-500 text-sm pointer-events-none"></i>
+									<input
+										type="text"
+										name="q"
+										placeholder="Search..."
+										value="${searchQuery ?? ""}"
+										class="w-40 bg-zinc-900 border border-zinc-800 rounded pl-7 pr-2 py-1 text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+									/>
+								</div>
+							</form>
 							${
 								username
 									? html`<span class="text-xs text-zinc-500">${username}</span>

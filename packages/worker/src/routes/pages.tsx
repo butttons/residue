@@ -135,6 +135,215 @@ pages.get("/", async (c) => {
 	);
 });
 
+// Search results page
+pages.get("/search", async (c) => {
+	const q = c.req.query("q")?.trim();
+	const username = c.get("username");
+
+	if (!q) {
+		return c.html(
+			<Layout
+				title="Search — residue"
+				username={username}
+				breadcrumbs={[{ label: "residue", href: "/app" }, { label: "search" }]}
+			>
+				<p class="text-zinc-400 text-sm">
+					Enter a query in the search bar above.
+				</p>
+			</Layout>,
+		);
+	}
+
+	const db = new DB(c.env.DB);
+
+	type SearchResultData = {
+		sessionId: string;
+		score: number;
+		snippets: string[];
+		session: {
+			agent: string;
+			firstMessage: string | null;
+			sessionName: string | null;
+			createdAt: number;
+		};
+		commits: {
+			sha: string;
+			message: string | null;
+			author: string | null;
+			committedAt: number | null;
+			org: string;
+			repo: string;
+			branch: string | null;
+		}[];
+	};
+
+	let results: SearchResultData[] = [];
+	let hasError = false;
+
+	try {
+		const searchResponse = await c.env.AI.autorag("residue-search").search({
+			query: q,
+			max_num_results: 10,
+		});
+
+		// Parse session IDs from filenames (search/<id>.txt)
+		const parsed = searchResponse.data.map((item) => {
+			const match = item.filename.match(/^search\/(.+)\.txt$/);
+			const sessionId = match ? match[1] : null;
+			const snippets = item.content
+				.filter((block) => block.type === "text")
+				.map((block) => block.text);
+			return { sessionId, score: item.score, snippets };
+		});
+
+		// Look up session details from D1
+		const enriched = await Promise.all(
+			parsed
+				.filter(
+					(p): p is typeof p & { sessionId: string } => p.sessionId !== null,
+				)
+				.map(async ({ sessionId, score, snippets }) => {
+					const detail = await db.getSessionDetail(sessionId);
+					if (!detail) return null;
+					return {
+						sessionId,
+						score,
+						snippets,
+						session: {
+							agent: detail.session.agent,
+							firstMessage: detail.session.first_message,
+							sessionName: detail.session.session_name,
+							createdAt: detail.session.created_at,
+						},
+						commits: detail.commits.map((commit) => ({
+							sha: commit.commit_sha,
+							message: commit.message,
+							author: commit.author,
+							committedAt: commit.committed_at,
+							org: commit.org,
+							repo: commit.repo,
+							branch: commit.branch,
+						})),
+					} satisfies SearchResultData;
+				}),
+		);
+
+		results = enriched.filter((r): r is SearchResultData => r !== null);
+	} catch {
+		hasError = true;
+	}
+
+	return c.html(
+		<Layout
+			title={`"${q}" — Search — residue`}
+			username={username}
+			breadcrumbs={[{ label: "residue", href: "/app" }, { label: "search" }]}
+			searchQuery={q}
+		>
+			<h1 class="text-sm text-zinc-400 mb-6">
+				{hasError ? (
+					<span class="text-red-400">
+						Search failed. Make sure AI Search is configured.
+					</span>
+				) : (
+					<>
+						{results.length} {results.length === 1 ? "result" : "results"} for{" "}
+						<span class="text-zinc-100">"{q}"</span>
+					</>
+				)}
+			</h1>
+
+			{!hasError && results.length === 0 && (
+				<p class="text-zinc-500 text-sm">No matching sessions found.</p>
+			)}
+
+			{results.length > 0 && (
+				<div class="flex flex-col gap-3">
+					{results.map((result) => {
+						// Link to the first commit's detail page, or fall back to nothing
+						const firstCommit = result.commits[0];
+						const href = firstCommit
+							? `/app/${firstCommit.org}/${firstCommit.repo}/${firstCommit.sha}`
+							: undefined;
+
+						return (
+							<a
+								href={href}
+								class="block bg-zinc-900 border border-zinc-800 rounded-md p-4 hover:border-zinc-700 transition-colors"
+							>
+								{/* Session header */}
+								<div class="flex items-center gap-2 mb-2">
+									<span class="text-xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+										{result.session.agent}
+									</span>
+									{result.session.sessionName && (
+										<span class="text-sm text-zinc-200 truncate">
+											{result.session.sessionName}
+										</span>
+									)}
+									<span class="text-xs text-zinc-600 font-mono ml-auto flex-shrink-0">
+										{(result.score * 100).toFixed(0)}%
+									</span>
+								</div>
+
+								{/* First message or snippet preview */}
+								<p class="text-sm text-zinc-300 mb-3 line-clamp-2">
+									{result.session.firstMessage ??
+										result.snippets[0]?.slice(0, 200) ??
+										"No preview available"}
+								</p>
+
+								{/* Commit links */}
+								{result.commits.length > 0 && (
+									<div class="flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-zinc-500">
+										{result.commits.slice(0, 3).map((commit) => (
+											<span class="flex items-center gap-1">
+												<span class="text-blue-400 font-mono">
+													{commit.sha.slice(0, 7)}
+												</span>
+												{commit.message && (
+													<span class="text-zinc-500 truncate max-w-48">
+														{commit.message}
+													</span>
+												)}
+											</span>
+										))}
+										{result.commits.length > 3 && (
+											<span class="text-zinc-600">
+												+{result.commits.length - 3} more
+											</span>
+										)}
+									</div>
+								)}
+
+								{/* Repo + time metadata */}
+								<div class="flex items-center gap-2 mt-2 text-xs text-zinc-500">
+									{firstCommit && (
+										<span class="font-mono">
+											{firstCommit.org}/{firstCommit.repo}
+										</span>
+									)}
+									{firstCommit?.branch && (
+										<>
+											<span class="text-zinc-700">&middot;</span>
+											<span class="font-mono">
+												<i class="ph ph-git-branch text-[10px] mr-0.5" />
+												{firstCommit.branch}
+											</span>
+										</>
+									)}
+									<span class="text-zinc-700">&middot;</span>
+									<span>{relativeTime(result.session.createdAt)}</span>
+								</div>
+							</a>
+						);
+					})}
+				</div>
+			)}
+		</Layout>,
+	);
+});
+
 // Org page — list repos for an org
 pages.get("/:org", async (c) => {
 	const org = c.req.param("org");
@@ -203,8 +412,12 @@ pages.get("/:org/:repo", async (c) => {
 	const org = c.req.param("org");
 	const repo = c.req.param("repo");
 	const cursorParam = c.req.query("cursor");
+	const prevParam = c.req.query("prev");
 	const cursor = cursorParam ? Number(cursorParam) : undefined;
 	const username = c.get("username");
+
+	// Parse the prev stack: comma-separated list of previous cursors
+	const prevStack = prevParam ? prevParam.split(",") : [];
 
 	const db = new DB(c.env.DB);
 	const commitLimit = 20;
@@ -233,11 +446,33 @@ pages.get("/:org/:repo", async (c) => {
 
 	const graphData = computeGraph(rows);
 	const lastCommit = graphData.commits[graphData.commits.length - 1];
+	const isOnFirstPage = !cursorParam;
 	const hasMore = graphData.commits.length === commitLimit;
 	const nextCursor =
 		hasMore && lastCommit?.committedAt != null
 			? String(lastCommit.committedAt)
 			: null;
+
+	// Build the "next" prev stack by appending the current cursor (or "0" for the first page)
+	const nextPrevStack = [...prevStack, cursorParam ?? "0"];
+	const nextPrevParam = nextPrevStack.join(",");
+
+	// Build the "previous" URL by popping the last entry from prevStack
+	let prevUrl: string | null = null;
+	if (!isOnFirstPage && prevStack.length > 0) {
+		const parentStack = prevStack.slice(0, -1);
+		const parentCursor = prevStack[prevStack.length - 1];
+		if (parentCursor === "0") {
+			// Going back to first page (no cursor)
+			prevUrl = `/app/${org}/${repo}`;
+		} else {
+			const params = new URLSearchParams({ cursor: parentCursor });
+			if (parentStack.length > 0) {
+				params.set("prev", parentStack.join(","));
+			}
+			prevUrl = `/app/${org}/${repo}?${params.toString()}`;
+		}
+	}
 
 	return c.html(
 		<Layout
@@ -253,13 +488,31 @@ pages.get("/:org/:repo", async (c) => {
 
 			<CommitGraph data={graphData} org={org} repo={repo} />
 
-			{nextCursor && (
-				<a
-					href={`/app/${org}/${repo}?cursor=${nextCursor}`}
-					class="block text-center text-blue-500 py-4 hover:underline text-sm"
-				>
-					Load more
-				</a>
+			{(prevUrl || nextCursor) && (
+				<div class="flex items-center justify-between py-4">
+					{prevUrl ? (
+						<a
+							href={prevUrl}
+							class="text-blue-500 hover:underline text-sm flex items-center gap-1"
+						>
+							<i class="ph ph-arrow-left text-xs" />
+							Newer
+						</a>
+					) : (
+						<span />
+					)}
+					{nextCursor ? (
+						<a
+							href={`/app/${org}/${repo}?cursor=${nextCursor}&prev=${nextPrevParam}`}
+							class="text-blue-500 hover:underline text-sm flex items-center gap-1"
+						>
+							Older
+							<i class="ph ph-arrow-right text-xs" />
+						</a>
+					) : (
+						<span />
+					)}
+				</div>
 			)}
 		</Layout>,
 	);
@@ -567,5 +820,4 @@ pages.get("/:org/:repo/:sha", async (c) => {
 		</Layout>,
 	);
 });
-
 export { pages };
