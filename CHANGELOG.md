@@ -1,5 +1,18 @@
 # residue
 
+## 0.0.3
+
+### @residue/cli
+
+- Add `residue status` command to show login, hooks, adapters, and pending session state
+- Read version from package.json instead of hardcoding
+- Add repository field for npm provenance verification
+
+### @residue/docs
+
+- Clarify bun runtime requirement and improve mobile layout
+- Add versioning policy and common workflows sections to AGENTS.md
+
 ## 0.0.2
 
 ### @residue/cli
