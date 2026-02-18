@@ -7,6 +7,12 @@ import { hookClaudeCode } from "@/commands/hook";
 import { init } from "@/commands/init";
 import { login } from "@/commands/login";
 import { push } from "@/commands/push";
+import {
+	queryCommit,
+	queryCommits,
+	querySession,
+	querySessions,
+} from "@/commands/query";
 import { search } from "@/commands/search";
 import { sessionEnd } from "@/commands/session-end";
 import { sessionStart } from "@/commands/session-start";
@@ -121,6 +127,92 @@ program
 	.action(
 		wrapCommand((query: string, opts: { ai?: boolean }) =>
 			search({ query, isAi: opts.ai }),
+		),
+	);
+
+const queryCmd = program
+	.command("query")
+	.description("Query the session database");
+
+queryCmd
+	.command("sessions")
+	.description("List sessions with optional filters")
+	.option("--agent <name>", "Filter by agent name")
+	.option("--repo <org/repo>", "Filter by repository")
+	.option("--branch <name>", "Filter by branch")
+	.option("--since <timestamp>", "Filter by created_at >= unix timestamp")
+	.option("--until <timestamp>", "Filter by created_at <= unix timestamp")
+	.option("--json", "Output as JSON to stdout")
+	.action(
+		wrapCommand(
+			(opts: {
+				agent?: string;
+				repo?: string;
+				branch?: string;
+				since?: string;
+				until?: string;
+				json?: boolean;
+			}) =>
+				querySessions({
+					agent: opts.agent,
+					repo: opts.repo,
+					branch: opts.branch,
+					since: opts.since,
+					until: opts.until,
+					isJson: opts.json,
+				}),
+		),
+	);
+
+queryCmd
+	.command("commits")
+	.description("List commits with optional filters")
+	.option("--repo <org/repo>", "Filter by repository")
+	.option("--branch <name>", "Filter by branch")
+	.option("--author <name>", "Filter by author")
+	.option("--since <timestamp>", "Filter by committed_at >= unix timestamp")
+	.option("--until <timestamp>", "Filter by committed_at <= unix timestamp")
+	.option("--json", "Output as JSON to stdout")
+	.action(
+		wrapCommand(
+			(opts: {
+				repo?: string;
+				branch?: string;
+				author?: string;
+				since?: string;
+				until?: string;
+				json?: boolean;
+			}) =>
+				queryCommits({
+					repo: opts.repo,
+					branch: opts.branch,
+					author: opts.author,
+					since: opts.since,
+					until: opts.until,
+					isJson: opts.json,
+				}),
+		),
+	);
+
+queryCmd
+	.command("session")
+	.description("Get full details for a specific session")
+	.argument("<id>", "Session ID")
+	.option("--json", "Output as JSON to stdout")
+	.action(
+		wrapCommand((id: string, opts: { json?: boolean }) =>
+			querySession({ id, isJson: opts.json }),
+		),
+	);
+
+queryCmd
+	.command("commit")
+	.description("Get details for a specific commit")
+	.argument("<sha>", "Commit SHA")
+	.option("--json", "Output as JSON to stdout")
+	.action(
+		wrapCommand((sha: string, opts: { json?: boolean }) =>
+			queryCommit({ sha, isJson: opts.json }),
 		),
 	);
 
