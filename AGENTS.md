@@ -53,9 +53,12 @@ Session data is uploaded **directly to R2** via presigned PUT URLs, bypassing th
 
 ```
 CLI
-  -> POST /api/sessions/upload-url (request presigned PUT URL)
-  <- Worker generates presigned R2 PUT URL using AWS SigV4
+  -> POST /api/sessions/upload-url (request presigned PUT URLs)
+  <- Worker generates two presigned R2 PUT URLs using AWS SigV4:
+       one for sessions/<id>.json (raw data)
+       one for search/<id>.txt (lightweight search text)
   -> PUT <presigned-url> (upload raw session data directly to R2)
+  -> PUT <search-presigned-url> (upload search text directly to R2)
   -> POST /api/sessions (metadata only, no session data)
     -> Worker upserts D1 metadata (does not touch R2)
 ```
@@ -75,6 +78,8 @@ The presigned URL generation uses lightweight AWS SigV4 signing with the Web Cry
 **Org and repo are inferred from the git remote.** `git@github.com:my-team/my-app.git` -> org is `my-team`, repo is `my-app`. No manual configuration needed.
 
 **No data normalization at rest.** Raw agent session data is stored as-is in R2. The worker's mappers transform it into a common format at render time. Adding a new agent means writing a mapper, not changing the storage schema.
+
+**Search uses lightweight text files.** Raw session files are too large and noisy for embedding models. At sync time, the CLI generates a second, lightweight `.txt` file per session under `search/<id>.txt` in R2. These contain only human messages, assistant text, and tool name summaries -- no thinking blocks, tool output, token metadata, or signatures. Cloudflare AI Search indexes only the `search/` prefix.
 
 **Users deploy their own worker.** No multi-tenant backend. Each user/team deploys their own Cloudflare Worker via a one-click deploy button. This eliminates auth complexity, data privacy concerns, and hosting costs for us.
 
@@ -121,6 +126,35 @@ Adapters are **not a separate package**. They live inside the CLI or are install
 **Pi:** Uses pi's extension system. `residue setup pi` installs an extension file at `.pi/extensions/residue.ts`. The extension source is embedded into the CLI binary at build time from `packages/cli/adapters/pi/extension.ts.txt`. The extension calls `residue session start` and `residue session end` directly via `pi.exec()`.
 
 Both adapters store hook state in `.residue/hooks/` within the project root.
+
+### Search Text Extractors
+
+The CLI generates lightweight text summaries of session data for search indexing. These live in `packages/cli/src/lib/search-text.ts`.
+
+Each agent has a simple extractor function (not the full worker-side mapper) that parses the raw session file and produces `SearchLine[]` entries tagged by role. The extractor is looked up by agent name via `getExtractor()`.
+
+**What is kept:** human messages, assistant text responses, tool names with short descriptors (file paths, commands).
+
+**What is stripped:** thinking blocks, tool output (actual file contents, command output), token/cost metadata, UUIDs, parent chains, signatures, cache metadata, sidechain entries, meta entries.
+
+The `buildSearchText()` function combines a metadata header with the extracted lines into the final `.txt` format:
+
+```
+Session: <id>
+Agent: claude-code
+Commits: abc1234, def5678
+Branch: feature-auth
+Repo: my-team/my-app
+
+[human] how do we fix the auth redirect
+[assistant] I'll update the middleware to check the session token...
+[tool] edit packages/worker/src/middleware/auth.ts
+[tool] bash git diff --staged
+[human] looks good, commit it
+[assistant] Committed as abc123.
+```
+
+Supported agents: `claude-code`, `pi`. Adding a new agent means writing one extractor function and registering it in the `extractors` map.
 
 ### Local State
 
@@ -177,8 +211,9 @@ Hook state: `.residue/hooks/` (maps agent session IDs to residue session IDs)
 - For each session with commits:
   - Reads raw session data directly from `data_path` (no local copies)
   - Reads commit metadata (message, author, timestamp) from git log for each associated SHA
-  - Requests a presigned PUT URL from `POST /api/sessions/upload-url`
+  - Requests presigned PUT URLs from `POST /api/sessions/upload-url` (returns URLs for both raw data and search text)
   - Uploads raw session data directly to R2 via the presigned URL
+  - Generates a lightweight search text file using the agent-specific text extractor (`packages/cli/src/lib/search-text.ts`), then uploads it to R2 at `search/<id>.txt` via the second presigned URL. Search upload failure is non-fatal.
   - POSTs metadata only to `POST /api/sessions` (no inline session data)
   - If session is `ended`: removes from pending.json
   - If session is `open`: keeps in pending.json (will re-upload with updated data on next push)
@@ -260,18 +295,25 @@ A session is stored once. Multiple commits can reference the same session. Org a
 
 ### R2 Storage
 
-Key format: `sessions/<session-id>.json`
+Two prefixes are used:
 
-The blob is the raw, unmodified agent session data. The CLI uploads directly to R2 via presigned PUT URLs (bypassing the worker). For open sessions that span multiple pushes, the key stays the same and the blob is overwritten with the latest state.
+- `sessions/<session-id>.json` -- raw, unmodified agent session data
+- `search/<session-id>.txt` -- lightweight text summary for search indexing
+
+The CLI uploads both files directly to R2 via presigned PUT URLs (bypassing the worker). For open sessions that span multiple pushes, both keys stay the same and the blobs are overwritten with the latest state.
+
+The `search/` prefix contains plain text files optimized for embedding. They include a metadata header (session ID, agent, commits, branch, repo) followed by conversation lines tagged by role (`[human]`, `[assistant]`, `[tool]`). Thinking blocks, tool output, token metadata, and other noise are stripped. Cloudflare AI Search is configured to index only the `search/` prefix.
 
 ### API Routes
 
 ```
-POST   /api/sessions/upload-url     -> Generate a presigned R2 PUT URL for direct upload
+POST   /api/sessions/upload-url     -> Generate presigned R2 PUT URLs for direct upload (raw + search)
 POST   /api/sessions                -> Receive session metadata + commit mappings, write to D1
 GET    /api/sessions/:id            -> Fetch session metadata + raw data from R2
 GET    /api/repos/:org/:repo        -> List commits with sessions (from D1, paginated via ?cursor=)
 GET    /api/repos/:org/:repo/:sha   -> Get sessions for a specific commit
+GET    /api/search?q=...            -> Search sessions via Cloudflare AI Search
+GET    /api/search/ai?q=...         -> AI-powered search with generated answer via Cloudflare AI Search
 ```
 
 **POST /api/sessions/upload-url** request body:
@@ -282,7 +324,18 @@ GET    /api/repos/:org/:repo/:sha   -> Get sessions for a specific commit
 }
 ```
 
-Returns `{"url": "<presigned PUT URL>", "r2_key": "sessions/session-uuid-1.json"}`. The CLI PUTs the raw session data directly to this URL.
+Returns two presigned PUT URLs -- one for the raw session data, one for the search text:
+
+```json
+{
+  "url": "<presigned PUT URL for sessions/session-uuid-1.json>",
+  "r2_key": "sessions/session-uuid-1.json",
+  "search_url": "<presigned PUT URL for search/session-uuid-1.txt>",
+  "search_r2_key": "search/session-uuid-1.txt"
+}
+```
+
+The CLI PUTs raw session data to `url` and the lightweight search text to `search_url`.
 
 **POST /api/sessions** request body (metadata only, session data already in R2):
 
@@ -354,6 +407,17 @@ worker/src/mappers/
 ```
 
 The worker reads `agent` from D1, picks the right mapper via `getMapper()`, transforms the raw R2 blob, and passes `Message[]` to the JSX template. Adding a new agent means writing one mapper function and registering it.
+
+### Search
+
+Search is powered by **Cloudflare AI Search** (formerly AutoRAG), pointed at the R2 bucket's `search/` prefix. It auto-indexes the lightweight text files, handles chunking/embedding/vector search.
+
+The worker exposes two search endpoints:
+
+- `GET /api/search?q=...` -- vector search, returns ranked results with scores and source chunks
+- `GET /api/search/ai?q=...` -- AI-powered search, returns a generated answer plus source citations
+
+The AI binding is configured in `wrangler.jsonc` under `"ai": {"binding": "AI"}`. The AI Search instance is named `residue-search`.
 
 ### UI Routes (Hono + JSX)
 
