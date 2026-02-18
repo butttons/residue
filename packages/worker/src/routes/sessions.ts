@@ -136,6 +136,13 @@ sessions.post(
 	},
 );
 
+sessions.get("/:id/commits", async (c) => {
+	const id = c.req.param("id");
+	const db = new DB(c.env.DB);
+	const commits = await db.getSessionCommits(id);
+	return c.json({ commits }, 200);
+});
+
 sessions.get("/:id", async (c) => {
 	const id = c.req.param("id");
 	const db = new DB(c.env.DB);
