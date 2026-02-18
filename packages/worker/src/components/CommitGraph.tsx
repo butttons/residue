@@ -1,6 +1,7 @@
 import type { FC } from "hono/jsx";
 import type { GraphData, SessionLane } from "../lib/graph";
 import { relativeTime } from "../lib/time";
+import { urls } from "../lib/urls";
 
 type CommitGraphProps = {
 	data: GraphData;
@@ -209,7 +210,7 @@ const CommitGraph: FC<CommitGraphProps> = ({ data, org, repo }) => {
 										</span>
 									))}
 									<a
-										href={`https://github.com/${org}/${repo}/commit/${commit.sha}`}
+										href={urls.githubCommit({ org, repo, sha: commit.sha })}
 										target="_blank"
 										rel="noopener noreferrer"
 										class="ml-auto text-zinc-600 hover:text-zinc-300 transition-colors flex-shrink-0"

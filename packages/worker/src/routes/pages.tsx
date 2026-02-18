@@ -10,6 +10,7 @@ import type { CommitWithSessionRow } from "../lib/db";
 import { DB } from "../lib/db";
 import { computeGraph } from "../lib/graph";
 import { formatTimestamp, relativeTime } from "../lib/time";
+import { urls } from "../lib/urls";
 import { getMapper } from "../mappers";
 
 // --- Shared sub-components ---
@@ -406,7 +407,7 @@ pages.get("/:org/:repo/:sha", async (c) => {
 						<span class="hidden sm:inline">{sha.slice(12)}</span>
 					</span>
 					<a
-						href={`https://github.com/${org}/${repo}/commit/${sha}`}
+						href={urls.githubCommit({ org, repo, sha })}
 						target="_blank"
 						rel="noopener noreferrer"
 						class="flex-shrink-0 text-zinc-400 hover:text-zinc-100 transition-colors flex items-center gap-1.5 text-sm"

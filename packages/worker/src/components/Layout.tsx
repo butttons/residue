@@ -1,5 +1,6 @@
 import { html } from "hono/html";
 import type { FC, PropsWithChildren } from "hono/jsx";
+import { urls } from "../lib/urls";
 
 type BreadcrumbItem = { label: string; href?: string };
 
@@ -63,8 +64,9 @@ const Layout: FC<LayoutProps> = ({
 				</nav>
 				<div class="max-w-4xl mx-auto px-4 py-8 w-full flex-1">${children}</div>
 				<footer class="border-t border-zinc-800/50">
-					<div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-center">
-						<span class="text-[11px] text-zinc-600">built by <a href="https://butttons.dev" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-zinc-300 transition-colors">Yash</a></span>
+					<div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+						<span class="text-[11px] text-zinc-600">built by <a href="${urls.author}" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-zinc-300 transition-colors">Yash</a></span>
+						<a href="${urls.githubRepo}" target="_blank" rel="noopener noreferrer" class="text-zinc-600 hover:text-zinc-300 transition-colors"><i class="ph ph-github-logo text-base"></i></a>
 					</div>
 				</footer>
 				<script>
