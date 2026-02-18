@@ -11,7 +11,7 @@
 		"test": "vitest",
 		"typecheck": "tsc --noEmit",
 		"cf-typegen": "wrangler types",
-		"db:migrate": "wrangler d1 migrations apply residue-app --remote",
+		"db:migrate": "wrangler d1 migrations apply residue-app",
 		"db:migrate:local": "wrangler d1 migrations apply residue-app --local"
 	},
 	"dependencies": {

@@ -189,7 +189,7 @@ npx wrangler d1 create residue-db
 <span class="text-zinc-500">#   ADMIN_USERNAME               -> your choice</span>
 
 <span class="text-zinc-500"># Run migrations</span>
-npm run db:migrate
+npx wrangler d1 migrations apply residue-app --remote
 
 <span class="text-zinc-500"># Set secrets</span>
 echo "your-secret-token" | npx wrangler secret put AUTH_TOKEN
