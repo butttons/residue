@@ -1,5 +1,13 @@
 # @residue/worker
 
+## 0.0.5
+
+### Patch Changes
+
+- 1403e90: Add `residue query` command for structured database lookups (sessions, commits) with filtering and `--json` output.
+- 1403e90: Store and serve session metadata (data_path, first_message, session_name) in D1.
+- 1403e90: Add GitHub Actions workflow for updating deployed worker instances from upstream releases.
+
 ## 0.0.4
 
 ### Patch Changes

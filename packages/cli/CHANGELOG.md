@@ -1,5 +1,14 @@
 # @residue/cli
 
+## 0.0.5
+
+### Patch Changes
+
+- 1403e90: Add `residue query` command for structured database lookups (sessions, commits) with filtering and `--json` output.
+- 1403e90: Enrich search results with session name, first message, and data file path.
+- 1403e90: Add session metadata extractors (first message, session name, data path) to search text headers.
+- 1403e90: Extract and send session metadata (data_path, first_message, session_name) to the worker during sync.
+
 ## 0.0.4
 
 ### Patch Changes

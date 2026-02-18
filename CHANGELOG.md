@@ -1,5 +1,20 @@
 # residue
 
+## 0.0.5
+
+### @residue/cli
+
+- Add `residue query` command for structured database lookups (sessions, commits) with filtering and `--json` output
+- Enrich search results with session name, first message, and data file path
+- Extract and send session metadata (data_path, first_message, session_name) during sync
+
+### @residue/worker
+
+- Store and serve session metadata (data_path, first_message, session_name) in D1
+- Add query API endpoints for sessions and commits with filtering
+- Add GitHub Actions workflow for updating deployed worker instances from upstream releases
+- Add PR template and CONTRIBUTING.md
+
 ## 0.0.4
 
 ### @residue/cli
