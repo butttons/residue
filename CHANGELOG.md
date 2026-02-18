@@ -1,5 +1,15 @@
 # residue
 
+## 0.0.6
+
+### @residue/worker
+
+- Display version number in the footer next to the GitHub icon
+
+### @residue/docs
+
+- Update setup guide with AI Search instructions, `--local` login flag, and corrected manual deploy steps
+
 ## 0.0.5
 
 ### @residue/cli

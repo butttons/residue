@@ -1,5 +1,11 @@
 # @residue/worker
 
+## 0.0.6
+
+### Patch Changes
+
+- 07f8138: Display version number in the footer next to the GitHub icon.
+
 ## 0.0.5
 
 ### Patch Changes
