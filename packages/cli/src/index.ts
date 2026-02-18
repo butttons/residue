@@ -7,6 +7,7 @@ import { hookClaudeCode } from "@/commands/hook";
 import { init } from "@/commands/init";
 import { login } from "@/commands/login";
 import { push } from "@/commands/push";
+import { search } from "@/commands/search";
 import { sessionEnd } from "@/commands/session-end";
 import { sessionStart } from "@/commands/session-start";
 import { setup } from "@/commands/setup";
@@ -111,5 +112,16 @@ program
 	.command("status")
 	.description("Show current residue state for this project")
 	.action(wrapCommand(() => status()));
+
+program
+	.command("search")
+	.description("Search session history")
+	.argument("<query>", "Search query")
+	.option("--ai", "Use AI-powered search (generates an answer with citations)")
+	.action(
+		wrapCommand((query: string, opts: { ai?: boolean }) =>
+			search({ query, isAi: opts.ai }),
+		),
+	);
 
 program.parse();
