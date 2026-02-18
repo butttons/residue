@@ -1,5 +1,12 @@
 # @residue/worker
 
+## 0.0.4
+
+### Patch Changes
+
+- ca5ad11: Add `residue search <query>` command to search session history from the terminal, with `--ai` flag for AI-powered answers. Results include clickable worker URLs to view full conversations.
+- ca5ad11: Generate lightweight search text files at sync time and upload to R2 `search/` prefix for Cloudflare AI Search indexing. Add `/api/search` and `/api/search/ai` endpoints.
+
 ## 0.0.2
 
 ### Patch Changes
