@@ -173,11 +173,13 @@ The worker serves both a JSON API and a server-rendered UI.
 
 | Route | Description |
 |---|---|
-| `POST /api/sessions/upload-url` | Generate a presigned R2 PUT URL for direct upload |
+| `POST /api/sessions/upload-url` | Generate presigned R2 PUT URLs for direct upload (raw + search) |
 | `POST /api/sessions` | Upload session metadata + commit mappings |
 | `GET /api/sessions/:id` | Fetch raw session data |
 | `GET /api/repos/:org/:repo` | List commits with linked sessions |
 | `GET /api/repos/:org/:repo/:sha` | Get sessions for a specific commit |
+| `GET /api/search?q=...` | Search sessions via Cloudflare AI Search |
+| `GET /api/search/ai?q=...` | AI-powered search with generated answer |
 
 **UI routes** (basic auth, served under `/app`):
 
@@ -211,9 +213,24 @@ pnpm --filter @residue/worker test       # worker tests
 
 - **No data normalization.** Raw agent session data is stored as-is in R2. The UI uses mappers to transform each agent's format into a common message format for rendering.
 - **Direct R2 upload.** Session data is uploaded directly to R2 via presigned PUT URLs, bypassing the worker's request body size limits. The worker only handles lightweight metadata.
+- **Search via lightweight text files.** Raw session files are too large and noisy for embedding models. At sync time, the CLI generates a second `.txt` file per session under `search/` in R2 containing only human messages, assistant text, and tool summaries. Cloudflare AI Search indexes only this prefix.
 - **Self-hosted.** Each user/team deploys their own Cloudflare Worker. No multi-tenant backend, no data privacy concerns.
 - **Single auth token.** Set at deploy time as an environment variable. No user management.
 - **Never block git.** Hooks exit 0 even on errors. Session capture and sync are best-effort.
+
+## Troubleshooting
+
+### `R2 upload failed` / `SignatureDoesNotMatch`
+
+The presigned URL signing is failing because the R2 S3 API credentials on the worker are stale. This happens when the R2 API token is regenerated in the Cloudflare dashboard but the worker secret is not updated.
+
+Fix: update the `R2_SECRET_ACCESS_KEY` secret on the worker.
+
+```bash
+echo "<new-secret>" | npx wrangler secret put R2_SECRET_ACCESS_KEY --name residue
+```
+
+If the access key ID also changed, update `R2_ACCESS_KEY_ID` in `wrangler.jsonc` vars and redeploy.
 
 ## License
 

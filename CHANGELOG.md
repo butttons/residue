@@ -1,5 +1,41 @@
 # residue
 
+## 0.0.4
+
+### @residue/cli
+
+- Add `residue search <query>` command to search session history from the terminal
+- Add `--ai` flag for AI-powered search that generates answers with citations
+- Search results include clickable worker URLs to view full conversations
+- Add `residue clear` command to remove stuck pending sessions from the local queue
+- Generate lightweight search text at sync time, stripped of thinking blocks, tool output, and metadata noise
+- Upload search text to R2 `search/` prefix for Cloudflare AI Search indexing
+
+### @residue/worker
+
+- Add `GET /api/search?q=` endpoint for vector search across session history
+- Add `GET /api/search/ai?q=` endpoint for AI-powered search with generated answers
+- Add `GET /api/sessions/:id/commits` endpoint to retrieve commits linked to a session
+- Return dual presigned URLs (raw session + search text) from upload-url endpoint
+- Centralize external URLs and add GitHub commit link to footer
+
+### @residue/docs
+
+- Add troubleshooting section for R2 credential errors
+
+## 0.0.3
+
+### @residue/cli
+
+- Add `residue status` command to show login, hooks, adapters, and pending session state
+- Read version from package.json instead of hardcoding
+- Add repository field for npm provenance verification
+
+### @residue/docs
+
+- Clarify bun runtime requirement and improve mobile layout
+- Add versioning policy and common workflows sections to AGENTS.md
+
 ## 0.0.2
 
 ### @residue/cli

@@ -7,7 +7,8 @@ Cloudflare Worker that serves as the backend for residue. Stores AI session data
 - **Runtime:** Cloudflare Workers
 - **Framework:** Hono + JSX (server-rendered)
 - **Database:** Cloudflare D1 (SQLite)
-- **Storage:** Cloudflare R2 (session blobs, uploaded directly via presigned URLs)
+- **Storage:** Cloudflare R2 (session blobs + search text, uploaded directly via presigned URLs)
+- **Search:** Cloudflare AI Search (indexes lightweight text files in R2 `search/` prefix)
 - **Styling:** Tailwind CSS (CDN), JetBrains Mono, Phosphor Icons
 
 ## Setup
@@ -156,15 +157,17 @@ All API routes require `Authorization: Bearer <token>` header.
 
 | Method | Route | Description |
 |--------|-------|-------------|
-| `POST` | `/api/sessions/upload-url` | Generate a presigned R2 PUT URL for direct upload |
+| `POST` | `/api/sessions/upload-url` | Generate presigned R2 PUT URLs for direct upload (raw + search) |
 | `POST` | `/api/sessions` | Upload session metadata + commit mappings (no session data) |
 | `GET` | `/api/sessions/:id` | Fetch session metadata + raw data from R2 |
 | `GET` | `/api/repos/:org/:repo` | List commits with sessions (paginated via `?cursor=`) |
 | `GET` | `/api/repos/:org/:repo/:sha` | Get sessions for a specific commit |
+| `GET` | `/api/search?q=...` | Search sessions via Cloudflare AI Search |
+| `GET` | `/api/search/ai?q=...` | AI-powered search with generated answer |
 
 ### POST /api/sessions/upload-url
 
-Request a presigned PUT URL for uploading session data directly to R2.
+Request presigned PUT URLs for uploading session data and search text directly to R2.
 
 ```json
 {
@@ -177,11 +180,13 @@ Response:
 ```json
 {
   "url": "<presigned PUT URL>",
-  "r2_key": "sessions/session-uuid-1.json"
+  "r2_key": "sessions/session-uuid-1.json",
+  "search_url": "<presigned PUT URL>",
+  "search_r2_key": "search/session-uuid-1.txt"
 }
 ```
 
-The CLI PUTs the raw session data to the returned URL. The worker never sees the session payload.
+The CLI PUTs the raw session data to `url` and a lightweight text summary to `search_url`. The worker never sees the session payload. The search text file is used by Cloudflare AI Search for indexing.
 
 ### POST /api/sessions
 
@@ -232,3 +237,24 @@ Each agent's raw session data gets transformed into a common `Message[]` format 
 | `pi` | `pi.ts` |
 
 Adding a new agent means writing one mapper function and registering it in `index.ts`. No storage schema changes needed.
+
+## Search
+
+Search is powered by Cloudflare AI Search, configured to index the `search/` prefix in the R2 bucket. The CLI generates lightweight `.txt` files at sync time containing human messages, assistant text, and tool summaries (no thinking blocks, tool output, or metadata noise).
+
+Two endpoints are available:
+
+- `GET /api/search?q=...` -- vector search returning ranked results with scores and source chunks
+- `GET /api/search/ai?q=...` -- AI-powered search returning a generated answer with citations
+
+The AI binding is configured in `wrangler.jsonc`:
+
+```jsonc
+{
+  "ai": {
+    "binding": "AI"
+  }
+}
+```
+
+The AI Search instance is named `residue-search` and must be created in the Cloudflare dashboard, pointed at the R2 bucket with the `search/` prefix filter.

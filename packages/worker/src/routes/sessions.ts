@@ -114,19 +114,34 @@ sessions.post(
 		}
 
 		const r2Key = `sessions/${session_id}.json`;
+		const searchR2Key = `search/${session_id}.txt`;
 
-		const url = await createPresignedPutUrl({
+		const presignOpts = {
 			accountId: R2_ACCOUNT_ID,
 			accessKeyId: R2_ACCESS_KEY_ID,
 			secretAccessKey: R2_SECRET_ACCESS_KEY,
 			bucketName: R2_BUCKET_NAME,
-			key: r2Key,
 			expiresIn: 3600,
-		});
+		};
 
-		return c.json({ url, r2_key: r2Key }, 200);
+		const [url, searchUrl] = await Promise.all([
+			createPresignedPutUrl({ ...presignOpts, key: r2Key }),
+			createPresignedPutUrl({ ...presignOpts, key: searchR2Key }),
+		]);
+
+		return c.json(
+			{ url, r2_key: r2Key, search_url: searchUrl, search_r2_key: searchR2Key },
+			200,
+		);
 	},
 );
+
+sessions.get("/:id/commits", async (c) => {
+	const id = c.req.param("id");
+	const db = new DB(c.env.DB);
+	const commits = await db.getSessionCommits(id);
+	return c.json({ commits }, 200);
+});
 
 sessions.get("/:id", async (c) => {
 	const id = c.req.param("id");

@@ -8,6 +8,7 @@ import {
 	readPending,
 	writePending,
 } from "@/lib/pending";
+import { buildSearchText, getExtractor } from "@/lib/search-text";
 import { CliError, toCliError } from "@/utils/errors";
 import { createLogger } from "@/utils/logger";
 
@@ -30,6 +31,8 @@ type CommitPayload = {
 type UploadUrlResponse = {
 	url: string;
 	r2_key: string;
+	search_url: string;
+	search_r2_key: string;
 };
 
 function requestUploadUrl(opts: {
@@ -197,6 +200,62 @@ function closeStaleOpenSessions(opts: {
 	return ResultAsync.combine(checks).map(() => opts.sessions);
 }
 
+function generateSearchText(opts: {
+	session: PendingSession;
+	rawData: string;
+	commits: CommitPayload[];
+	org: string;
+	repo: string;
+}): string | null {
+	const extractor = getExtractor(opts.session.agent);
+	if (!extractor) {
+		log.debug(
+			"no search text extractor for agent %s, skipping",
+			opts.session.agent,
+		);
+		return null;
+	}
+
+	const searchLines = extractor(opts.rawData);
+	if (searchLines.length === 0) return null;
+
+	const branches = [
+		...new Set(opts.session.commits.map((c) => c.branch).filter(Boolean)),
+	];
+
+	return buildSearchText({
+		metadata: {
+			sessionId: opts.session.id,
+			agent: opts.session.agent,
+			commits: opts.commits.map((c) => c.sha.slice(0, 7)),
+			branch: branches[0] ?? "",
+			repo: `${opts.org}/${opts.repo}`,
+		},
+		lines: searchLines,
+	});
+}
+
+function uploadSearchText(opts: {
+	url: string;
+	data: string;
+}): ResultAsync<void, CliError> {
+	return ResultAsync.fromPromise(
+		fetch(opts.url, {
+			method: "PUT",
+			headers: { "Content-Type": "text/plain" },
+			body: opts.data,
+		}).then((response) => {
+			if (!response.ok) {
+				throw new Error(`R2 search upload failed: HTTP ${response.status}`);
+			}
+		}),
+		toCliError({
+			message: "Search text R2 upload failed",
+			code: "NETWORK_ERROR",
+		}),
+	);
+}
+
 function syncSessions(opts: {
 	sessions: PendingSession[];
 	workerUrl: string;
@@ -240,7 +299,7 @@ function syncSessions(opts: {
 					continue;
 				}
 
-				// Step 1: Get a presigned URL from the worker
+				// Step 1: Get presigned URLs from the worker (raw + search)
 				const uploadUrlResult = await requestUploadUrl({
 					workerUrl: opts.workerUrl,
 					token: opts.token,
@@ -270,6 +329,31 @@ function syncSessions(opts: {
 				}
 
 				log.debug("uploaded session %s data directly to R2", session.id);
+
+				// Step 2b: Generate and upload search text
+				const searchText = generateSearchText({
+					session,
+					rawData: data,
+					commits: commitsResult.value,
+					org: opts.org,
+					repo: opts.repo,
+				});
+
+				if (searchText && uploadUrlResult.value.search_url) {
+					const searchUploadResult = await uploadSearchText({
+						url: uploadUrlResult.value.search_url,
+						data: searchText,
+					});
+
+					if (searchUploadResult.isErr()) {
+						// Non-fatal: search upload failure should not block sync
+						log.warn(
+							`search text upload failed for session ${session.id}: ${searchUploadResult.error.message}`,
+						);
+					} else {
+						log.debug("uploaded search text for session %s", session.id);
+					}
+				}
 
 				// Step 3: POST metadata only (no inline data)
 				const metadataResult = await postSessionMetadata({
