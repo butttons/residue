@@ -4,6 +4,7 @@ import {
 	extractClaudeCode,
 	extractPi,
 	getExtractor,
+	getMetadataExtractors,
 	summarizeToolInput,
 } from "@/lib/search-text";
 
@@ -361,6 +362,236 @@ describe("search text extractors", () => {
 			expect(result).not.toContain("Commits:");
 			expect(result).not.toContain("Branch:");
 			expect(result).not.toContain("Repo:");
+		});
+
+		test("includes dataPath, sessionName, firstMessage in header", () => {
+			const result = buildSearchText({
+				metadata: {
+					sessionId: "abc-123",
+					agent: "pi",
+					commits: [],
+					branch: "",
+					repo: "",
+					dataPath: "/home/user/.pi/agent/sessions/foo/bar.jsonl",
+					sessionName: "refactor auth",
+					firstMessage: "fix the login redirect bug",
+				},
+				lines: [{ role: "human", text: "fix the login redirect bug" }],
+			});
+
+			expect(result).toContain(
+				"DataPath: /home/user/.pi/agent/sessions/foo/bar.jsonl",
+			);
+			expect(result).toContain("SessionName: refactor auth");
+			expect(result).toContain("FirstMessage: fix the login redirect bug");
+		});
+
+		test("omits dataPath, sessionName, firstMessage when absent", () => {
+			const result = buildSearchText({
+				metadata: {
+					sessionId: "abc",
+					agent: "pi",
+					commits: [],
+					branch: "",
+					repo: "",
+				},
+				lines: [{ role: "human", text: "hello" }],
+			});
+
+			expect(result).not.toContain("DataPath:");
+			expect(result).not.toContain("SessionName:");
+			expect(result).not.toContain("FirstMessage:");
+		});
+	});
+
+	describe("getMetadataExtractors", () => {
+		test("returns extractors for claude-code", () => {
+			const ext = getMetadataExtractors("claude-code");
+			expect(ext).not.toBeNull();
+			expect(ext!.extractFirstMessage).toBeFunction();
+			expect(ext!.extractSessionName).toBeFunction();
+		});
+
+		test("returns extractors for pi", () => {
+			const ext = getMetadataExtractors("pi");
+			expect(ext).not.toBeNull();
+			expect(ext!.extractFirstMessage).toBeFunction();
+			expect(ext!.extractSessionName).toBeFunction();
+		});
+
+		test("returns null for unknown agent", () => {
+			expect(getMetadataExtractors("unknown")).toBeNull();
+		});
+
+		describe("claude-code", () => {
+			const ext = getMetadataExtractors("claude-code")!;
+
+			test("extractFirstMessage returns first non-meta user message", () => {
+				const raw = [
+					JSON.stringify({
+						type: "user",
+						isMeta: true,
+						message: { role: "user", content: "system injected" },
+					}),
+					JSON.stringify({
+						type: "user",
+						message: { role: "user", content: "fix the auth redirect" },
+					}),
+					JSON.stringify({
+						type: "user",
+						message: { role: "user", content: "second message" },
+					}),
+				].join("\n");
+
+				expect(ext.extractFirstMessage(raw)).toBe("fix the auth redirect");
+			});
+
+			test("extractFirstMessage returns null for empty session", () => {
+				expect(ext.extractFirstMessage("")).toBeNull();
+			});
+
+			test("extractFirstMessage truncates long messages to 200 chars", () => {
+				const longMsg = "a".repeat(300);
+				const raw = JSON.stringify({
+					type: "user",
+					message: { role: "user", content: longMsg },
+				});
+
+				const result = ext.extractFirstMessage(raw);
+				expect(result).not.toBeNull();
+				expect(result!.length).toBe(200);
+			});
+
+			test("extractFirstMessage skips tool_result entries", () => {
+				const raw = [
+					JSON.stringify({
+						type: "user",
+						message: {
+							role: "user",
+							content: [
+								{ type: "tool_result", tool_use_id: "abc", content: "output" },
+							],
+						},
+					}),
+					JSON.stringify({
+						type: "user",
+						message: { role: "user", content: "real message" },
+					}),
+				].join("\n");
+
+				expect(ext.extractFirstMessage(raw)).toBe("real message");
+			});
+
+			test("extractSessionName returns slug from progress entry", () => {
+				const raw = [
+					JSON.stringify({ type: "file-history-snapshot", snapshot: {} }),
+					JSON.stringify({
+						type: "progress",
+						slug: "graceful-floating-grove",
+						sessionId: "abc",
+					}),
+					JSON.stringify({
+						type: "user",
+						message: { role: "user", content: "hello" },
+					}),
+				].join("\n");
+
+				expect(ext.extractSessionName(raw)).toBe("graceful-floating-grove");
+			});
+
+			test("extractSessionName returns null when no slug", () => {
+				const raw = JSON.stringify({
+					type: "user",
+					message: { role: "user", content: "hello" },
+				});
+
+				expect(ext.extractSessionName(raw)).toBeNull();
+			});
+		});
+
+		describe("pi", () => {
+			const ext = getMetadataExtractors("pi")!;
+
+			test("extractFirstMessage returns first user message", () => {
+				const raw = [
+					JSON.stringify({
+						type: "session",
+						id: "abc",
+						timestamp: "2026-01-01T00:00:00Z",
+					}),
+					JSON.stringify({
+						type: "message",
+						message: { role: "user", content: "add a search feature" },
+					}),
+					JSON.stringify({
+						type: "message",
+						message: { role: "user", content: "second prompt" },
+					}),
+				].join("\n");
+
+				expect(ext.extractFirstMessage(raw)).toBe("add a search feature");
+			});
+
+			test("extractFirstMessage handles array content", () => {
+				const raw = JSON.stringify({
+					type: "message",
+					message: {
+						role: "user",
+						content: [{ type: "text", text: "array content message" }],
+					},
+				});
+
+				expect(ext.extractFirstMessage(raw)).toBe("array content message");
+			});
+
+			test("extractFirstMessage returns null for empty session", () => {
+				expect(ext.extractFirstMessage("")).toBeNull();
+			});
+
+			test("extractFirstMessage truncates long messages to 200 chars", () => {
+				const longMsg = "b".repeat(300);
+				const raw = JSON.stringify({
+					type: "message",
+					message: { role: "user", content: longMsg },
+				});
+
+				const result = ext.extractFirstMessage(raw);
+				expect(result).not.toBeNull();
+				expect(result!.length).toBe(200);
+			});
+
+			test("extractSessionName returns name from custom session-name entry", () => {
+				const raw = [
+					JSON.stringify({
+						type: "session",
+						id: "abc",
+						timestamp: "2026-01-01T00:00:00Z",
+					}),
+					JSON.stringify({
+						type: "custom",
+						customType: "session-name",
+						data: { name: "refactor auth module" },
+					}),
+				].join("\n");
+
+				expect(ext.extractSessionName(raw)).toBe("refactor auth module");
+			});
+
+			test("extractSessionName returns null when no name entry", () => {
+				const raw = [
+					JSON.stringify({
+						type: "session",
+						id: "abc",
+						timestamp: "2026-01-01T00:00:00Z",
+					}),
+					JSON.stringify({
+						type: "message",
+						message: { role: "user", content: "hello" },
+					}),
+				].join("\n");
+
+				expect(ext.extractSessionName(raw)).toBeNull();
+			});
 		});
 	});
 });
