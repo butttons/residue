@@ -1,6 +1,10 @@
 {
   "name": "residue",
   "version": "0.0.3",
+  "author": {
+    "name": "butttons"
+  },
+  "license": "MIT",
   "scripts": {
     "dev:cli": "pnpm --filter @residue/cli dev",
     "dev:worker": "pnpm --filter @residue/worker dev",
