@@ -8,7 +8,11 @@ import {
 	readPending,
 	writePending,
 } from "@/lib/pending";
-import { buildSearchText, getExtractor } from "@/lib/search-text";
+import {
+	buildSearchText,
+	getExtractor,
+	getMetadataExtractors,
+} from "@/lib/search-text";
 import { CliError, toCliError } from "@/utils/errors";
 import { createLogger } from "@/utils/logger";
 
@@ -87,6 +91,9 @@ function postSessionMetadata(opts: {
 		agent: string;
 		agent_version: string;
 		status: string;
+		data_path?: string;
+		first_message?: string;
+		session_name?: string;
 	};
 	commits: CommitPayload[];
 }): ResultAsync<void, CliError> {
@@ -200,12 +207,30 @@ function closeStaleOpenSessions(opts: {
 	return ResultAsync.combine(checks).map(() => opts.sessions);
 }
 
+type SessionMetadataFields = {
+	firstMessage: string | null;
+	sessionName: string | null;
+};
+
+function extractSessionMetadata(opts: {
+	agent: string;
+	rawData: string;
+}): SessionMetadataFields {
+	const ext = getMetadataExtractors(opts.agent);
+	if (!ext) return { firstMessage: null, sessionName: null };
+	return {
+		firstMessage: ext.extractFirstMessage(opts.rawData),
+		sessionName: ext.extractSessionName(opts.rawData),
+	};
+}
+
 function generateSearchText(opts: {
 	session: PendingSession;
 	rawData: string;
 	commits: CommitPayload[];
 	org: string;
 	repo: string;
+	sessionMetadata: SessionMetadataFields;
 }): string | null {
 	const extractor = getExtractor(opts.session.agent);
 	if (!extractor) {
@@ -230,6 +255,9 @@ function generateSearchText(opts: {
 			commits: opts.commits.map((c) => c.sha.slice(0, 7)),
 			branch: branches[0] ?? "",
 			repo: `${opts.org}/${opts.repo}`,
+			dataPath: opts.session.data_path,
+			firstMessage: opts.sessionMetadata.firstMessage ?? undefined,
+			sessionName: opts.sessionMetadata.sessionName ?? undefined,
 		},
 		lines: searchLines,
 	});
@@ -330,6 +358,12 @@ function syncSessions(opts: {
 
 				log.debug("uploaded session %s data directly to R2", session.id);
 
+				// Extract session metadata from raw data
+				const sessionMeta = extractSessionMetadata({
+					agent: session.agent,
+					rawData: data,
+				});
+
 				// Step 2b: Generate and upload search text
 				const searchText = generateSearchText({
 					session,
@@ -337,6 +371,7 @@ function syncSessions(opts: {
 					commits: commitsResult.value,
 					org: opts.org,
 					repo: opts.repo,
+					sessionMetadata: sessionMeta,
 				});
 
 				if (searchText && uploadUrlResult.value.search_url) {
@@ -364,6 +399,9 @@ function syncSessions(opts: {
 						agent: session.agent,
 						agent_version: session.agent_version,
 						status: session.status,
+						data_path: session.data_path,
+						first_message: sessionMeta.firstMessage ?? undefined,
+						session_name: sessionMeta.sessionName ?? undefined,
 					},
 					commits: commitsResult.value,
 				});

@@ -20,6 +20,9 @@ const postSessionsSchema = z.object({
 		agent: z.string().min(1),
 		agent_version: z.string().optional(),
 		status: z.enum(["open", "ended"]).optional(),
+		data_path: z.string().optional(),
+		first_message: z.string().optional(),
+		session_name: z.string().optional(),
 	}),
 	commits: z.array(commitSchema),
 });
@@ -52,6 +55,9 @@ sessions.post(
 				agentVersion: session.agent_version ?? "unknown",
 				status: session.status ?? "open",
 				r2Key,
+				dataPath: session.data_path ?? null,
+				firstMessage: session.first_message ?? null,
+				sessionName: session.session_name ?? null,
 			});
 
 			for (const commit of commits) {
@@ -136,6 +142,30 @@ sessions.post(
 	},
 );
 
+sessions.get("/:id/metadata", async (c) => {
+	const id = c.req.param("id");
+	const db = new DB(c.env.DB);
+	const session = await db.getSessionById(id);
+	if (!session) {
+		return c.json({ error: "Session not found" }, 404);
+	}
+	return c.json(
+		{
+			session: {
+				id: session.id,
+				agent: session.agent,
+				agent_version: session.agent_version,
+				created_at: session.created_at,
+				ended_at: session.ended_at,
+				data_path: session.data_path,
+				first_message: session.first_message,
+				session_name: session.session_name,
+			},
+		},
+		200,
+	);
+});
+
 sessions.get("/:id/commits", async (c) => {
 	const id = c.req.param("id");
 	const db = new DB(c.env.DB);
@@ -167,6 +197,9 @@ sessions.get("/:id", async (c) => {
 				agent_version: session.agent_version,
 				created_at: session.created_at,
 				ended_at: session.ended_at,
+				data_path: session.data_path,
+				first_message: session.first_message,
+				session_name: session.session_name,
 			},
 			data,
 		},

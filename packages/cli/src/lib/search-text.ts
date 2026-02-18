@@ -12,6 +12,9 @@ type SearchTextMetadata = {
 	commits: string[];
 	branch: string;
 	repo: string;
+	dataPath?: string;
+	firstMessage?: string;
+	sessionName?: string;
 };
 
 type SearchLine = {
@@ -34,6 +37,13 @@ function buildSearchText(opts: {
 			: null,
 		opts.metadata.branch ? `Branch: ${opts.metadata.branch}` : null,
 		opts.metadata.repo ? `Repo: ${opts.metadata.repo}` : null,
+		opts.metadata.dataPath ? `DataPath: ${opts.metadata.dataPath}` : null,
+		opts.metadata.sessionName
+			? `SessionName: ${opts.metadata.sessionName}`
+			: null,
+		opts.metadata.firstMessage
+			? `FirstMessage: ${opts.metadata.firstMessage}`
+			: null,
 	]
 		.filter(Boolean)
 		.join("\n");
@@ -43,6 +53,143 @@ function buildSearchText(opts: {
 		.join("\n");
 
 	return `${header}\n\n${body}\n`;
+}
+
+// -- Session metadata extractors ---------------------------------------------
+
+/**
+ * Extract the first user message from raw session data.
+ * Returns the text truncated to 200 characters, or null if none found.
+ */
+function extractFirstMessageClaudeCode(raw: string): string | null {
+	for (const line of raw.split("\n")) {
+		if (!line.trim()) continue;
+		let entry: ClaudeEntry;
+		try {
+			entry = JSON.parse(line) as ClaudeEntry;
+		} catch {
+			continue;
+		}
+		if (entry.isMeta || entry.isSidechain) continue;
+		if (entry.type !== "user") continue;
+
+		const content = entry.message?.content;
+		if (!content) continue;
+
+		if (typeof content === "string") {
+			const trimmed = content.trim();
+			if (trimmed) return trimmed.slice(0, 200);
+		} else if (Array.isArray(content)) {
+			const hasToolResult = content.some((b) => b.type === "tool_result");
+			if (hasToolResult) continue;
+			const text = content
+				.filter((b) => b.type === "text" && b.text)
+				.map((b) => b.text!)
+				.join("\n")
+				.trim();
+			if (text) return text.slice(0, 200);
+		}
+	}
+	return null;
+}
+
+/**
+ * Extract the session name (slug) from a Claude Code session.
+ * Claude Code stores the slug on "progress" entries.
+ */
+function extractSessionNameClaudeCode(raw: string): string | null {
+	for (const line of raw.split("\n")) {
+		if (!line.trim()) continue;
+		try {
+			const entry = JSON.parse(line) as Record<string, unknown>;
+			if (entry.type === "progress" && typeof entry.slug === "string") {
+				return entry.slug;
+			}
+		} catch {}
+	}
+	return null;
+}
+
+/**
+ * Extract the first user message from a pi session.
+ * Returns the text truncated to 200 characters, or null if none found.
+ */
+function extractFirstMessagePi(raw: string): string | null {
+	for (const line of raw.split("\n")) {
+		if (!line.trim()) continue;
+		let entry: PiEntry;
+		try {
+			entry = JSON.parse(line) as PiEntry;
+		} catch {
+			continue;
+		}
+		if (entry.type !== "message") continue;
+		const msg = entry.message;
+		if (!msg || msg.role !== "user") continue;
+
+		const content = msg.content;
+		if (!content) continue;
+
+		if (typeof content === "string") {
+			const trimmed = content.trim();
+			if (trimmed) return trimmed.slice(0, 200);
+		} else if (Array.isArray(content)) {
+			const text = content
+				.filter((b) => b.type === "text" && b.text)
+				.map((b) => b.text!)
+				.join("\n")
+				.trim();
+			if (text) return text.slice(0, 200);
+		}
+	}
+	return null;
+}
+
+/**
+ * Extract the session name from a pi session.
+ * Pi stores custom entries with customType "session-name" when the user
+ * uses /name. Falls back to checking the session header for a name field.
+ */
+function extractSessionNamePi(raw: string): string | null {
+	// Check custom entries for session-name
+	for (const line of raw.split("\n")) {
+		if (!line.trim()) continue;
+		try {
+			const entry = JSON.parse(line) as Record<string, unknown>;
+			if (
+				entry.type === "custom" &&
+				entry.customType === "session-name" &&
+				typeof (entry as Record<string, unknown>).data === "object"
+			) {
+				const data = (entry as Record<string, unknown>).data as Record<
+					string,
+					unknown
+				>;
+				if (typeof data.name === "string") return data.name;
+			}
+		} catch {}
+	}
+	return null;
+}
+
+type MetadataExtractors = {
+	extractFirstMessage: (raw: string) => string | null;
+	extractSessionName: (raw: string) => string | null;
+};
+
+const metadataExtractors: Record<ExtractorName, MetadataExtractors> = {
+	"claude-code": {
+		extractFirstMessage: extractFirstMessageClaudeCode,
+		extractSessionName: extractSessionNameClaudeCode,
+	},
+	pi: {
+		extractFirstMessage: extractFirstMessagePi,
+		extractSessionName: extractSessionNamePi,
+	},
+};
+
+function getMetadataExtractors(agent: string): MetadataExtractors | null {
+	return metadataExtractors[agent as ExtractorName] ?? null;
 }
 
 // -- Claude Code extractor --------------------------------------------------
@@ -252,6 +399,12 @@ export {
 	extractClaudeCode,
 	extractPi,
 	getExtractor,
+	getMetadataExtractors,
 	summarizeToolInput,
 };
-export type { SearchLine, SearchTextMetadata, ExtractorName };
+export type {
+	SearchLine,
+	SearchTextMetadata,
+	ExtractorName,
+	MetadataExtractors,
+};

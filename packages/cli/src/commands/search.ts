@@ -38,6 +38,17 @@ type SessionCommit = {
 	branch: string | null;
 };
 
+type SessionMetadata = {
+	id: string;
+	agent: string;
+	agent_version: string | null;
+	created_at: number;
+	ended_at: number | null;
+	data_path: string | null;
+	first_message: string | null;
+	session_name: string | null;
+};
+
 function fetchSearch(opts: {
 	workerUrl: string;
 	token: string;
@@ -83,6 +94,28 @@ function fetchSessionCommits(opts: {
 	).orElse(() => ok([] as SessionCommit[]));
 }
 
+function fetchSessionMetadata(opts: {
+	workerUrl: string;
+	token: string;
+	sessionId: string;
+}): ResultAsync<SessionMetadata | null, CliError> {
+	const url = `${opts.workerUrl}/api/sessions/${opts.sessionId}/metadata`;
+
+	return ResultAsync.fromPromise(
+		fetch(url, {
+			headers: { Authorization: `Bearer ${opts.token}` },
+		}).then(async (response) => {
+			if (!response.ok) return null;
+			const data = (await response.json()) as { session: SessionMetadata };
+			return data.session;
+		}),
+		toCliError({
+			message: "Failed to fetch session metadata",
+			code: "NETWORK_ERROR",
+		}),
+	).orElse(() => ok(null));
+}
+
 /**
  * Extract a session ID from an R2 filename like "sessions/<uuid>.json"
  * or "search/<uuid>.txt".
@@ -122,9 +155,25 @@ function buildCommitUrl(opts: {
 	return `${opts.workerUrl}/app/${opts.org}/${opts.repo}/${opts.sha}`;
 }
 
+function renderSessionMeta(opts: { meta: SessionMetadata | null }): void {
+	if (!opts.meta) return;
+	if (opts.meta.session_name) {
+		log.info(`    name: ${opts.meta.session_name}`);
+	}
+	if (opts.meta.first_message) {
+		log.info(
+			`    first: ${truncate({ text: opts.meta.first_message, maxLength: 120 })}`,
+		);
+	}
+	if (opts.meta.data_path) {
+		log.info(`    file: ${opts.meta.data_path}`);
+	}
+}
+
 function renderSearchResults(opts: {
 	results: SearchResponse;
 	commitMap: Map<string, SessionCommit[]>;
+	metadataMap: Map<string, SessionMetadata | null>;
 	workerUrl: string;
 }): void {
 	if (opts.results.data.length === 0) {
@@ -141,6 +190,8 @@ function renderSearchResults(opts: {
 		const scorePercent = (item.score * 100).toFixed(1);
 
 		log.info(`  ${sessionId}  [${scorePercent}%]`);
+
+		renderSessionMeta({ meta: opts.metadataMap.get(sessionId) ?? null });
 
 		const snippet = item.content[0]?.text;
 		if (snippet) {
@@ -167,6 +218,7 @@ function renderSearchResults(opts: {
 function renderAiSearchResults(opts: {
 	results: AiSearchResponse;
 	commitMap: Map<string, SessionCommit[]>;
+	metadataMap: Map<string, SessionMetadata | null>;
 	workerUrl: string;
 }): void {
 	if (opts.results.response) {
@@ -180,6 +232,8 @@ function renderAiSearchResults(opts: {
 			const sessionId = extractSessionId(item.filename);
 			const scorePercent = (item.score * 100).toFixed(1);
 			log.info(`  ${sessionId}  [${scorePercent}%]`);
+
+			renderSessionMeta({ meta: opts.metadataMap.get(sessionId) ?? null });
 
 			const commits = opts.commitMap.get(sessionId) ?? [];
 			if (commits.length > 0) {
@@ -226,37 +280,55 @@ export function search(opts: {
 			isAi: opts.isAi ?? false,
 		});
 
-		// Fetch commits for each session in parallel
+		// Fetch commits and metadata for each session in parallel
 		const sessionIds = results.data.map((item) =>
 			extractSessionId(item.filename),
 		);
 		const uniqueSessionIds = [...new Set(sessionIds)];
 
-		const commitResults = yield* ResultAsync.combine(
-			uniqueSessionIds.map((sessionId) =>
-				fetchSessionCommits({
-					workerUrl: config.worker_url,
-					token: config.token,
-					sessionId,
-				}).map((commits) => ({ sessionId, commits })),
+		const [commitResults, metadataResults] = yield* ResultAsync.combine([
+			ResultAsync.combine(
+				uniqueSessionIds.map((sessionId) =>
+					fetchSessionCommits({
+						workerUrl: config.worker_url,
+						token: config.token,
+						sessionId,
+					}).map((commits) => ({ sessionId, commits })),
+				),
 			),
-		);
+			ResultAsync.combine(
+				uniqueSessionIds.map((sessionId) =>
+					fetchSessionMetadata({
+						workerUrl: config.worker_url,
+						token: config.token,
+						sessionId,
+					}).map((meta) => ({ sessionId, meta })),
+				),
+			),
+		]);
 
 		const commitMap = new Map<string, SessionCommit[]>();
 		for (const entry of commitResults) {
 			commitMap.set(entry.sessionId, entry.commits);
 		}
 
+		const metadataMap = new Map<string, SessionMetadata | null>();
+		for (const entry of metadataResults) {
+			metadataMap.set(entry.sessionId, entry.meta);
+		}
+
 		if (opts.isAi && isAiSearchResponse(results)) {
 			renderAiSearchResults({
 				results,
 				commitMap,
+				metadataMap,
 				workerUrl: config.worker_url,
 			});
 		} else {
 			renderSearchResults({
 				results,
 				commitMap,
+				metadataMap,
 				workerUrl: config.worker_url,
 			});
 		}

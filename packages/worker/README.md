@@ -104,6 +104,19 @@ wrangler deploy
 residue login --url https://your-worker.workers.dev --token <token>
 ```
 
+## Updating
+
+When a new version of residue is released, update your worker to match the CLI version.
+
+1. Go to your worker repo on GitHub
+2. Navigate to **Actions** > **Update Worker**
+3. Click **Run workflow**
+4. Optionally enter a specific version tag (e.g. `v0.0.5`), or leave empty for the latest release
+5. The workflow downloads the latest worker code, preserves your `wrangler.jsonc`, and commits the update
+6. The Cloudflare deploy workflow then picks up the commit and redeploys automatically
+
+Your `wrangler.jsonc` is never overwritten -- all your D1 database IDs, R2 bucket config, and other settings are preserved.
+
 ## Configuration Reference
 
 ### wrangler.jsonc vars
