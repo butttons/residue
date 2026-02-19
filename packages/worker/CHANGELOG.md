@@ -1,5 +1,11 @@
 # @residue/worker
 
+## 0.0.7
+
+### Patch Changes
+
+- bc7f309: Add CLI-to-worker version mismatch detection via `X-Version` response header and `/api/ping` endpoint.
+
 ## 0.0.6
 
 ### Patch Changes
