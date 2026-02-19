@@ -4,10 +4,12 @@ import {
 	getPendingPath,
 	getProjectRoot,
 	getSession,
+	readPending,
 	updateSession,
 } from "@/lib/pending";
 import { type CliError, toCliError } from "@/utils/errors";
 import { createLogger } from "@/utils/logger";
+import { deriveSessionId } from "@/utils/session-id";
 
 const log = createLogger("hook");
 
@@ -116,31 +118,47 @@ function handleSessionStart(opts: {
 	if (!input.transcript_path) return okAsync(undefined);
 	if (!input.session_id) return okAsync(undefined);
 
-	const residueSessionId = crypto.randomUUID();
 	const claudeSessionId = input.session_id;
 
 	return safeTry(async function* () {
 		const pendingPath = yield* getPendingPath(projectRoot);
 
-		yield* addSession({
-			path: pendingPath,
-			session: {
+		// Derive a deterministic ID from the transcript path so the
+		// same Claude session file always maps to the same residue session.
+		const residueSessionId = deriveSessionId(input.transcript_path!);
+
+		const sessions = yield* readPending(pendingPath);
+		const existing = sessions.find((s) => s.id === residueSessionId);
+
+		if (existing) {
+			if (existing.status === "ended") {
+				yield* updateSession({
+					path: pendingPath,
+					id: existing.id,
+					updates: { status: "open" },
+				});
+			}
+		} else {
+			yield* addSession({
+				path: pendingPath,
+				session: {
+					id: residueSessionId,
+					agent: "claude-code",
+					agent_version: "unknown",
+					status: "open",
+					data_path: input.transcript_path!,
+					commits: [],
+				},
+			});
+
+			const version = yield* detectClaudeVersion();
+
+			yield* updateSession({
+				path: pendingPath,
 				id: residueSessionId,
-				agent: "claude-code",
-				agent_version: "unknown",
-				status: "open",
-				data_path: input.transcript_path!,
-				commits: [],
-			},
-		});
-
-		const version = yield* detectClaudeVersion();
-
-		yield* updateSession({
-			path: pendingPath,
-			id: residueSessionId,
-			updates: { agent_version: version },
-		});
+				updates: { agent_version: version },
+			});
+		}
 
 		const hooksDir = yield* getHooksDir(projectRoot);
 		const stateFile = join(hooksDir, `${claudeSessionId}.state`);
