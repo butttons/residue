@@ -278,6 +278,14 @@ function generateSearchText(opts: {
 		...new Set(opts.session.commits.map((c) => c.branch).filter(Boolean)),
 	];
 
+	// Collect unique file paths across all commits for this session
+	const filePaths = [
+		...new Set(opts.commits.flatMap((c) => c.files.map((f) => f.path))),
+	];
+	if (filePaths.length > 0) {
+		searchLines.push({ role: "files", text: filePaths.join(", ") });
+	}
+
 	return buildSearchText({
 		metadata: {
 			sessionId: opts.session.id,

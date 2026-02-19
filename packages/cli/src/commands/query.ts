@@ -41,6 +41,13 @@ type SessionDetail = {
 	}[];
 };
 
+type CommitFileItem = {
+	file_path: string;
+	change_type: string;
+	lines_added: number;
+	lines_deleted: number;
+};
+
 type CommitDetail = {
 	commit_sha: string;
 	message: string | null;
@@ -50,6 +57,7 @@ type CommitDetail = {
 	org: string;
 	repo: string;
 	sessions: QuerySessionItem[];
+	files: CommitFileItem[];
 };
 
 function fetchJson<T>(opts: {
@@ -178,6 +186,18 @@ function renderCommitDetail(detail: CommitDetail): void {
 	if (detail.branch) log.info(`  branch: ${detail.branch}`);
 	if (detail.author) log.info(`  author: ${detail.author}`);
 	log.info(`  date: ${formatTimestamp(detail.committed_at)}`);
+
+	if (detail.files && detail.files.length > 0) {
+		const totalAdded = detail.files.reduce((s, f) => s + f.lines_added, 0);
+		const totalDeleted = detail.files.reduce((s, f) => s + f.lines_deleted, 0);
+		log.info(
+			`\n  ${detail.files.length} file(s) changed (+${totalAdded} -${totalDeleted}):`,
+		);
+		for (const f of detail.files) {
+			const stats = `+${f.lines_added} -${f.lines_deleted}`;
+			log.info(`    ${f.change_type}  ${f.file_path}  ${stats}`);
+		}
+	}
 
 	if (detail.sessions.length > 0) {
 		log.info(`\n  ${detail.sessions.length} session(s):`);

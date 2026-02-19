@@ -831,5 +831,56 @@
 			15,
 			36
 		]
+	},
+	{
+		"id": 49,
+		"title": "CLI: show files in query commit output",
+		"description": "The worker API GET /api/query/commits/:sha already returns files via db.getCommitDetail(). The CLI query.ts CommitDetail type is missing the files field. Add it, and render file paths with change type and line counts in renderCommitDetail(). The --json output gets it for free once the type is correct.",
+		"tags": [
+			"cli",
+			"query"
+		],
+		"isDone": true,
+		"tests": [
+			"bun packages/cli/src/index.ts query commit <any-sha> --json returns files array in output"
+		],
+		"dependencies": [
+			47,
+			48
+		]
+	},
+	{
+		"id": 50,
+		"title": "Worker UI: render files on commit permalink page",
+		"description": "The commit permalink page (/:org/:repo/:sha in pages.tsx) does not show files changed. Call db.getCommitFiles(sha) in the page handler and render a collapsible \"Files changed\" section between the commit header and the session conversations. Show change type icon (A/M/D/R), file path in monospace, +N -N in green/red. Summary line: \"N files changed, +X -Y\".",
+		"tags": [
+			"worker",
+			"ui"
+		],
+		"isDone": true,
+		"tests": [
+			"packages/worker/test/pages/commit.test.ts passes with files rendered"
+		],
+		"dependencies": [
+			28,
+			48
+		]
+	},
+	{
+		"id": 51,
+		"title": "Include file paths in search text",
+		"description": "During sync, after building commit metadata (which now includes files), collect all unique file paths across all commits for the session and add a [files] line to the search text. Add a \"files\" role to SearchLine type. In sync.ts buildSearchText call, pass file paths extracted from commitMeta. This makes files discoverable via Cloudflare AI Search.",
+		"tags": [
+			"cli",
+			"search"
+		],
+		"isDone": true,
+		"tests": [
+			"packages/cli/test/search-text.test.ts passes with file paths included"
+		],
+		"dependencies": [
+			46,
+			48
+		]
 	}
 ]

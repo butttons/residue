@@ -549,6 +549,7 @@ pages.get("/:org/:repo/:sha", async (c) => {
 	}
 
 	const first = rows[0];
+	const files = await db.getCommitFiles(sha);
 
 	// Deduplicate sessions
 	const uniqueSessions = new Map<
@@ -727,6 +728,54 @@ pages.get("/:org/:repo/:sha", async (c) => {
 					</span>
 				</div>
 			</div>
+
+			{/* Files changed */}
+			{files.length > 0 && (
+				<details class="mb-6 group">
+					<summary class="cursor-pointer text-sm text-zinc-400 hover:text-zinc-200 transition-colors flex items-center gap-1.5 select-none">
+						<i class="ph ph-caret-right text-xs transition-transform group-open:rotate-90" />
+						<span>
+							{files.length} {files.length === 1 ? "file" : "files"} changed
+							<span class="text-emerald-500 ml-1.5">
+								+{files.reduce((s, f) => s + f.lines_added, 0)}
+							</span>
+							<span class="text-red-400 ml-1">
+								-{files.reduce((s, f) => s + f.lines_deleted, 0)}
+							</span>
+						</span>
+					</summary>
+					<div class="mt-2 bg-zinc-900 border border-zinc-800 rounded-md overflow-hidden">
+						{files.map((f) => (
+							<div class="flex items-center justify-between px-3 py-1.5 text-xs font-mono border-b border-zinc-800/50 last:border-b-0 hover:bg-zinc-800/30">
+								<div class="flex items-center gap-2 min-w-0">
+									<span
+										class={`flex-shrink-0 w-4 text-center ${
+											f.change_type === "A"
+												? "text-emerald-400"
+												: f.change_type === "D"
+													? "text-red-400"
+													: f.change_type === "R"
+														? "text-blue-400"
+														: "text-zinc-400"
+										}`}
+									>
+										{f.change_type}
+									</span>
+									<span class="text-zinc-300 truncate">{f.file_path}</span>
+								</div>
+								<div class="flex-shrink-0 ml-4 flex items-center gap-2">
+									{f.lines_added > 0 && (
+										<span class="text-emerald-500">+{f.lines_added}</span>
+									)}
+									{f.lines_deleted > 0 && (
+										<span class="text-red-400">-{f.lines_deleted}</span>
+									)}
+								</div>
+							</div>
+						))}
+					</div>
+				</details>
+			)}
 
 			{/* Sessions - tabbed if multiple */}
 			{sessionsData.length === 1 ? (

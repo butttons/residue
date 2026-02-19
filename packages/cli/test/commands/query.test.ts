@@ -429,6 +429,14 @@ describe("query commit <sha>", () => {
 							session_name: "my-session",
 						},
 					],
+					files: [
+						{
+							file_path: "src/auth.ts",
+							change_type: "M",
+							lines_added: 10,
+							lines_deleted: 3,
+						},
+					],
 				},
 			},
 		]);
@@ -446,6 +454,8 @@ describe("query commit <sha>", () => {
 		expect(stderr).toContain("fix auth redirect");
 		expect(stderr).toContain("my-org/my-repo");
 		expect(stderr).toContain("jane");
+		expect(stderr).toContain("1 file(s) changed (+10 -3)");
+		expect(stderr).toContain("M  src/auth.ts  +10 -3");
 		expect(stderr).toContain("1 session(s)");
 		expect(stderr).toContain("s-1");
 		expect(stderr).toContain("claude-code");
@@ -464,6 +474,7 @@ describe("query commit <sha>", () => {
 			org: "o",
 			repo: "r",
 			sessions: [],
+			files: [],
 		};
 
 		const { server } = createMockServer([
