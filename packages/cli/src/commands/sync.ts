@@ -1,6 +1,13 @@
 import { err, ok, okAsync, ResultAsync, safeTry } from "neverthrow";
 import { resolveConfig } from "@/lib/config";
-import { getCommitMeta, getRemoteUrl, parseRemote } from "@/lib/git";
+import { residueFetch } from "@/lib/fetch";
+import {
+	type CommitFile,
+	getCommitFiles,
+	getCommitMeta,
+	getRemoteUrl,
+	parseRemote,
+} from "@/lib/git";
 import type { CommitRef, PendingSession } from "@/lib/pending";
 import {
 	getPendingPath,
@@ -22,6 +29,13 @@ import { stat } from "fs/promises";
 
 const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
 
+type CommitFilePayload = {
+	path: string;
+	change_type: string;
+	lines_added: number;
+	lines_deleted: number;
+};
+
 type CommitPayload = {
 	sha: string;
 	org: string;
@@ -30,6 +44,7 @@ type CommitPayload = {
 	author: string;
 	committed_at: number;
 	branch: string;
+	files: CommitFilePayload[];
 };
 
 type UploadUrlResponse = {
@@ -45,7 +60,7 @@ function requestUploadUrl(opts: {
 	sessionId: string;
 }): ResultAsync<UploadUrlResponse, CliError> {
 	return ResultAsync.fromPromise(
-		fetch(`${opts.workerUrl}/api/sessions/upload-url`, {
+		residueFetch(`${opts.workerUrl}/api/sessions/upload-url`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -54,7 +69,10 @@ function requestUploadUrl(opts: {
 			body: JSON.stringify({ session_id: opts.sessionId }),
 		}).then(async (response) => {
 			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}`);
+				throw new CliError({
+					message: `HTTP ${response.status}`,
+					code: "NETWORK_ERROR",
+				});
 			}
 			return response.json() as Promise<UploadUrlResponse>;
 		}),
@@ -76,7 +94,10 @@ function uploadToPresignedUrl(opts: {
 			body: opts.data,
 		}).then((response) => {
 			if (!response.ok) {
-				throw new Error(`R2 upload failed: HTTP ${response.status}`);
+				throw new CliError({
+					message: `R2 upload failed: HTTP ${response.status}`,
+					code: "NETWORK_ERROR",
+				});
 			}
 		}),
 		toCliError({ message: "Direct R2 upload failed", code: "NETWORK_ERROR" }),
@@ -98,7 +119,7 @@ function postSessionMetadata(opts: {
 	commits: CommitPayload[];
 }): ResultAsync<void, CliError> {
 	return ResultAsync.fromPromise(
-		fetch(`${opts.workerUrl}/api/sessions`, {
+		residueFetch(`${opts.workerUrl}/api/sessions`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -110,7 +131,10 @@ function postSessionMetadata(opts: {
 			}),
 		}).then((response) => {
 			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}`);
+				throw new CliError({
+					message: `HTTP ${response.status}`,
+					code: "NETWORK_ERROR",
+				});
 			}
 		}),
 		toCliError({ message: "Metadata upload failed", code: "NETWORK_ERROR" }),
@@ -131,6 +155,15 @@ function readSessionData(
 	);
 }
 
+function toFilePayloads(files: CommitFile[]): CommitFilePayload[] {
+	return files.map((f) => ({
+		path: f.path,
+		change_type: f.changeType,
+		lines_added: f.linesAdded,
+		lines_deleted: f.linesDeleted,
+	}));
+}
+
 function buildCommitMeta(opts: {
 	commitRefs: CommitRef[];
 	org: string;
@@ -145,6 +178,11 @@ function buildCommitMeta(opts: {
 					log.warn(metaResult.error);
 					continue;
 				}
+				const filesResult = await getCommitFiles(ref.sha);
+				const files = filesResult.isOk() ? filesResult.value : [];
+				if (filesResult.isErr()) {
+					log.warn(filesResult.error);
+				}
 				commits.push({
 					sha: ref.sha,
 					org: opts.org,
@@ -153,6 +191,7 @@ function buildCommitMeta(opts: {
 					author: metaResult.value.author,
 					committed_at: metaResult.value.committed_at,
 					branch: ref.branch,
+					files: toFilePayloads(files),
 				});
 			}
 			return commits;
@@ -248,6 +287,14 @@ function generateSearchText(opts: {
 		...new Set(opts.session.commits.map((c) => c.branch).filter(Boolean)),
 	];
 
+	// Collect unique file paths across all commits for this session
+	const filePaths = [
+		...new Set(opts.commits.flatMap((c) => c.files.map((f) => f.path))),
+	];
+	if (filePaths.length > 0) {
+		searchLines.push({ role: "files", text: filePaths.join(", ") });
+	}
+
 	return buildSearchText({
 		metadata: {
 			sessionId: opts.session.id,
@@ -274,7 +321,10 @@ function uploadSearchText(opts: {
 			body: opts.data,
 		}).then((response) => {
 			if (!response.ok) {
-				throw new Error(`R2 search upload failed: HTTP ${response.status}`);
+				throw new CliError({
+					message: `R2 search upload failed: HTTP ${response.status}`,
+					code: "NETWORK_ERROR",
+				});
 			}
 		}),
 		toCliError({

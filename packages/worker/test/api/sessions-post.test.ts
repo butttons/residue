@@ -209,4 +209,91 @@ describe("POST /api/sessions", () => {
 		const text = await r2Object!.text();
 		expect(text).toBe('{"messages": ["direct upload"]}');
 	});
+
+	it("stores commit files in D1 when provided", async () => {
+		const payload = makeBody({
+			commits: [
+				{
+					sha: "files-test-sha",
+					org: "my-org",
+					repo: "my-repo",
+					message: "add auth module",
+					author: "jane",
+					committed_at: 1700000000,
+					branch: "main",
+					files: [
+						{
+							path: "src/auth.ts",
+							change_type: "A",
+							lines_added: 25,
+							lines_deleted: 0,
+						},
+						{
+							path: "src/index.ts",
+							change_type: "M",
+							lines_added: 3,
+							lines_deleted: 1,
+						},
+					],
+				},
+			],
+		});
+
+		const res = await postSession(payload);
+		expect(res.status).toBe(200);
+
+		const files = await db.getCommitFiles("files-test-sha");
+		expect(files).toHaveLength(2);
+
+		const authFile = files.find((f) => f.file_path === "src/auth.ts");
+		expect(authFile).toBeDefined();
+		expect(authFile!.change_type).toBe("A");
+		expect(authFile!.lines_added).toBe(25);
+		expect(authFile!.lines_deleted).toBe(0);
+
+		const indexFile = files.find((f) => f.file_path === "src/index.ts");
+		expect(indexFile).toBeDefined();
+		expect(indexFile!.change_type).toBe("M");
+		expect(indexFile!.lines_added).toBe(3);
+		expect(indexFile!.lines_deleted).toBe(1);
+	});
+
+	it("accepts commits without files field", async () => {
+		const res = await postSession(makeBody());
+		expect(res.status).toBe(200);
+
+		const files = await db.getCommitFiles("abc123");
+		expect(files).toHaveLength(0);
+	});
+
+	it("skips duplicate file inserts without error", async () => {
+		const payload = makeBody({
+			commits: [
+				{
+					sha: "dup-files-sha",
+					org: "my-org",
+					repo: "my-repo",
+					message: "test",
+					author: "jane",
+					committed_at: 1700000000,
+					branch: "main",
+					files: [
+						{
+							path: "README.md",
+							change_type: "M",
+							lines_added: 1,
+							lines_deleted: 0,
+						},
+					],
+				},
+			],
+		});
+
+		await postSession(payload);
+		const res = await postSession(payload);
+		expect(res.status).toBe(200);
+
+		const files = await db.getCommitFiles("dup-files-sha");
+		expect(files).toHaveLength(1);
+	});
 });

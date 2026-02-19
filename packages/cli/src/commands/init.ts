@@ -16,7 +16,7 @@ import {
 } from "fs/promises";
 import { join } from "path";
 
-const POST_COMMIT_LINE = "residue capture >/dev/null 2>&1 &";
+const POST_COMMIT_LINE = "residue capture >/dev/null 2>&1";
 const PRE_PUSH_LINE = 'residue sync --remote-url "$2"';
 
 function installHook(opts: {

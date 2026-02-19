@@ -84,6 +84,8 @@ repos.get("/:org/:repo/:sha", async (c) => {
 		ended_at: row.session_ended_at,
 	}));
 
+	const files = await db.getCommitFiles(sha);
+
 	return c.json(
 		{
 			commit: {
@@ -94,6 +96,12 @@ repos.get("/:org/:repo/:sha", async (c) => {
 				branch: first.branch,
 			},
 			sessions,
+			files: files.map((f) => ({
+				path: f.file_path,
+				change_type: f.change_type,
+				lines_added: f.lines_added,
+				lines_deleted: f.lines_deleted,
+			})),
 		},
 		200,
 	);

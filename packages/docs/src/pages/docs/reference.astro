@@ -1,0 +1,442 @@
+---
+import { Github } from "lucide-astro";
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout
+    title="Reference - residue"
+    description="Worker configuration, API routes, database schema, local state, and development commands."
+>
+    <div class="mb-10">
+        <h1 class="text-3xl font-bold mb-4">Reference</h1>
+        <p class="text-base text-zinc-400">
+            Configuration, APIs, schema, and local state.
+        </p>
+    </div>
+
+    <!-- Worker -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Worker</h2>
+
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-lg font-semibold mb-3 text-amber-300">Tech stack</h3>
+                <ul class="text-zinc-300 text-sm space-y-1">
+                    <li><strong>Framework:</strong> Hono</li>
+                    <li><strong>Rendering:</strong> JSX (server-rendered HTML)</li>
+                    <li><strong>Storage:</strong> Cloudflare R2 (blobs, uploaded via presigned URLs) + D1 (query index)</li>
+                    <li><strong>Styling:</strong> Tailwind CSS, JetBrains Mono, Phosphor Icons</li>
+                </ul>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-semibold mb-3 text-amber-300">Configuration</h3>
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-zinc-400 text-xs mb-2">Vars (in wrangler.jsonc)</p>
+                        <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs overflow-x-auto">
+                            <table class="w-full text-zinc-300">
+                                <tbody>
+                                    <tr><td class="text-amber-300 pr-4 sm:pr-6 py-1 whitespace-nowrap">ADMIN_USERNAME</td><td class="text-zinc-400">Super admin username (can manage users and settings)</td></tr>
+                                    <tr><td class="text-amber-300 pr-4 sm:pr-6 py-1 whitespace-nowrap">R2_ACCESS_KEY_ID</td><td class="text-zinc-400">From R2 API Tokens page</td></tr>
+                                    <tr><td class="text-amber-300 pr-4 sm:pr-6 py-1 whitespace-nowrap">R2_ACCOUNT_ID</td><td class="text-zinc-400">Your Cloudflare account ID</td></tr>
+                                    <tr><td class="text-amber-300 pr-4 sm:pr-6 py-1 whitespace-nowrap">R2_BUCKET_NAME</td><td class="text-zinc-400">Name of the R2 bucket</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-zinc-400 text-xs mb-2">Secrets (via wrangler secret put)</p>
+                        <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs overflow-x-auto">
+                            <table class="w-full text-zinc-300">
+                                <tbody>
+                                    <tr><td class="text-amber-300 pr-4 sm:pr-6 py-1 whitespace-nowrap">AUTH_TOKEN</td><td class="text-zinc-400">Bearer token for CLI API auth + session signing secret</td></tr>
+                                    <tr><td class="text-amber-300 pr-4 sm:pr-6 py-1 whitespace-nowrap">ADMIN_PASSWORD</td><td class="text-zinc-400">Password for the super admin user</td></tr>
+                                    <tr><td class="text-amber-300 pr-4 sm:pr-6 py-1 whitespace-nowrap">R2_SECRET_ACCESS_KEY</td><td class="text-zinc-400">From R2 API Tokens page</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Routes -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">API Routes</h2>
+        <p class="text-zinc-400 text-xs mb-3">All routes require <code class="text-zinc-300">Authorization: Bearer &lt;token&gt;</code></p>
+
+        <div class="space-y-4">
+            <div>
+                <p class="text-zinc-400 text-xs mb-2">Sessions</p>
+                <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs sm:text-sm space-y-2 overflow-x-auto">
+                    <div>
+                        <span class="text-emerald-400">POST</span>
+                        <span class="text-zinc-300 ml-2">/api/sessions/upload-url</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># presigned R2 PUT URLs (raw + search)</span>
+                    </div>
+                    <div>
+                        <span class="text-emerald-400">POST</span>
+                        <span class="text-zinc-300 ml-2">/api/sessions</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># metadata + commit mappings</span>
+                    </div>
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/sessions/:id</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># session + raw data from R2</span>
+                    </div>
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/sessions/:id/metadata</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># session metadata only (no R2 fetch)</span>
+                    </div>
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/sessions/:id/commits</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># commits linked to a session</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-zinc-400 text-xs mb-2">Repos</p>
+                <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs sm:text-sm space-y-2 overflow-x-auto">
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/repos/:org/:repo</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># commits with sessions (paginated via ?cursor=)</span>
+                    </div>
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/repos/:org/:repo/:sha</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># commit detail + sessions + files</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-zinc-400 text-xs mb-2">Query (filter and list)</p>
+                <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs sm:text-sm space-y-2 overflow-x-auto">
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/query/sessions</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># list sessions (filter by agent, repo, branch, since, until)</span>
+                    </div>
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/query/sessions/:id</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># session detail with commits</span>
+                    </div>
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/query/commits</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># list commits (filter by repo, branch, author, since, until)</span>
+                    </div>
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/query/commits/:sha</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># commit detail with sessions</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-zinc-400 text-xs mb-2">Search</p>
+                <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs sm:text-sm space-y-2 overflow-x-auto">
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/search?q=...</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># vector search via AI Search</span>
+                    </div>
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/search/ai?q=...</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># AI-powered search with generated answer</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-zinc-400 text-xs mb-2">Users</p>
+                <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs sm:text-sm space-y-2 overflow-x-auto">
+                    <div>
+                        <span class="text-emerald-400">POST</span>
+                        <span class="text-zinc-300 ml-2">/api/users</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># create a user</span>
+                    </div>
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/users</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># list users</span>
+                    </div>
+                    <div>
+                        <span class="text-red-400">DELETE</span>
+                        <span class="text-zinc-300 ml-2">/api/users/:id</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># delete a user</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-zinc-400 text-xs mb-2">Health</p>
+                <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs sm:text-sm space-y-2 overflow-x-auto">
+                    <div>
+                        <span class="text-amber-400">GET</span>
+                        <span class="text-zinc-300 ml-3">/api/ping</span>
+                        <span class="text-zinc-500 ml-4 hidden sm:inline"># returns worker version</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI Routes -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">UI Pages</h2>
+        <p class="text-zinc-400 text-xs mb-2">Cookie-based session auth. Served under /app.</p>
+        <p class="text-zinc-500 text-xs mb-3">
+            Instances can be <strong class="text-zinc-400">public</strong> (anyone can view conversations) or <strong class="text-zinc-400">private</strong> (login required).
+            Settings and user management always require authentication.
+        </p>
+        <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs sm:text-sm space-y-2 overflow-x-auto">
+            <div>
+                <span class="text-amber-300">/app/login</span>
+                <span class="text-zinc-500 ml-4"># login page</span>
+            </div>
+            <div>
+                <span class="text-amber-300">/app</span>
+                <span class="text-zinc-500 ml-4"># list orgs</span>
+            </div>
+            <div>
+                <span class="text-amber-300">/app/:org</span>
+                <span class="text-zinc-500 ml-4"># list repos</span>
+            </div>
+            <div>
+                <span class="text-amber-300">/app/:org/:repo</span>
+                <span class="text-zinc-500 ml-4"># commit timeline with sessions</span>
+            </div>
+            <div>
+                <span class="text-amber-300">/app/:org/:repo/:sha</span>
+                <span class="text-zinc-500 ml-4"># commit permalink + conversations</span>
+            </div>
+            <div>
+                <span class="text-amber-300">/app/search</span>
+                <span class="text-zinc-500 ml-4"># search conversations</span>
+            </div>
+            <div>
+                <span class="text-amber-300">/app/settings</span>
+                <span class="text-zinc-500 ml-4"># instance settings (visibility)</span>
+            </div>
+            <div>
+                <span class="text-amber-300">/app/settings/users</span>
+                <span class="text-zinc-500 ml-4"># manage user accounts</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Database Schema -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Database Schema</h2>
+        <pre class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs overflow-x-auto"><code class="text-zinc-300">{`CREATE TABLE sessions (
+  id TEXT PRIMARY KEY,
+  agent TEXT NOT NULL,
+  agent_version TEXT,
+  created_at INTEGER NOT NULL,
+  ended_at INTEGER,
+  r2_key TEXT NOT NULL,
+  data_path TEXT,
+  first_message TEXT,
+  session_name TEXT
+);
+
+CREATE TABLE commits (
+  commit_sha TEXT NOT NULL,
+  repo TEXT NOT NULL,
+  org TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  message TEXT,
+  author TEXT,
+  committed_at INTEGER,
+  created_at INTEGER NOT NULL,
+  branch TEXT,
+  FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
+
+CREATE TABLE commit_files (
+  commit_sha TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  change_type TEXT NOT NULL,
+  lines_added INTEGER NOT NULL DEFAULT 0,
+  lines_deleted INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_commits_unique
+  ON commits(commit_sha, session_id);
+CREATE INDEX idx_commits_repo
+  ON commits(org, repo);
+CREATE INDEX idx_commits_sha
+  ON commits(commit_sha);
+CREATE INDEX idx_commits_session
+  ON commits(session_id);
+CREATE INDEX idx_commits_branch
+  ON commits(org, repo, branch);
+CREATE UNIQUE INDEX idx_commit_files_unique
+  ON commit_files(commit_sha, file_path);
+CREATE INDEX idx_commit_files_sha
+  ON commit_files(commit_sha);`}</code></pre>
+    </div>
+
+    <!-- Conversation Rendering -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Conversation Rendering</h2>
+        <p class="text-zinc-300 text-sm leading-relaxed mb-4">
+            Each agent gets a <strong>mapper</strong>: a pure function that transforms
+            the agent's raw session data into a common message format. The mapper
+            is the only agent-specific code. Everything else is shared.
+        </p>
+        <pre class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs overflow-x-auto"><code class="text-zinc-300">{`type ToolCall = {
+  name: string;
+  input: string;
+  output: string;
+};
+
+type Message = {
+  role: string;
+  content: string;
+  timestamp?: string;
+  model?: string;
+  tool_calls?: ToolCall[];
+};
+
+type Mapper = (raw: string) => Message[];`}</code></pre>
+        <p class="text-zinc-400 text-sm mt-3">
+            Mappers: <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">claude-code.ts</code>,
+            <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">pi.ts</code>.
+            Adding a new agent means writing one mapper function and registering it.
+        </p>
+    </div>
+
+    <!-- Local State -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Local State</h2>
+
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-lg font-semibold mb-3 text-amber-300">Global config</h3>
+                <p class="text-zinc-400 text-sm mb-2">
+                    <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">~/.residue/config</code>
+                </p>
+                <pre class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto"><code class="text-zinc-300">{JSON.stringify({
+                    worker_url: "https://my-residue.workers.dev",
+                    token: "secret-token-from-deploy"
+                }, null, 2)}</code></pre>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-semibold mb-3 text-amber-300">Pending queue</h3>
+                <p class="text-zinc-400 text-sm mb-2">
+                    <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.residue/pending.json</code>
+                </p>
+                <pre class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs overflow-x-auto"><code class="text-zinc-300">{JSON.stringify([
+                    {
+                        id: "session-uuid-1",
+                        agent: "claude-code",
+                        agent_version: "1.2.3",
+                        status: "ended",
+                        data_path: "/path/to/raw/session/log",
+                        commits: []
+                    },
+                    {
+                        id: "session-uuid-2",
+                        agent: "pi",
+                        agent_version: "0.5.0",
+                        status: "open",
+                        data_path: "/path/to/raw/session/log",
+                        commits: [{ sha: "abc123", branch: "feature-auth" }]
+                    }
+                ], null, 2)}</code></pre>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-semibold mb-3 text-amber-300">Hook state</h3>
+                <p class="text-zinc-400 text-sm">
+                    <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.residue/hooks/</code> --
+                    Maps agent session IDs to residue session IDs. Used by the Claude Code hook handler and the pi extension.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Development -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Development</h2>
+        <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm space-y-4 overflow-x-auto">
+            <div>
+                <div class="text-zinc-500"># Install dependencies</div>
+                <div class="text-zinc-300">pnpm install</div>
+            </div>
+            <div>
+                <div class="text-zinc-500"># Dev</div>
+                <div class="text-zinc-300">pnpm --filter @residue/cli dev</div>
+                <div class="text-zinc-300">pnpm --filter @residue/worker dev</div>
+            </div>
+            <div>
+                <div class="text-zinc-500"># Build</div>
+                <div class="text-zinc-300">pnpm --filter @residue/cli build</div>
+            </div>
+            <div>
+                <div class="text-zinc-500"># Apply D1 migrations locally (required before running tests)</div>
+                <div class="text-zinc-300">cd packages/worker && pnpm exec wrangler d1 migrations apply DB --local</div>
+            </div>
+            <div>
+                <div class="text-zinc-500"># Run tests</div>
+                <div class="text-zinc-300">pnpm --filter @residue/worker test</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contributing -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Contributing</h2>
+        <p class="text-zinc-300 text-sm leading-relaxed mb-4">
+            Residue is open source.
+            See the <a
+                href="https://github.com/butttons/residue"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-amber-400 hover:underline">GitHub repository</a
+            > for issues, discussions, and pull requests.
+        </p>
+        <div class="flex gap-4">
+            <a
+                href="https://github.com/butttons/residue"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 text-sm"
+            >
+                <Github class="w-4 h-4" />
+                View on GitHub
+            </a>
+        </div>
+    </div>
+
+    <!-- Nav -->
+    <div class="mt-12 pt-8 border-t border-zinc-800">
+        <a href="/docs/how-it-works" class="text-amber-400 hover:underline text-sm flex items-center gap-1">
+            &larr; How It Works
+        </a>
+    </div>
+</DocsLayout>

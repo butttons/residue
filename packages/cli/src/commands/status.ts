@@ -1,12 +1,16 @@
 import { readFile, stat } from "fs/promises";
 import { ok, okAsync, ResultAsync, safeTry } from "neverthrow";
 import { join } from "path";
+import type { ResidueConfig } from "@/lib/config";
 import { readConfig, readLocalConfig } from "@/lib/config";
+import { residueFetch } from "@/lib/fetch";
 import { isGitRepo } from "@/lib/git";
 import { getPendingPath, getProjectRoot, readPending } from "@/lib/pending";
 import type { CliError } from "@/utils/errors";
 import { toCliError } from "@/utils/errors";
 import { createLogger } from "@/utils/logger";
+
+import packageJson from "../../package.json";
 
 const log = createLogger("status");
 
@@ -29,6 +33,34 @@ function checkHookInstalled(opts: {
 		),
 		toCliError({ message: "Failed to read hook", code: "IO_ERROR" }),
 	).orElse(() => okAsync(false));
+}
+
+type PingResult = {
+	isReachable: boolean;
+	workerVersion: string | null;
+	isVersionMatch: boolean;
+};
+
+function pingWorker(config: ResidueConfig): ResultAsync<PingResult, CliError> {
+	return ResultAsync.fromPromise(
+		residueFetch(`${config.worker_url}/api/ping`, {
+			headers: { Authorization: `Bearer ${config.token}` },
+		}).then((response) => {
+			const workerVersion = response.headers.get("X-Version");
+			return {
+				isReachable: response.ok,
+				workerVersion,
+				isVersionMatch: workerVersion === packageJson.version,
+			};
+		}),
+		toCliError({ message: "Failed to ping worker", code: "NETWORK_ERROR" }),
+	).orElse(() =>
+		okAsync({
+			isReachable: false,
+			workerVersion: null,
+			isVersionMatch: false,
+		}),
+	);
 }
 
 function getGitDir(): ResultAsync<string, CliError> {
@@ -77,6 +109,29 @@ export function status(): ResultAsync<void, CliError> {
 			log.info(`  active: ${isActiveConfig.worker_url}`);
 		} else {
 			log.info('  active: none (run "residue login" to configure)');
+		}
+
+		log.info("");
+
+		// -- Worker connection --
+		log.info("Worker");
+
+		if (isActiveConfig) {
+			const ping = yield* pingWorker(isActiveConfig);
+			if (ping.isReachable) {
+				log.info(`  status:  reachable`);
+				log.info(`  version: ${ping.workerVersion ?? "unknown"}`);
+				log.info(`  cli:     ${packageJson.version}`);
+				if (!ping.isVersionMatch) {
+					log.info(
+						"  warning: version mismatch -- update CLI or worker to match",
+					);
+				}
+			} else {
+				log.info("  status:  unreachable");
+			}
+		} else {
+			log.info("  status:  not configured");
 		}
 
 		log.info("");

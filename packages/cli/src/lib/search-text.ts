@@ -18,7 +18,7 @@ type SearchTextMetadata = {
 };
 
 type SearchLine = {
-	role: "human" | "assistant" | "tool";
+	role: "human" | "assistant" | "tool" | "files";
 	text: string;
 };
 

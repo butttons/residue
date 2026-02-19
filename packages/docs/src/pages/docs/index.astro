@@ -1,0 +1,320 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout
+    title="Getting Started - residue"
+    description="Set up residue to capture AI agent conversations and link them to git commits."
+>
+    <div class="mb-10">
+        <h1 class="text-3xl font-bold mb-4">Getting Started</h1>
+        <p class="text-base text-zinc-400">
+            Deploy your worker, install the CLI, and start capturing conversations.
+        </p>
+    </div>
+
+    <!-- Prerequisites -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Prerequisites</h2>
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+            <ul class="space-y-2 text-zinc-300 text-sm">
+                <li><strong><a href="https://bun.sh" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">Bun</a></strong> (required runtime for the CLI)</li>
+                <li><strong>Git</strong> (hooks are installed in .git/hooks/)</li>
+                <li><strong>Cloudflare account</strong> (for deploying the worker)</li>
+                <li><strong>A supported AI agent:</strong> Claude Code or pi</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Setup -->
+    <div id="setup" class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Setup</h2>
+
+        <p class="text-zinc-300 text-sm leading-relaxed mb-8">
+            Six steps: create the R2 bucket with S3 API credentials, deploy the worker, set up AI Search, install the CLI, then configure your repos.
+        </p>
+
+        <!-- One-time setup label -->
+        <div class="flex items-center gap-3 mb-8">
+            <div class="h-px flex-1 bg-zinc-800"></div>
+            <span class="text-xs text-zinc-500 uppercase tracking-wider">One-time setup</span>
+            <div class="h-px flex-1 bg-zinc-800"></div>
+        </div>
+
+        <div class="space-y-8">
+            <!-- Step 1: R2 bucket -->
+            <div>
+                <h3 class="text-xl font-semibold mb-3 text-amber-300">
+                    1. Create an R2 bucket and S3 API token
+                </h3>
+                <p class="text-zinc-300 text-sm mb-4 leading-relaxed">
+                    The CLI uploads session data directly to R2 via presigned PUT URLs.
+                    You must set these up <strong>before</strong> deploying the worker.
+                </p>
+
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6 space-y-4">
+                    <div>
+                        <p class="text-zinc-400 text-xs mb-2">Create an R2 bucket in the Cloudflare dashboard:</p>
+                        <div class="bg-zinc-950 rounded p-3">
+                            <a href="https://dash.cloudflare.com/?to=/:account/r2/new" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline break-all font-mono text-xs sm:text-sm">dash.cloudflare.com/?to=/:account/r2/new</a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-zinc-400 text-xs mb-2">Then create an S3 API token with read/write access to your bucket:</p>
+                        <div class="bg-zinc-950 rounded p-3">
+                            <a href="https://dash.cloudflare.com/?to=/:account/r2/api-tokens" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline break-all font-mono text-xs sm:text-sm">dash.cloudflare.com/?to=/:account/r2/api-tokens</a>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-950 border border-zinc-800 rounded p-4">
+                        <p class="text-zinc-400 text-xs mb-2">Save these values -- you will need them in step 2:</p>
+                        <div class="font-mono text-xs sm:text-sm space-y-1.5">
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                                <span class="text-zinc-500 sm:w-44 shrink-0">R2_ACCESS_KEY_ID</span>
+                                <span class="text-zinc-600">from the API token</span>
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                                <span class="text-zinc-500 sm:w-44 shrink-0">R2_SECRET_ACCESS_KEY</span>
+                                <span class="text-zinc-600">from the API token</span>
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                                <span class="text-zinc-500 sm:w-44 shrink-0">R2_ACCOUNT_ID</span>
+                                <span class="text-zinc-600">your Cloudflare account ID</span>
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                                <span class="text-zinc-500 sm:w-44 shrink-0">R2_BUCKET_NAME</span>
+                                <span class="text-zinc-600">the bucket you just created</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Deploy -->
+            <div>
+                <h3 class="text-xl font-semibold mb-3 text-amber-300">
+                    2. Deploy the Worker
+                </h3>
+                <p class="text-zinc-300 text-sm mb-4 leading-relaxed">
+                    The worker stores commit metadata in D1 and serves the web UI.
+                    Session data lives in R2 (set up in step 1).
+                </p>
+
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6 mb-4">
+                    <h4 class="font-semibold text-zinc-200 text-sm mb-3">Option A: Deploy to Cloudflare</h4>
+                    <p class="text-zinc-400 text-sm leading-relaxed mb-4">
+                        Click the button below to fork and deploy the worker automatically.
+                        You will be prompted for secrets during the deploy process.
+                    </p>
+
+                    <div class="mb-4">
+                        <a
+                            href="https://deploy.workers.cloudflare.com/?url=https://github.com/butttons/residue/tree/main/packages/worker"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-block"
+                        >
+                            <img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers" />
+                        </a>
+                    </div>
+
+                    <div class="bg-zinc-950 border border-zinc-800 rounded p-4">
+                        <p class="text-zinc-400 text-xs mb-2">During deploy, you will be prompted for these secrets:</p>
+                        <div class="font-mono text-xs sm:text-sm space-y-1.5">
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                                <span class="text-zinc-500 sm:w-44 shrink-0">AUTH_TOKEN</span>
+                                <span class="text-zinc-600">generate a random string -- this is your CLI auth token</span>
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                                <span class="text-zinc-500 sm:w-44 shrink-0">R2_SECRET_ACCESS_KEY</span>
+                                <span class="text-zinc-600">from step 1</span>
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                                <span class="text-zinc-500 sm:w-44 shrink-0">ADMIN_PASSWORD</span>
+                                <span class="text-zinc-600">password for the web UI</span>
+                            </div>
+                        </div>
+                        <p class="text-zinc-500 text-xs mt-3">
+                            The R2 vars from step 1 (<code class="text-zinc-400">R2_ACCESS_KEY_ID</code>,
+                            <code class="text-zinc-400">R2_ACCOUNT_ID</code>,
+                            <code class="text-zinc-400">R2_BUCKET_NAME</code>) go into the worker environment variables.
+                        </p>
+                    </div>
+
+                    <p class="text-zinc-500 text-xs mt-3">
+                        After deploy, note your worker URL (e.g. <code class="text-zinc-400">https://residue.your-subdomain.workers.dev</code>).
+                    </p>
+                </div>
+
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6">
+                    <h4 class="font-semibold text-zinc-200 text-sm mb-3">Option B: Manual</h4>
+                    <pre class="bg-zinc-950 rounded p-3 font-mono text-xs overflow-x-auto"><code class="text-zinc-300"><span class="text-zinc-500"># Clone the repo and install dependencies</span>
+git clone https://github.com/butttons/residue.git
+cd residue
+pnpm install
+cd packages/worker
+
+<span class="text-zinc-500"># Login to Cloudflare</span>
+npx wrangler login
+
+<span class="text-zinc-500"># Create D1 database</span>
+npx wrangler d1 create residue-db
+<span class="text-zinc-500"># Copy the database_id into wrangler.jsonc</span>
+
+<span class="text-zinc-500"># Update wrangler.jsonc with:</span>
+<span class="text-zinc-500">#   d1_databases[0].database_id  -> your D1 ID</span>
+<span class="text-zinc-500">#   r2_buckets[0].bucket_name    -> from step 1</span>
+<span class="text-zinc-500">#   R2_ACCESS_KEY_ID             -> from step 1</span>
+<span class="text-zinc-500">#   R2_ACCOUNT_ID                -> from step 1</span>
+<span class="text-zinc-500">#   R2_BUCKET_NAME               -> from step 1</span>
+<span class="text-zinc-500">#   ADMIN_USERNAME               -> your choice</span>
+
+<span class="text-zinc-500"># Run migrations</span>
+npx wrangler d1 migrations apply residue-app --remote
+
+<span class="text-zinc-500"># Set secrets</span>
+echo "your-secret-token" | npx wrangler secret put AUTH_TOKEN
+npx wrangler secret put ADMIN_PASSWORD
+npx wrangler secret put R2_SECRET_ACCESS_KEY
+
+<span class="text-zinc-500"># Deploy</span>
+npx wrangler deploy</code></pre>
+                </div>
+            </div>
+
+            <!-- Step 3: AI Search -->
+            <div>
+                <h3 class="text-xl font-semibold mb-3 text-amber-300">
+                    3. Set up AI Search
+                </h3>
+                <p class="text-zinc-300 text-sm mb-4 leading-relaxed">
+                    Search requires a Cloudflare AI Search instance connected to your R2 bucket.
+                    Without this, the <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue search</code> and
+                    <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue query</code> commands will not work.
+                </p>
+
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6 space-y-4">
+                    <div>
+                        <p class="text-zinc-400 text-xs mb-2">Go to Compute & AI > AI Search in the Cloudflare dashboard:</p>
+                        <div class="bg-zinc-950 rounded p-3">
+                            <a href="https://dash.cloudflare.com/?to=/:account/ai/ai-search" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline break-all font-mono text-xs sm:text-sm">dash.cloudflare.com/?to=/:account/ai/ai-search</a>
+                        </div>
+                    </div>
+
+                    <ol class="text-zinc-300 text-sm space-y-2 list-decimal list-inside">
+                        <li>Select <strong>Create</strong>, then <strong>Get Started</strong></li>
+                        <li>Choose your R2 bucket as the data source</li>
+                        <li>Leave chunking, embedding, and retrieval settings at their defaults</li>
+                        <li>Name the instance <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue-search</code></li>
+                        <li>Complete the setup</li>
+                    </ol>
+
+                    <div class="bg-zinc-950 border border-zinc-800 rounded p-4">
+                        <p class="text-zinc-400 text-xs mb-2">After creation, configure path filters so only search-optimized text files are indexed:</p>
+                        <div class="mb-3">
+                            <p class="text-zinc-500 text-xs mb-1">Go to the Settings tab of your instance:</p>
+                            <a href="https://dash.cloudflare.com/?to=/:account/ai/ai-search/instance/residue-search/settings" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline break-all font-mono text-xs">dash.cloudflare.com/?to=/:account/ai/ai-search/instance/residue-search/settings</a>
+                        </div>
+                        <p class="text-zinc-400 text-xs mb-2">Under <strong>Resources > Path Filters</strong>:</p>
+                        <div class="font-mono text-sm space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-zinc-500 w-24 shrink-0">Include</span>
+                                <span class="text-zinc-300">search/**</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-zinc-500 w-24 shrink-0">Exclude</span>
+                                <span class="text-zinc-300">sessions/**</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-zinc-500 text-xs">
+                        For more details, see the <a href="https://developers.cloudflare.com/ai-search/get-started/dashboard/" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">Cloudflare AI Search docs</a>.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 4: Install CLI -->
+            <div>
+                <h3 class="text-xl font-semibold mb-3 text-amber-300">
+                    4. Install the CLI
+                </h3>
+                <p class="text-zinc-400 text-sm mb-3">
+                    Requires <a href="https://bun.sh" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">bun</a> as the runtime. Install bun first if you don't have it.
+                </p>
+                <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                    <div class="text-zinc-300">bun add -g @residue/cli</div>
+                </div>
+            </div>
+
+            <!-- Step 5: Login -->
+            <div>
+                <h3 class="text-xl font-semibold mb-3 text-amber-300">
+                    5. Login
+                </h3>
+                <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs sm:text-sm overflow-x-auto mb-3">
+                    <div class="text-zinc-300">residue login --url https://residue.your-subdomain.workers.dev --token YOUR_AUTH_TOKEN</div>
+                </div>
+                <div class="text-zinc-500 text-xs space-y-1">
+                    <p><code class="text-zinc-400">--url</code> is your worker URL from step 2.</p>
+                    <p><code class="text-zinc-400">--token</code> is the <code class="text-zinc-400">AUTH_TOKEN</code> you set in step 2.</p>
+                    <p>Saves credentials to <code class="text-zinc-400">~/.residue/config</code>. One-time.</p>
+                </div>
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 mt-3">
+                    <p class="text-zinc-400 text-xs mb-2">Use <code class="text-zinc-300">--local</code> to save credentials to <code class="text-zinc-300">.residue/config</code> in the current project instead of globally. Useful when different repos connect to different workers.</p>
+                    <div class="bg-zinc-950 rounded p-3 font-mono text-xs sm:text-sm overflow-x-auto">
+                        <div class="text-zinc-300">residue login --url https://residue.your-subdomain.workers.dev --token YOUR_AUTH_TOKEN --local</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Per-project label -->
+            <div class="flex items-center gap-3">
+                <div class="h-px flex-1 bg-zinc-800"></div>
+                <span class="text-xs text-zinc-500 uppercase tracking-wider">Per-project setup</span>
+                <div class="h-px flex-1 bg-zinc-800"></div>
+            </div>
+
+            <!-- Step 6: Configure repo -->
+            <div>
+                <h3 class="text-xl font-semibold mb-3 text-amber-300">
+                    6. Configure a repository
+                </h3>
+                <p class="text-zinc-400 text-sm mb-3">Run these in any git repository you want to track:</p>
+                <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4">
+                    <div class="text-zinc-500"># Install git hooks (post-commit + pre-push)</div>
+                    <div class="text-zinc-300">residue init</div>
+                    <div class="text-zinc-300 mt-3"><span class="text-zinc-500"># Set up your agent adapter</span></div>
+                    <div class="text-zinc-300">residue setup claude-code   <span class="text-zinc-500"># or: residue setup pi</span></div>
+                </div>
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6 space-y-3">
+                    <p class="text-zinc-400 text-sm">
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue init</code> --
+                        Installs <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">post-commit</code> and
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">pre-push</code> hooks.
+                        Adds <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.residue/</code> to <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.gitignore</code>.
+                    </p>
+                    <p class="text-zinc-400 text-sm">
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup claude-code</code> --
+                        Adds hooks to <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.claude/settings.json</code>.
+                    </p>
+                    <p class="text-zinc-400 text-sm">
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup pi</code> --
+                        Installs extension at <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.pi/extensions/residue.ts</code>.
+                    </p>
+                    <p class="text-zinc-500 text-xs mt-1">
+                        That's it. Commit and push as usual -- conversations are captured and uploaded automatically.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Next page -->
+    <div class="mt-12 pt-8 border-t border-zinc-800">
+        <a href="/docs/how-it-works" class="text-amber-400 hover:underline text-sm flex items-center gap-1">
+            Next: How It Works &rarr;
+        </a>
+    </div>
+</DocsLayout>

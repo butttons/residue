@@ -1,31 +1,14 @@
 import type { FC } from "hono/jsx";
-import type { GraphData, SessionLane } from "../lib/graph";
-import { relativeTime } from "../lib/time";
-import { urls } from "../lib/urls";
+import type { GraphData, SessionLane } from "@/lib/graph";
+import { Circle, Line, useCommitGraphLayout } from "@/lib/svg";
+import { relativeTime } from "@/lib/time";
+import { urls } from "@/lib/urls";
 
 type CommitGraphProps = {
 	data: GraphData;
 	org: string;
 	repo: string;
 };
-
-const ROW_HEIGHT = 60;
-const LANE_SPACING = 20;
-const DOT_RADIUS = 4;
-const LANE_DOT_RADIUS = 3.5;
-const LINE_WIDTH = 2;
-const TRUNK_GAP = 14;
-
-const laneX = (lane: number): number => lane * LANE_SPACING + LANE_SPACING / 2;
-
-const FIRST_LINE_OFFSET = 12;
-const rowY = (row: number): number => row * ROW_HEIGHT + FIRST_LINE_OFFSET;
-
-const trunkX = (laneCount: number): number =>
-	laneCount > 0 ? laneCount * LANE_SPACING + TRUNK_GAP : DOT_RADIUS + 2;
-
-const graphWidth = (laneCount: number): number =>
-	trunkX(laneCount) + DOT_RADIUS + 4;
 
 const getAgentCounts = (
 	sessions: { sessionId: string; agent: string }[],
@@ -82,11 +65,16 @@ const GraphSvg: FC<{
 	data: GraphData;
 	totalHeight: number;
 	width: number;
-	trunk: number;
-}> = ({ data, totalHeight, width, trunk }) => {
-	const { commits, lanes, laneCount } = data;
+}> = ({ data, totalHeight, width }) => {
+	const layout = useCommitGraphLayout({
+		data: {
+			commitCount: data.commits.length,
+			lanes: data.lanes,
+			laneCount: data.laneCount,
+		},
+	});
 
-	if (commits.length === 0) return <span />;
+	if (data.commits.length === 0) return <span />;
 
 	return (
 		<svg
@@ -95,89 +83,54 @@ const GraphSvg: FC<{
 			height={totalHeight}
 			style="pointer-events: none"
 		>
-			{/* Trunk line — dashed and subtle so it reads as a timeline, not a session lane */}
-			{commits.length > 1 && (
-				<line
-					x1={trunk}
-					y1={rowY(0)}
-					x2={trunk}
-					y2={rowY(commits.length - 1)}
-					stroke="#27272a"
-					stroke-width={LINE_WIDTH}
-					stroke-dasharray="3,4"
-				/>
-			)}
-
-			{/* Lane vertical lines */}
-			{lanes.map((lane) => (
-				<line
-					x1={laneX(lane.lane)}
-					y1={rowY(lane.startRow)}
-					x2={laneX(lane.lane)}
-					y2={rowY(lane.endRow)}
-					stroke={lane.color}
-					stroke-width={LINE_WIDTH}
-					stroke-opacity="0.5"
+			{layout.lines.map((l) => (
+				<Line
+					x1={l.x1}
+					y1={l.y1}
+					x2={l.x2}
+					y2={l.y2}
+					stroke={l.stroke}
+					strokeWidth={l.strokeWidth}
+					strokeOpacity={l.strokeOpacity}
+					isDashed={l.isDashed}
+					dashArray={l.dashArray}
 				/>
 			))}
 
-			{/* Horizontal connectors: lane dots to trunk */}
-			{laneCount > 0 &&
-				lanes.flatMap((lane) =>
-					lane.commitRows.map((row) => (
-						<line
-							x1={laneX(lane.lane) + LANE_DOT_RADIUS + 1}
-							y1={rowY(row)}
-							x2={trunk - DOT_RADIUS - 1}
-							y2={rowY(row)}
-							stroke={lane.color}
-							stroke-width={1}
-							stroke-opacity="0.25"
-							stroke-dasharray="2,2"
-						/>
-					)),
-				)}
-
-			{/* Lane dots */}
-			{lanes.flatMap((lane) =>
-				lane.commitRows.map((row) => (
-					<circle
-						cx={laneX(lane.lane)}
-						cy={rowY(row)}
-						r={LANE_DOT_RADIUS}
-						fill={lane.color}
-					/>
-				)),
-			)}
-
-			{/* Trunk dots — small and muted to not compete with lane dots */}
-			{commits.map((_, i) => (
-				<circle cx={trunk} cy={rowY(i)} r={2} fill="#3f3f46" />
+			{layout.dots.map((d) => (
+				<Circle cx={d.cx} cy={d.cy} r={d.r} fill={d.fill} />
 			))}
 		</svg>
 	);
 };
 
 const CommitGraph: FC<CommitGraphProps> = ({ data, org, repo }) => {
-	const { commits, lanes, laneCount } = data;
-	const trunk = trunkX(laneCount);
-	const width = graphWidth(laneCount);
-	const totalHeight = commits.length * ROW_HEIGHT;
+	const layout = useCommitGraphLayout({
+		data: {
+			commitCount: data.commits.length,
+			lanes: data.lanes,
+			laneCount: data.laneCount,
+		},
+	});
 
 	return (
 		<div>
-			<LaneLegend lanes={lanes} commits={commits} org={org} repo={repo} />
+			<LaneLegend
+				lanes={data.lanes}
+				commits={data.commits}
+				org={org}
+				repo={repo}
+			/>
 
-			<div class="relative" style={`min-height: ${totalHeight}px`}>
+			<div class="relative" style={`min-height: ${layout.totalHeight}px`}>
 				<GraphSvg
 					data={data}
-					totalHeight={totalHeight}
-					width={width}
-					trunk={trunk}
+					totalHeight={layout.totalHeight}
+					width={layout.svgWidth}
 				/>
 
-				<div style={`padding-left: ${width + 8}px`}>
-					{commits.map((commit) => {
+				<div style={`padding-left: ${layout.contentLeftPad}px`}>
+					{data.commits.map((commit) => {
 						const agentCounts = getAgentCounts(
 							commit.sessions.map((s) => ({
 								sessionId: s.sessionId,
@@ -187,7 +140,7 @@ const CommitGraph: FC<CommitGraphProps> = ({ data, org, repo }) => {
 
 						return (
 							<div
-								style={`height: ${ROW_HEIGHT}px`}
+								style={`height: ${layout.rowHeight}px`}
 								class="flex flex-col justify-start"
 							>
 								<div class="flex items-center gap-2 flex-wrap">
@@ -235,5 +188,5 @@ const CommitGraph: FC<CommitGraphProps> = ({ data, org, repo }) => {
 	);
 };
 
-export { CommitGraph, ROW_HEIGHT };
+export { CommitGraph };
 export type { CommitGraphProps };

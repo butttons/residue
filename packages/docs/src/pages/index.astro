@@ -1,7 +1,15 @@
 ---
-import { BookOpen, GitCommit, Github, Zap } from "lucide-astro";
+import {
+	BookOpen,
+	Cloud,
+	Download,
+	FolderGit2,
+	GitCommit,
+	Github,
+	LogIn,
+	Zap,
+} from "lucide-astro";
 import FlowDiagram from "../components/FlowDiagram.astro";
-import QuickStart from "../components/QuickStart.astro";
 import Layout from "../layouts/Layout.astro";
 ---
 
@@ -26,11 +34,11 @@ import Layout from "../layouts/Layout.astro";
 
             <div class="flex gap-3 justify-center flex-wrap">
                 <a
-                    href="#quick-start"
+                    href="/docs#setup"
                     class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-lg font-semibold transition-colors flex items-center gap-2 text-sm"
                 >
                     <Zap class="w-4 h-4" />
-                    Quick Start
+                    Get Started
                 </a>
                 <a
                     href="/docs"
@@ -48,8 +56,78 @@ import Layout from "../layouts/Layout.astro";
             <FlowDiagram />
         </div>
 
-        <!-- Quick Start -->
-        <QuickStart />
+        <!-- Setup -->
+        <div class="mb-20 max-w-3xl mx-auto">
+            <h2 class="text-2xl font-bold mb-8 text-center">Setup</h2>
+            <div class="space-y-3">
+                <!-- Step 1 -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-lg px-5 py-4 flex items-center gap-4">
+                    <div class="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+                        <Cloud class="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <span class="text-xs text-amber-400/70 font-semibold shrink-0">1</span>
+                            <span class="text-zinc-300 text-sm">Deploy your worker</span>
+                        </div>
+                    </div>
+                    <a
+                        href="https://deploy.workers.cloudflare.com/?url=https://github.com/butttons/residue/tree/main/packages/worker"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="shrink-0"
+                    >
+                        <img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers" class="h-7" />
+                    </a>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-lg px-5 py-4 flex items-center gap-4">
+                    <div class="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+                        <Download class="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <span class="text-xs text-amber-400/70 font-semibold shrink-0">2</span>
+                            <span class="text-zinc-300 text-sm">Install the CLI</span>
+                        </div>
+                    </div>
+                    <code class="text-zinc-400 text-xs bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 shrink-0">bun add -g @residue/cli</code>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-lg px-5 py-4 flex items-center gap-4">
+                    <div class="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+                        <LogIn class="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <span class="text-xs text-amber-400/70 font-semibold shrink-0">3</span>
+                            <span class="text-zinc-300 text-sm">Connect to your worker</span>
+                        </div>
+                    </div>
+                    <code class="text-zinc-400 text-xs bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 shrink-0">residue login</code>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-lg px-5 py-4 flex items-center gap-4">
+                    <div class="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+                        <FolderGit2 class="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <span class="text-xs text-amber-400/70 font-semibold shrink-0">4</span>
+                            <span class="text-zinc-300 text-sm">Set up a repo</span>
+                        </div>
+                    </div>
+                    <code class="text-zinc-400 text-xs bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 shrink-0">residue init && residue setup claude-code</code>
+                </div>
+            </div>
+
+            <p class="text-zinc-500 text-xs text-center mt-6">
+                Full instructions including R2 setup, AI Search, and all options in the <a href="/docs#setup" class="text-amber-400 hover:underline">setup guide</a>.
+            </p>
+        </div>
 
         <!-- CTA -->
         <div class="border-t border-zinc-800 mt-20">
@@ -63,7 +141,7 @@ import Layout from "../layouts/Layout.astro";
                 </p>
                 <div class="flex flex-wrap gap-4 justify-center">
                     <a
-                        href="#quick-start"
+                        href="/docs#setup"
                         class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2 text-sm"
                     >
                         <Zap class="w-4 h-4" />

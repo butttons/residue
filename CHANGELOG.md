@@ -1,5 +1,31 @@
 # residue
 
+## 0.0.7
+
+### @residue/cli
+
+- Add `residue read <session-id>` command to pipe session transcript data to stdout from local state
+- Add `residue context` command that outputs agent-facing documentation to stdout
+- Add CLI-to-worker version mismatch detection via `X-Version` header and `/api/ping` endpoint
+- Track files touched per commit with line counts during sync
+- Surface commit file data (paths, change types, line counts) in query output and search text
+- Derive deterministic session IDs from agent data path instead of random UUIDs
+- Run post-commit hook synchronously to prevent git index.lock races
+
+### @residue/worker
+
+- Add search UI in nav bar with results page
+- Revamp home page dashboard layout
+- Add weekly activity bar chart to repo page
+- Add SVG charting library for server-rendered data visualizations
+- Surface commit file data (paths, change types, line counts) in commit detail UI
+- Add CLI-to-worker version mismatch detection via `X-Version` header and `/api/ping` endpoint
+
+### @residue/docs
+
+- Split documentation into multi-page layout
+- Simplify setup instructions to one-liners with links to detailed docs
+
 ## 0.0.6
 
 ### @residue/worker

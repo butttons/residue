@@ -1,5 +1,14 @@
 # @residue/cli
 
+## 0.0.7
+
+### Patch Changes
+
+- 984d53a: Add `residue context` command that outputs agent-facing documentation to stdout.
+- d5c7297: Add `residue read <session-id>` command to pipe session transcript data to stdout from local state.
+- 6a7123e: Run post-commit hook synchronously to prevent git index.lock races with subsequent commands.
+- bc7f309: Add CLI-to-worker version mismatch detection via `X-Version` response header and `/api/ping` endpoint.
+
 ## 0.0.6
 
 ## 0.0.5

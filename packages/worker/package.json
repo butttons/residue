@@ -1,12 +1,12 @@
 {
 	"name": "@residue/worker",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"private": true,
 	"scripts": {
 		"build:assets": "vite build",
 		"dev:assets": "vite build --watch",
 		"deploy": "pnpm run db:migrate && wrangler deploy",
-		"dev": "wrangler dev",
+		"dev": "wrangler dev --config wrangler.local.jsonc",
 		"start": "wrangler dev",
 		"test": "vitest",
 		"typecheck": "tsc --noEmit",

@@ -9,12 +9,14 @@ type LayoutProps = PropsWithChildren<{
 	title: string;
 	username?: string;
 	breadcrumbs?: BreadcrumbItem[];
+	searchQuery?: string;
 }>;
 
 const Layout: FC<LayoutProps> = ({
 	title,
 	username,
 	breadcrumbs,
+	searchQuery,
 	children,
 }) => {
 	return html`<!doctype html>
@@ -33,24 +35,35 @@ const Layout: FC<LayoutProps> = ({
 				<nav class="border-b border-zinc-800">
 					<div class="max-w-4xl mx-auto px-4 h-12 flex items-center justify-between">
 						<div class="flex items-center gap-1.5 text-sm text-zinc-400">
+							<a href="/app" class="font-bold text-zinc-100 hover:text-zinc-200 transition-colors">residue</a>
 							${
 								breadcrumbs && breadcrumbs.length > 0
 									? html`${breadcrumbs.map(
-											(item, i) => html`
-											${i > 0 ? html`<span class="text-zinc-600">/</span>` : ""}
+											(item) => html`
+											<span class="text-zinc-600">/</span>
 											${
-												i === 0 && item.href
-													? html`<a href="${item.href}" class="hover:text-zinc-200 transition-colors flex items-center" title="Home"><i class="ph ph-house text-base"></i></a>`
-													: item.href
-														? html`<a href="${item.href}" class="hover:text-zinc-200 transition-colors">${item.label}</a>`
-														: html`<span class="text-zinc-200">${item.label}</span>`
+												item.href
+													? html`<a href="${item.href}" class="hover:text-zinc-200 transition-colors">${item.label}</a>`
+													: html`<span class="text-zinc-200">${item.label}</span>`
 											}
 										`,
 										)}`
-									: html`<a href="/app" class="hover:text-zinc-200 transition-colors flex items-center" title="Home"><i class="ph ph-house text-base"></i></a>`
+									: ""
 							}
 						</div>
 						<div class="flex items-center gap-3">
+							<form action="/app/search" method="GET" class="inline-flex">
+								<div class="relative flex items-center">
+									<i class="ph ph-magnifying-glass absolute left-2 text-zinc-500 text-sm pointer-events-none"></i>
+									<input
+										type="text"
+										name="q"
+										placeholder="Search..."
+										value="${searchQuery ?? ""}"
+										class="w-40 bg-zinc-900 border border-zinc-800 rounded pl-7 pr-2 py-1 text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+									/>
+								</div>
+							</form>
 							${
 								username
 									? html`<span class="text-xs text-zinc-500">${username}</span>

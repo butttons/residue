@@ -31,7 +31,10 @@ export default function (pi: ExtensionAPI) {
 		if (doraAvailable) {
 			pi.exec(
 				"bash",
-				["-c", "(dora index > /tmp/dora-index.log 2>&1 &) || true"],
+				[
+					"-c",
+					"(dora index --ignore='worker-configuration.d.ts' > /tmp/dora-index.log 2>&1 &) || true",
+				],
 				{
 					timeout: 500,
 				},

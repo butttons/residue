@@ -3,6 +3,7 @@
 import { Command } from "commander";
 import { capture } from "@/commands/capture";
 import { clear } from "@/commands/clear";
+import { context } from "@/commands/context";
 import { hookClaudeCode } from "@/commands/hook";
 import { init } from "@/commands/init";
 import { login } from "@/commands/login";
@@ -13,6 +14,7 @@ import {
 	querySession,
 	querySessions,
 } from "@/commands/query";
+import { read } from "@/commands/read";
 import { search } from "@/commands/search";
 import { sessionEnd } from "@/commands/session-end";
 import { sessionStart } from "@/commands/session-start";
@@ -107,6 +109,17 @@ program
 	.command("push")
 	.description("Upload pending sessions to worker (manual trigger)")
 	.action(wrapCommand(() => push()));
+
+program
+	.command("context")
+	.description("Output agent-facing documentation to stdout")
+	.action(wrapCommand(() => context()));
+
+program
+	.command("read")
+	.description("Read session transcript data to stdout")
+	.argument("<session-id>", "Session ID to read")
+	.action(wrapCommand((sessionId: string) => read({ id: sessionId })));
 
 program
 	.command("clear")

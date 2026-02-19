@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { authMiddleware } from "./middleware/auth";
 import { sessionMiddleware } from "./middleware/session";
+import { VERSION, versionMiddleware } from "./middleware/version";
 import { auth } from "./routes/auth";
 import { pages } from "./routes/pages";
 import { query } from "./routes/query";
@@ -12,9 +13,12 @@ import { users } from "./routes/users";
 
 const app = new Hono<{ Bindings: Env }>();
 
+app.use("/api/*", versionMiddleware);
 app.use("/api/*", authMiddleware);
 
 app.use("/app/*", sessionMiddleware);
+
+app.get("/api/ping", (c) => c.json({ version: VERSION }));
 
 app.route("/api/sessions", sessions);
 app.route("/api/repos", repos);

@@ -28,16 +28,33 @@ After setup, conversations are captured automatically. Commit and push as usual.
 
 ## Commands
 
+**User-facing:**
+
 | Command | Description |
 |---|---|
 | `residue login` | Save worker URL + auth token |
 | `residue init` | Install git hooks (post-commit, pre-push) |
 | `residue setup <agent>` | Configure an agent adapter |
 | `residue push` | Manually upload pending sessions |
+| `residue status` | Show current residue state for this project |
+| `residue clear` | Remove pending sessions from the local queue |
+| `residue search <query>` | Search session history. Use `--ai` for AI-powered answers |
+| `residue read <session-id>` | Read a local session transcript to stdout |
+| `residue context` | Output agent-facing documentation to stdout |
+| `residue query sessions` | List sessions (filter by `--agent`, `--repo`, `--branch`, `--since`, `--until`) |
+| `residue query commits` | List commits (filter by `--repo`, `--branch`, `--author`, `--since`, `--until`) |
+| `residue query session <id>` | Get full details for a specific session |
+| `residue query commit <sha>` | Get details for a specific commit |
+
+**Hook-invoked (internal):**
+
+| Command | Description |
+|---|---|
 | `residue capture` | Tag pending sessions with current commit (hook) |
 | `residue sync` | Upload sessions + search text to worker (hook) |
 | `residue session start` | Register a new session (adapter) |
 | `residue session end` | Mark a session as ended (adapter) |
+| `residue hook claude-code` | Handle Claude Code hook events (stdin) |
 
 ## Search Text Generation
 

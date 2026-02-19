@@ -4,6 +4,13 @@ import { z } from "zod";
 import { DB } from "../lib/db";
 import { createPresignedPutUrl } from "../lib/presign";
 
+const commitFileSchema = z.object({
+	path: z.string().min(1),
+	change_type: z.string().min(1),
+	lines_added: z.number().int().default(0),
+	lines_deleted: z.number().int().default(0),
+});
+
 const commitSchema = z.object({
 	sha: z.string().min(1),
 	org: z.string().min(1),
@@ -12,6 +19,7 @@ const commitSchema = z.object({
 	author: z.string(),
 	committed_at: z.number(),
 	branch: z.string().optional(),
+	files: z.array(commitFileSchema).optional(),
 });
 
 const postSessionsSchema = z.object({
@@ -71,6 +79,18 @@ sessions.post(
 					committedAt: commit.committed_at,
 					branch: commit.branch ?? null,
 				});
+
+				if (commit.files && commit.files.length > 0) {
+					await db.insertCommitFiles({
+						commitSha: commit.sha,
+						files: commit.files.map((f) => ({
+							path: f.path,
+							changeType: f.change_type,
+							linesAdded: f.lines_added,
+							linesDeleted: f.lines_deleted,
+						})),
+					});
+				}
 			}
 		} catch {
 			return c.json({ error: "Failed to write metadata to database" }, 500);
