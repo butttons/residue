@@ -5,13 +5,13 @@
 	"scripts": {
 		"build:assets": "vite build",
 		"dev:assets": "vite build --watch",
-		"deploy": "pnpm run db:migrate && wrangler deploy",
+		"deploy": "wrangler d1 migrations apply residue-app --remote && wrangler deploy",
 		"dev": "wrangler dev --config wrangler.local.jsonc",
 		"start": "wrangler dev",
 		"test": "vitest",
 		"typecheck": "tsc --noEmit",
 		"cf-typegen": "wrangler types",
-		"db:migrate": "wrangler d1 migrations apply residue-app",
+		"db:migrate": "wrangler d1 migrations apply residue-app --remote",
 		"db:migrate:local": "wrangler d1 migrations apply residue-app --local"
 	},
 	"dependencies": {
