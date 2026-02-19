@@ -18,10 +18,10 @@ const ActivityGraph: FC<ActivityGraphProps> = ({ dailyCounts }) => {
 			</div>
 			<div class="overflow-x-auto activity-graph-container">
 				<svg
-					width={layout.svgWidth}
-					height={layout.svgHeight}
+					width="100%"
+					viewBox={`0 0 ${layout.svgWidth} ${layout.svgHeight}`}
+					preserveAspectRatio="xMidYMid meet"
 					class="block"
-					style="min-width: fit-content"
 				>
 					{layout.monthLabels.map((ml) => (
 						<Text x={ml.x} y={10} fill={zinc[500]}>

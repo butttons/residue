@@ -2,12 +2,18 @@ import { Hono } from "hono";
 import { raw } from "hono/html";
 import type { FC } from "hono/jsx";
 import { ActivityGraph } from "../components/ActivityGraph";
+import { AgentBreakdownChart } from "../components/AgentBreakdownChart";
 import { CommitGraph } from "../components/CommitGraph";
 import type { ContinuationLink } from "../components/Conversation";
 import { Conversation } from "../components/Conversation";
 import { Layout } from "../components/Layout";
 import { StatsChart } from "../components/StatsChart";
-import type { CommitWithSessionRow } from "../lib/db";
+import type {
+	AgentBreakdown,
+	CommitWithSessionRow,
+	GlobalStats,
+	RecentCommitRow,
+} from "../lib/db";
 import { DB } from "../lib/db";
 import { computeGraph } from "../lib/graph";
 import { formatTimestamp, relativeTime } from "../lib/time";
@@ -84,20 +90,159 @@ const groupCommits = (rows: CommitWithSessionRow[]): GroupedCommit[] => {
 
 const pages = new Hono<{ Bindings: Env; Variables: { username: string } }>();
 
-// Home page — list orgs
+// --- Home page sub-components ---
+
+const StatCard: FC<{
+	label: string;
+	value: string | number;
+	icon: string;
+	detail?: string;
+}> = ({ label, value, icon, detail }) => (
+	<div class="bg-zinc-900 border border-zinc-800 rounded-md p-4 flex flex-col gap-1">
+		<div class="flex items-center gap-1.5 text-zinc-500 text-xs">
+			<i class={`ph ph-${icon} text-sm`} />
+			{label}
+		</div>
+		<span class="text-xl font-bold text-zinc-100">{value}</span>
+		{detail && <span class="text-xs text-zinc-500">{detail}</span>}
+	</div>
+);
+
+const StatsBar: FC<{ stats: GlobalStats }> = ({ stats }) => (
+	<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+		<StatCard
+			label="Conversations"
+			value={stats.totalSessions.toLocaleString()}
+			icon="chats-circle"
+		/>
+		<StatCard
+			label="Commits"
+			value={stats.totalCommits.toLocaleString()}
+			icon="git-commit"
+		/>
+		<StatCard
+			label="Repos"
+			value={stats.totalRepos.toLocaleString()}
+			icon="folder-simple"
+		/>
+		<StatCard
+			label="Files changed"
+			value={stats.totalFilesChanged.toLocaleString()}
+			icon="file-code"
+			detail={`+${stats.totalLinesAdded.toLocaleString()} / -${stats.totalLinesDeleted.toLocaleString()}`}
+		/>
+	</div>
+);
+
+const RecentActivity: FC<{
+	commits: RecentCommitRow[];
+}> = ({ commits }) => {
+	if (commits.length === 0) return <span />;
+
+	// Group by commit SHA to aggregate sessions/agents per commit
+	const grouped = new Map<
+		string,
+		{
+			sha: string;
+			message: string | null;
+			author: string | null;
+			committedAt: number | null;
+			branch: string | null;
+			org: string;
+			repo: string;
+			agents: Set<string>;
+		}
+	>();
+
+	for (const row of commits) {
+		const existing = grouped.get(row.commit_sha);
+		if (existing) {
+			existing.agents.add(row.agent);
+		} else {
+			grouped.set(row.commit_sha, {
+				sha: row.commit_sha,
+				message: row.message,
+				author: row.author,
+				committedAt: row.committed_at,
+				branch: row.branch,
+				org: row.org,
+				repo: row.repo,
+				agents: new Set([row.agent]),
+			});
+		}
+	}
+
+	const uniqueCommits = [...grouped.values()];
+
+	return (
+		<div class="mb-6">
+			<h2 class="text-xs text-zinc-400 mb-3">Recent activity</h2>
+			<div class="bg-zinc-900 border border-zinc-800 rounded-md divide-y divide-zinc-800/50">
+				{uniqueCommits.map((commit) => (
+					<a
+						href={`/app/${commit.org}/${commit.repo}/${commit.sha}`}
+						class="flex items-start gap-3 px-4 py-3 hover:bg-zinc-800/30 transition-colors"
+					>
+						<span class="text-blue-500 font-mono text-sm flex-shrink-0 mt-0.5">
+							{commit.sha.slice(0, 7)}
+						</span>
+						<div class="flex-1 min-w-0">
+							<p class="text-zinc-100 text-sm truncate">
+								{commit.message ?? "No message"}
+							</p>
+							<div class="flex items-center gap-2 mt-1 text-xs text-zinc-500 flex-wrap">
+								<span class="font-mono text-zinc-400">
+									{commit.org}/{commit.repo}
+								</span>
+								{commit.branch && (
+									<>
+										<span class="text-zinc-700">&middot;</span>
+										<span class="font-mono">
+											<i class="ph ph-git-branch text-[10px] mr-0.5" />
+											{commit.branch}
+										</span>
+									</>
+								)}
+								<span class="text-zinc-700">&middot;</span>
+								<span>{commit.author}</span>
+								{commit.committedAt && (
+									<>
+										<span class="text-zinc-700">&middot;</span>
+										<span>{relativeTime(commit.committedAt)}</span>
+									</>
+								)}
+							</div>
+						</div>
+						<div class="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+							{[...commit.agents].map((agent) => (
+								<span class="text-xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+									{agent}
+								</span>
+							))}
+						</div>
+					</a>
+				))}
+			</div>
+		</div>
+	);
+};
+
+// Home page — dashboard
 pages.get("/", async (c) => {
 	const db = new DB(c.env.DB);
 	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
-	const [orgs, dailyCounts] = await Promise.all([
-		db.getOrgList(),
-		db.getDailyActivityCountsGlobal({ since: oneYearAgo }),
-	]);
+	const [orgs, dailyCounts, stats, agentBreakdown, recentCommits] =
+		await Promise.all([
+			db.getOrgList(),
+			db.getDailyActivityCountsGlobal({ since: oneYearAgo }),
+			db.getGlobalStats(),
+			db.getAgentBreakdown(),
+			db.getRecentCommits({ limit: 15 }),
+		]);
 	const username = c.get("username");
 
 	return c.html(
 		<Layout title="residue" username={username}>
-			<h1 class="text-2xl font-bold mb-6 text-zinc-100">residue</h1>
-
 			{orgs.length === 0 ? (
 				<p class="text-zinc-400">
 					No sessions uploaded yet. Run{" "}
@@ -108,28 +253,41 @@ pages.get("/", async (c) => {
 				</p>
 			) : (
 				<>
+					<StatsBar stats={stats} />
+
 					<ActivityGraph dailyCounts={dailyCounts} />
 
-					<div class="flex flex-col gap-3">
-						{orgs.map((org) => (
-							<a
-								href={`/app/${org.org}`}
-								class="block bg-zinc-900 border border-zinc-800 rounded-md p-4 hover:border-zinc-700 transition-colors"
-							>
-								<div class="flex items-center justify-between">
-									<span class="text-zinc-100 font-medium">{org.org}</span>
-									<span class="text-zinc-400 text-sm">
-										{org.repo_count} {org.repo_count === 1 ? "repo" : "repos"}
-									</span>
-								</div>
-								{org.last_activity && (
-									<span class="text-zinc-500 text-xs mt-1 block">
-										{relativeTime(org.last_activity)}
-									</span>
-								)}
-							</a>
-						))}
+					<StatsChart dailyCounts={dailyCounts} />
+
+					{agentBreakdown.length > 1 && (
+						<AgentBreakdownChart agents={agentBreakdown} />
+					)}
+
+					<div class="mb-6">
+						<h2 class="text-xs text-zinc-400 mb-3">Organizations</h2>
+						<div class="flex flex-col gap-3">
+							{orgs.map((org) => (
+								<a
+									href={`/app/${org.org}`}
+									class="block bg-zinc-900 border border-zinc-800 rounded-md p-4 hover:border-zinc-700 transition-colors"
+								>
+									<div class="flex items-center justify-between">
+										<span class="text-zinc-100 font-medium">{org.org}</span>
+										<span class="text-zinc-400 text-sm">
+											{org.repo_count} {org.repo_count === 1 ? "repo" : "repos"}
+										</span>
+									</div>
+									{org.last_activity && (
+										<span class="text-zinc-500 text-xs mt-1 block">
+											{relativeTime(org.last_activity)}
+										</span>
+									)}
+								</a>
+							))}
+						</div>
 					</div>
+
+					<RecentActivity commits={recentCommits} />
 				</>
 			)}
 		</Layout>,
@@ -146,7 +304,7 @@ pages.get("/search", async (c) => {
 			<Layout
 				title="Search — residue"
 				username={username}
-				breadcrumbs={[{ label: "residue", href: "/app" }, { label: "search" }]}
+				breadcrumbs={[{ label: "search" }]}
 			>
 				<p class="text-zinc-400 text-sm">
 					Enter a query in the search bar above.
@@ -238,7 +396,7 @@ pages.get("/search", async (c) => {
 		<Layout
 			title={`"${q}" — Search — residue`}
 			username={username}
-			breadcrumbs={[{ label: "residue", href: "/app" }, { label: "search" }]}
+			breadcrumbs={[{ label: "search" }]}
 			searchQuery={q}
 		>
 			<h1 class="text-sm text-zinc-400 mb-6">
@@ -358,11 +516,7 @@ pages.get("/:org", async (c) => {
 
 	if (repos.length === 0) {
 		return c.html(
-			<Layout
-				title={`${org} — residue`}
-				username={username}
-				breadcrumbs={[{ label: "residue", href: "/app" }]}
-			>
+			<Layout title={`${org} — residue`} username={username} breadcrumbs={[]}>
 				<p class="text-zinc-400">No data found for this organization.</p>
 			</Layout>,
 			404,
@@ -373,7 +527,7 @@ pages.get("/:org", async (c) => {
 		<Layout
 			title={`${org} — residue`}
 			username={username}
-			breadcrumbs={[{ label: "residue", href: "/app" }, { label: org }]}
+			breadcrumbs={[{ label: org }]}
 		>
 			<ActivityGraph dailyCounts={dailyCounts} />
 
@@ -434,10 +588,7 @@ pages.get("/:org/:repo", async (c) => {
 			<Layout
 				title={`${org}/${repo} — residue`}
 				username={username}
-				breadcrumbs={[
-					{ label: "residue", href: "/app" },
-					{ label: org, href: `/app/${org}` },
-				]}
+				breadcrumbs={[{ label: org, href: `/app/${org}` }]}
 			>
 				<p class="text-zinc-400">No data found for this repository.</p>
 			</Layout>,
@@ -479,11 +630,7 @@ pages.get("/:org/:repo", async (c) => {
 		<Layout
 			title={`${org}/${repo} — residue`}
 			username={username}
-			breadcrumbs={[
-				{ label: "residue", href: "/app" },
-				{ label: org, href: `/app/${org}` },
-				{ label: repo },
-			]}
+			breadcrumbs={[{ label: org, href: `/app/${org}` }, { label: repo }]}
 		>
 			<ActivityGraph dailyCounts={dailyCounts} org={org} repo={repo} />
 
@@ -537,7 +684,6 @@ pages.get("/:org/:repo/:sha", async (c) => {
 				title="Not found — residue"
 				username={username}
 				breadcrumbs={[
-					{ label: "residue", href: "/app" },
 					{ label: org, href: `/app/${org}` },
 					{ label: repo, href: `/app/${org}/${repo}` },
 				]}
@@ -650,7 +796,6 @@ pages.get("/:org/:repo/:sha", async (c) => {
 			title={`${sha.slice(0, 7)} — ${org}/${repo} — residue`}
 			username={username}
 			breadcrumbs={[
-				{ label: "residue", href: "/app" },
 				{ label: org, href: `/app/${org}` },
 				{ label: repo, href: `/app/${org}/${repo}` },
 				{ label: sha.slice(0, 7) },

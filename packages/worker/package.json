@@ -6,7 +6,7 @@
 		"build:assets": "vite build",
 		"dev:assets": "vite build --watch",
 		"deploy": "pnpm run db:migrate && wrangler deploy",
-		"dev": "wrangler dev",
+		"dev": "wrangler dev --config wrangler.local.jsonc",
 		"start": "wrangler dev",
 		"test": "vitest",
 		"typecheck": "tsc --noEmit",

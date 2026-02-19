@@ -181,6 +181,32 @@ type CommitDetailResult = {
 	files: CommitFileRow[];
 };
 
+type GlobalStats = {
+	totalSessions: number;
+	totalCommits: number;
+	totalRepos: number;
+	totalFilesChanged: number;
+	totalLinesAdded: number;
+	totalLinesDeleted: number;
+};
+
+type AgentBreakdown = {
+	agent: string;
+	sessionCount: number;
+};
+
+type RecentCommitRow = {
+	commit_sha: string;
+	message: string | null;
+	author: string | null;
+	committed_at: number | null;
+	branch: string | null;
+	org: string;
+	repo: string;
+	session_id: string;
+	agent: string;
+};
+
 export type {
 	SessionRow,
 	CommitRow,
@@ -199,6 +225,9 @@ export type {
 	QueryCommitResult,
 	SessionDetailResult,
 	CommitDetailResult,
+	GlobalStats,
+	AgentBreakdown,
+	RecentCommitRow,
 };
 
 export class DB {
@@ -815,5 +844,63 @@ export class DB {
 			sessions,
 			files,
 		};
+	}
+
+	// --- Home page stats ---
+
+	async getGlobalStats(): Promise<GlobalStats> {
+		const result = await this.db
+			.prepare(
+				`SELECT
+           (SELECT COUNT(*) FROM sessions) as totalSessions,
+           (SELECT COUNT(DISTINCT commit_sha) FROM commits) as totalCommits,
+           (SELECT COUNT(DISTINCT org || '/' || repo) FROM commits) as totalRepos,
+           (SELECT COUNT(DISTINCT commit_sha || '/' || file_path) FROM commit_files) as totalFilesChanged,
+           (SELECT COALESCE(SUM(lines_added), 0) FROM commit_files) as totalLinesAdded,
+           (SELECT COALESCE(SUM(lines_deleted), 0) FROM commit_files) as totalLinesDeleted`,
+			)
+			.first<GlobalStats>();
+
+		return (
+			result ?? {
+				totalSessions: 0,
+				totalCommits: 0,
+				totalRepos: 0,
+				totalFilesChanged: 0,
+				totalLinesAdded: 0,
+				totalLinesDeleted: 0,
+			}
+		);
+	}
+
+	async getAgentBreakdown(): Promise<AgentBreakdown[]> {
+		const result = await this.db
+			.prepare(
+				`SELECT agent, COUNT(*) as sessionCount
+         FROM sessions
+         GROUP BY agent
+         ORDER BY sessionCount DESC`,
+			)
+			.all<AgentBreakdown>();
+
+		return result.results;
+	}
+
+	async getRecentCommits(opts: { limit?: number }): Promise<RecentCommitRow[]> {
+		const limit = opts.limit ?? 10;
+
+		const result = await this.db
+			.prepare(
+				`SELECT c.commit_sha, c.message, c.author, c.committed_at, c.branch,
+                c.org, c.repo, c.session_id, s.agent
+         FROM commits c
+         JOIN sessions s ON c.session_id = s.id
+         ORDER BY c.committed_at DESC
+         LIMIT ?`,
+			)
+			.bind(limit)
+			.all<RecentCommitRow>();
+
+		return result.results;
 	}
 }

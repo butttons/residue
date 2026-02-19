@@ -35,21 +35,20 @@ const Layout: FC<LayoutProps> = ({
 				<nav class="border-b border-zinc-800">
 					<div class="max-w-4xl mx-auto px-4 h-12 flex items-center justify-between">
 						<div class="flex items-center gap-1.5 text-sm text-zinc-400">
+							<a href="/app" class="font-bold text-zinc-100 hover:text-zinc-200 transition-colors">residue</a>
 							${
 								breadcrumbs && breadcrumbs.length > 0
 									? html`${breadcrumbs.map(
-											(item, i) => html`
-											${i > 0 ? html`<span class="text-zinc-600">/</span>` : ""}
+											(item) => html`
+											<span class="text-zinc-600">/</span>
 											${
-												i === 0 && item.href
-													? html`<a href="${item.href}" class="hover:text-zinc-200 transition-colors flex items-center" title="Home"><i class="ph ph-house text-base"></i></a>`
-													: item.href
-														? html`<a href="${item.href}" class="hover:text-zinc-200 transition-colors">${item.label}</a>`
-														: html`<span class="text-zinc-200">${item.label}</span>`
+												item.href
+													? html`<a href="${item.href}" class="hover:text-zinc-200 transition-colors">${item.label}</a>`
+													: html`<span class="text-zinc-200">${item.label}</span>`
 											}
 										`,
 										)}`
-									: html`<a href="/app" class="hover:text-zinc-200 transition-colors flex items-center" title="Home"><i class="ph ph-house text-base"></i></a>`
+									: ""
 							}
 						</div>
 						<div class="flex items-center gap-3">
