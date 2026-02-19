@@ -487,6 +487,76 @@ describe("sync command", () => {
 		}
 	});
 
+	test("includes changed files in commit payload", async () => {
+		const mock = createMockServer();
+
+		try {
+			await setupConfig({ workerUrl: mock.workerUrl, token: "my-token" });
+
+			const dataPath = join(tempDir, "session-data.jsonl");
+			await writeFile(dataPath, '{"role":"user","content":"hello"}');
+
+			const startProc = cli([
+				"session",
+				"start",
+				"--agent",
+				"claude-code",
+				"--data",
+				dataPath,
+			]);
+			await startProc.exited;
+			const sessionId = (await new Response(startProc.stdout).text()).trim();
+
+			// Create a file and commit it
+			await mkdir(join(tempDir, "src"), { recursive: true });
+			await writeFile(
+				join(tempDir, "src/auth.ts"),
+				"export const auth = true;\n",
+			);
+			await gitExec(["add", "."]);
+			await gitExec(["commit", "-m", "add auth module"]);
+
+			const captureProc = cli(["capture"]);
+			await captureProc.exited;
+
+			const endProc = cli(["session", "end", "--id", sessionId]);
+			await endProc.exited;
+
+			const syncProc = cli(["sync"]);
+			const exitCode = await syncProc.exited;
+
+			expect(exitCode).toBe(0);
+			expect(mock.requests).toHaveLength(2);
+
+			const body = mock.requests[1].body as {
+				session: Record<string, unknown>;
+				commits: Array<{
+					sha: string;
+					files: Array<{
+						path: string;
+						change_type: string;
+						lines_added: number;
+						lines_deleted: number;
+					}>;
+				}>;
+			};
+
+			expect(body.commits).toHaveLength(1);
+			expect(body.commits[0].files).toBeDefined();
+			expect(body.commits[0].files.length).toBeGreaterThan(0);
+
+			const authFile = body.commits[0].files.find(
+				(f) => f.path === "src/auth.ts",
+			);
+			expect(authFile).toBeDefined();
+			expect(authFile!.change_type).toBe("A");
+			expect(authFile!.lines_added).toBe(1);
+			expect(authFile!.lines_deleted).toBe(0);
+		} finally {
+			mock.stop();
+		}
+	});
+
 	test("keeps session on upload failure", async () => {
 		// Worker that returns 500 for everything
 		const server = Bun.serve({

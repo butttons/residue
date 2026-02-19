@@ -44,6 +44,14 @@ type CommitRow = {
 	branch: string | null;
 };
 
+type CommitFileRow = {
+	commit_sha: string;
+	file_path: string;
+	change_type: string;
+	lines_added: number;
+	lines_deleted: number;
+};
+
 type OrgListItem = {
 	org: string;
 	repo_count: number;
@@ -170,11 +178,13 @@ type CommitDetailResult = {
 	org: string;
 	repo: string;
 	sessions: QuerySessionResult[];
+	files: CommitFileRow[];
 };
 
 export type {
 	SessionRow,
 	CommitRow,
+	CommitFileRow,
 	CommitWithSessionRow,
 	CommitShaDetailRow,
 	OrgListItem,
@@ -244,6 +254,41 @@ export class DB {
 				params.branch,
 			)
 			.run();
+	}
+
+	async insertCommitFiles(opts: {
+		commitSha: string;
+		files: {
+			path: string;
+			changeType: string;
+			linesAdded: number;
+			linesDeleted: number;
+		}[];
+	}): Promise<void> {
+		for (const file of opts.files) {
+			await this.db
+				.prepare(
+					`INSERT INTO commit_files (commit_sha, file_path, change_type, lines_added, lines_deleted)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(commit_sha, file_path) DO NOTHING`,
+				)
+				.bind(
+					opts.commitSha,
+					file.path,
+					file.changeType,
+					file.linesAdded,
+					file.linesDeleted,
+				)
+				.run();
+		}
+	}
+
+	async getCommitFiles(commitSha: string): Promise<CommitFileRow[]> {
+		const result = await this.db
+			.prepare("SELECT * FROM commit_files WHERE commit_sha = ?")
+			.bind(commitSha)
+			.all<CommitFileRow>();
+		return result.results;
 	}
 
 	async getSessionById(id: string): Promise<SessionRow | null> {
@@ -757,6 +802,8 @@ export class DB {
 			if (s) sessions.push(s);
 		}
 
+		const files = await this.getCommitFiles(sha);
+
 		return {
 			commit_sha: first.commit_sha,
 			message: first.message,
@@ -766,6 +813,7 @@ export class DB {
 			org: first.org,
 			repo: first.repo,
 			sessions,
+			files,
 		};
 	}
 }

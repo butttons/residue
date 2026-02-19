@@ -1,7 +1,13 @@
 import { err, ok, okAsync, ResultAsync, safeTry } from "neverthrow";
 import { resolveConfig } from "@/lib/config";
 import { residueFetch } from "@/lib/fetch";
-import { getCommitMeta, getRemoteUrl, parseRemote } from "@/lib/git";
+import {
+	type CommitFile,
+	getCommitFiles,
+	getCommitMeta,
+	getRemoteUrl,
+	parseRemote,
+} from "@/lib/git";
 import type { CommitRef, PendingSession } from "@/lib/pending";
 import {
 	getPendingPath,
@@ -23,6 +29,13 @@ import { stat } from "fs/promises";
 
 const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
 
+type CommitFilePayload = {
+	path: string;
+	change_type: string;
+	lines_added: number;
+	lines_deleted: number;
+};
+
 type CommitPayload = {
 	sha: string;
 	org: string;
@@ -31,6 +44,7 @@ type CommitPayload = {
 	author: string;
 	committed_at: number;
 	branch: string;
+	files: CommitFilePayload[];
 };
 
 type UploadUrlResponse = {
@@ -132,6 +146,15 @@ function readSessionData(
 	);
 }
 
+function toFilePayloads(files: CommitFile[]): CommitFilePayload[] {
+	return files.map((f) => ({
+		path: f.path,
+		change_type: f.changeType,
+		lines_added: f.linesAdded,
+		lines_deleted: f.linesDeleted,
+	}));
+}
+
 function buildCommitMeta(opts: {
 	commitRefs: CommitRef[];
 	org: string;
@@ -146,6 +169,11 @@ function buildCommitMeta(opts: {
 					log.warn(metaResult.error);
 					continue;
 				}
+				const filesResult = await getCommitFiles(ref.sha);
+				const files = filesResult.isOk() ? filesResult.value : [];
+				if (filesResult.isErr()) {
+					log.warn(filesResult.error);
+				}
 				commits.push({
 					sha: ref.sha,
 					org: opts.org,
@@ -154,6 +182,7 @@ function buildCommitMeta(opts: {
 					author: metaResult.value.author,
 					committed_at: metaResult.value.committed_at,
 					branch: ref.branch,
+					files: toFilePayloads(files),
 				});
 			}
 			return commits;

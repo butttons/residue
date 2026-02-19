@@ -80,6 +80,64 @@ export function getCommitMeta(
 	});
 }
 
+export type CommitFile = {
+	path: string;
+	changeType: string;
+	linesAdded: number;
+	linesDeleted: number;
+};
+
+export function getCommitFiles(
+	sha: string,
+): ResultAsync<CommitFile[], CliError> {
+	return ResultAsync.combine([
+		runGitCommand({
+			args: ["diff-tree", "--no-commit-id", "-r", "--name-status", sha],
+			errorMessage: `Failed to get changed files for ${sha}`,
+		}),
+		runGitCommand({
+			args: ["diff-tree", "--no-commit-id", "-r", "--numstat", sha],
+			errorMessage: `Failed to get file stats for ${sha}`,
+		}),
+	]).map(([nameStatusText, numstatText]) => {
+		if (!nameStatusText) return [];
+
+		// Parse --numstat output: "<added>\t<deleted>\t<path>"
+		// Binary files show "-" for added/deleted counts.
+		const statsByPath = new Map<
+			string,
+			{ linesAdded: number; linesDeleted: number }
+		>();
+		if (numstatText) {
+			for (const line of numstatText.split("\n")) {
+				if (!line) continue;
+				const [added, deleted, ...pathParts] = line.split("\t");
+				const filePath = pathParts.join("\t");
+				statsByPath.set(filePath, {
+					linesAdded: added === "-" ? 0 : parseInt(added ?? "0", 10),
+					linesDeleted: deleted === "-" ? 0 : parseInt(deleted ?? "0", 10),
+				});
+			}
+		}
+
+		// Parse --name-status output: "<change_type>\t<path>"
+		return nameStatusText
+			.split("\n")
+			.filter((line) => line.length > 0)
+			.map((line) => {
+				const [changeType, ...pathParts] = line.split("\t");
+				const filePath = pathParts.join("\t");
+				const stats = statsByPath.get(filePath);
+				return {
+					path: filePath,
+					changeType: changeType ?? "",
+					linesAdded: stats?.linesAdded ?? 0,
+					linesDeleted: stats?.linesDeleted ?? 0,
+				};
+			});
+	});
+}
+
 export function isGitRepo(): ResultAsync<boolean, CliError> {
 	return ResultAsync.fromPromise(
 		(async () => {
