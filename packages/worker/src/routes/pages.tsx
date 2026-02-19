@@ -6,6 +6,7 @@ import { CommitGraph } from "../components/CommitGraph";
 import type { ContinuationLink } from "../components/Conversation";
 import { Conversation } from "../components/Conversation";
 import { Layout } from "../components/Layout";
+import { StatsChart } from "../components/StatsChart";
 import type { CommitWithSessionRow } from "../lib/db";
 import { DB } from "../lib/db";
 import { computeGraph } from "../lib/graph";
@@ -485,6 +486,8 @@ pages.get("/:org/:repo", async (c) => {
 			]}
 		>
 			<ActivityGraph dailyCounts={dailyCounts} org={org} repo={repo} />
+
+			<StatsChart dailyCounts={dailyCounts} />
 
 			<CommitGraph data={graphData} org={org} repo={repo} />
 
