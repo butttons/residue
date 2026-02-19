@@ -408,6 +408,27 @@ worker/src/mappers/
 
 The worker reads `agent` from D1, picks the right mapper via `getMapper()`, transforms the raw R2 blob, and passes `Message[]` to the JSX template. Adding a new agent means writing one mapper function and registering it.
 
+### SVG Chart Library (`lib/svg/`)
+
+All SVG visualizations are built with a shared library at `packages/worker/src/lib/svg/`. Full documentation in `packages/worker/src/lib/svg/README.md`.
+
+Three layers:
+
+1. **Utilities** (`colors.ts`, `dates.ts`, `math.ts`, `text.ts`) -- pure functions, no JSX. Color palettes (`zinc`, `palette`, `heatmapColor`, `pickSeriesColor`), UTC date formatting, grid tick computation, value-to-pixel mapping, pluralization.
+
+2. **Primitives** (`primitives.tsx`, `tooltip.tsx`) -- generic SVG JSX elements (`Rect`, `Circle`, `Line`, `Text`). They know nothing about charts. All styling is via props, no hardcoded colors. `Tooltip` wraps the HTML Popover API pattern.
+
+3. **Hooks** (`hooks/`) -- layout functions that take raw data and return fully positioned layout objects. Components render what hooks return with zero inline math.
+
+Available hooks:
+- `useHeatmapLayout` -- GitHub-style activity grid (cells, month/day labels, dimensions)
+- `useBarChartLayout` -- weekly paired bar chart (groups with bars, grid lines, x-axis labels)
+- `useCommitGraphLayout` -- git-style commit graph (trunk, session lanes, dots, connectors)
+
+The pattern: call a hook, get a layout object, iterate over it with primitives. No math or color constants in component JSX.
+
+Both `tsconfig.json` and `vitest.config.mts` have `@/*` -> `src/*` path aliases configured.
+
 ### Search
 
 Search is powered by **Cloudflare AI Search** (formerly AutoRAG), pointed at the R2 bucket's `search/` prefix. It auto-indexes the lightweight text files, handles chunking/embedding/vector search.
