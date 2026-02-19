@@ -61,7 +61,7 @@ const canonicalURL = new URL(currentPath, "https://residue.dev").href;
                             href="/docs"
                             class:list={[
                                 "hover:text-amber-500 transition-colors",
-                                currentPath === "/docs/"
+                                currentPath.startsWith("/docs")
                                     ? "text-amber-500"
                                     : "text-zinc-400",
                             ]}

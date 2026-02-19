@@ -154,7 +154,7 @@ For more details, see the [Cloudflare AI Search docs](https://developers.cloudfl
 Requires [bun](https://bun.sh) as the runtime. Install bun first if you don't have it.
 
 ```bash
-npm install -g @residue/cli
+bun add -g @residue/cli
 ```
 
 ### Step 5: Login
@@ -195,16 +195,31 @@ That's it. Commit and push as usual -- conversations are captured and uploaded a
 
 ## CLI Commands
 
+**User-facing:**
+
 | Command | Description |
 |---|---|
 | `residue login` | Save worker URL + auth token to `~/.residue/config`. Use `--local` for per-project config |
 | `residue init` | Install git hooks in current repo |
 | `residue setup <agent>` | Configure an agent adapter (`claude-code` or `pi`) |
 | `residue push` | Manually upload pending sessions |
+| `residue status` | Show current residue state for this project |
+| `residue clear` | Remove pending sessions from the local queue. Use `--id` for a specific session |
+| `residue search <query>` | Search session history. Use `--ai` for AI-powered search with generated answers |
+| `residue query sessions` | List sessions (filter by `--agent`, `--repo`, `--branch`, `--since`, `--until`) |
+| `residue query commits` | List commits (filter by `--repo`, `--branch`, `--author`, `--since`, `--until`) |
+| `residue query session <id>` | Get full details for a specific session |
+| `residue query commit <sha>` | Get details for a specific commit |
+
+**Hook-invoked (internal):**
+
+| Command | Description |
+|---|---|
 | `residue capture` | Tag pending sessions with current commit SHA (called by post-commit hook) |
 | `residue sync` | Upload sessions to worker (called by pre-push hook) |
 | `residue session start` | Register a new session (called by adapters) |
 | `residue session end` | Mark a session as ended (called by adapters) |
+| `residue hook claude-code` | Handle Claude Code hook events (reads JSON from stdin) |
 
 ## Worker
 
@@ -214,22 +229,38 @@ The worker serves both a JSON API and a server-rendered UI.
 
 | Route | Description |
 |---|---|
+| `GET /api/ping` | Health check, returns worker version |
 | `POST /api/sessions/upload-url` | Generate presigned R2 PUT URLs for direct upload (raw + search) |
 | `POST /api/sessions` | Upload session metadata + commit mappings |
-| `GET /api/sessions/:id` | Fetch raw session data |
-| `GET /api/repos/:org/:repo` | List commits with linked sessions |
-| `GET /api/repos/:org/:repo/:sha` | Get sessions for a specific commit |
+| `GET /api/sessions/:id` | Fetch session metadata + raw data from R2 |
+| `GET /api/sessions/:id/metadata` | Fetch session metadata only (no R2 fetch) |
+| `GET /api/sessions/:id/commits` | List commits linked to a session |
+| `GET /api/repos/:org/:repo` | List commits with linked sessions (paginated via `?cursor=`) |
+| `GET /api/repos/:org/:repo/:sha` | Commit detail + sessions + files |
+| `GET /api/query/sessions` | List sessions (filter by agent, repo, branch, since, until) |
+| `GET /api/query/sessions/:id` | Session detail with commits |
+| `GET /api/query/commits` | List commits (filter by repo, branch, author, since, until) |
+| `GET /api/query/commits/:sha` | Commit detail with sessions |
 | `GET /api/search?q=...` | Search sessions via Cloudflare AI Search |
 | `GET /api/search/ai?q=...` | AI-powered search with generated answer |
+| `POST /api/users` | Create a user |
+| `GET /api/users` | List users |
+| `DELETE /api/users/:id` | Delete a user |
 
-**UI routes** (basic auth, served under `/app`):
+**UI routes** (cookie-based session auth, served under `/app`):
 
 | Route | Description |
 |---|---|
+| `/app/login` | Login page |
 | `/app` | List of orgs |
 | `/app/:org` | List of repos in org |
 | `/app/:org/:repo` | Commit timeline with linked sessions |
 | `/app/:org/:repo/:sha` | Commit permalink with full conversation |
+| `/app/search` | Search conversations |
+| `/app/settings` | Instance settings (visibility, user management) |
+| `/app/settings/users` | Manage user accounts |
+
+The instance can be set to **public mode** (anyone can view conversations) or **private mode** (login required). Settings and user management always require authentication. The `ADMIN_USERNAME` user is the super admin who can create and delete other users.
 
 Org and repo are inferred from the git remote URL. No manual configuration needed.
 
@@ -256,7 +287,7 @@ pnpm --filter @residue/worker test       # worker tests
 - **Direct R2 upload.** Session data is uploaded directly to R2 via presigned PUT URLs, bypassing the worker's request body size limits. The worker only handles lightweight metadata.
 - **Search via lightweight text files.** Raw session files are too large and noisy for embedding models. At sync time, the CLI generates a second `.txt` file per session under `search/` in R2 containing only human messages, assistant text, and tool summaries. Cloudflare AI Search indexes only this prefix.
 - **Self-hosted.** Each user/team deploys their own Cloudflare Worker. No multi-tenant backend, no data privacy concerns.
-- **Single auth token.** Set at deploy time as an environment variable. No user management.
+- **User management.** The super admin (`ADMIN_USERNAME`) can create additional users via the settings UI or API. Instances can be set to public or private mode.
 - **Never block git.** Hooks exit 0 even on errors. Session capture and sync are best-effort.
 
 ## Troubleshooting

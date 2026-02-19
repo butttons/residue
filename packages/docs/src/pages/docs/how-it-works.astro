@@ -1,0 +1,177 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout
+    title="How It Works - residue"
+    description="Understand how residue tracks AI agent sessions, links them to commits, and syncs data to your worker."
+>
+    <div class="mb-10">
+        <h1 class="text-3xl font-bold mb-4">How It Works</h1>
+        <p class="text-base text-zinc-400">
+            Sessions, commits, and the sync pipeline.
+        </p>
+    </div>
+
+    <!-- Overview -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Overview</h2>
+        <p class="text-zinc-300 text-sm leading-relaxed mb-4">
+            Residue has two packages: a <strong>CLI</strong> that runs
+            locally and a <strong>Cloudflare Worker</strong> that stores and
+            serves data. Agent adapters are built into the CLI.
+        </p>
+        <p class="text-zinc-300 text-sm leading-relaxed">
+            The CLI manages local state, installs git hooks, and handles
+            syncing. Session data is uploaded directly to R2 via presigned
+            URLs. The worker provides an API for metadata and presigned URL
+            generation, plus a web UI for browsing conversations.
+        </p>
+    </div>
+
+    <!-- Session Lifecycle -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Session Lifecycle</h2>
+
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6 mb-6">
+            <ol class="text-zinc-300 text-sm space-y-2 list-decimal list-inside">
+                <li>Agent adapter calls <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session start</code>. CLI generates a session ID</li>
+                <li>User has a conversation with the AI agent</li>
+                <li>Agent adapter calls <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session end</code>. CLI marks session as ended</li>
+                <li>User commits. Post-commit hook runs <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue capture</code>, tags pending sessions with the commit SHA</li>
+                <li>User pushes. Pre-push hook runs <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue sync</code>, uploads session data to R2 and metadata to the worker</li>
+            </ol>
+        </div>
+
+        <div class="space-y-6">
+            <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6">
+                <h3 class="font-semibold text-zinc-200 mb-3">Multi-Commit Sessions</h3>
+                <p class="text-zinc-300 text-sm leading-relaxed">
+                    A conversation can span multiple commits. If a session is still open
+                    when a commit happens, it gets linked to that commit. When the next
+                    commit happens, the same session gets linked again. The session data
+                    is stored once in R2; multiple commits reference it.
+                </p>
+            </div>
+
+            <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6">
+                <h3 class="font-semibold text-zinc-200 mb-3">Open Sessions at Push Time</h3>
+                <p class="text-zinc-300 text-sm leading-relaxed">
+                    If a session is still open when you push, the current state is
+                    uploaded to R2. On the next push, it gets overwritten with the latest
+                    state. The R2 key stays the same. Stale sessions (data file
+                    unmodified for 30+ minutes) are automatically marked as ended.
+                </p>
+            </div>
+
+            <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6">
+                <h3 class="font-semibold text-zinc-200 mb-3">Capture Behavior</h3>
+                <p class="text-zinc-300 text-sm leading-relaxed">
+                    When a commit happens, open sessions always get tagged with the SHA.
+                    Ended sessions with zero commits get tagged once. Ended sessions
+                    that already have commits are skipped to avoid incorrectly linking
+                    unrelated work.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Flow -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Upload Flow</h2>
+        <p class="text-zinc-300 text-sm leading-relaxed mb-4">
+            Session data is uploaded <strong>directly to R2</strong> via presigned PUT URLs,
+            bypassing the worker's request body size limits entirely. A second lightweight
+            text file is uploaded alongside for search indexing. The worker only
+            receives lightweight metadata.
+        </p>
+        <pre class="bg-zinc-950 rounded p-3 font-mono text-xs overflow-x-auto"><code class="text-zinc-400">CLI
+  -&gt; POST /api/sessions/upload-url <span class="text-zinc-500">(request presigned PUT URLs)</span>
+  &lt;- Worker generates two presigned R2 PUT URLs
+  -&gt; PUT &lt;presigned-url&gt; <span class="text-zinc-500">(upload raw data to sessions/&lt;id&gt;.json)</span>
+  -&gt; PUT &lt;search-url&gt; <span class="text-zinc-500">(upload search text to search/&lt;id&gt;.txt)</span>
+  -&gt; POST /api/sessions <span class="text-zinc-500">(metadata only, no session data)</span></code></pre>
+    </div>
+
+    <!-- Agent Adapters -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Agent Adapters</h2>
+        <p class="text-zinc-300 text-sm leading-relaxed mb-6">
+            Adapters are built into the CLI. They hook into each agent's lifecycle
+            and call <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session start</code> and
+            <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session end</code> to track conversations.
+            Install them with <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup &lt;agent&gt;</code>.
+        </p>
+
+        <div class="space-y-6">
+            <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6">
+                <h3 class="font-semibold text-zinc-200 mb-3">Claude Code</h3>
+                <p class="text-zinc-300 text-sm leading-relaxed mb-3">
+                    Uses Claude Code's native hook system.
+                    <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup claude-code</code>
+                    writes hook entries into <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.claude/settings.json</code>
+                    that pipe session lifecycle events (as JSON on stdin) to
+                    <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue hook claude-code</code>.
+                </p>
+                <pre class="bg-zinc-950 rounded p-3 font-mono text-sm overflow-x-auto"><code class="text-zinc-300">residue setup claude-code</code></pre>
+            </div>
+
+            <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6">
+                <h3 class="font-semibold text-zinc-200 mb-3">pi</h3>
+                <p class="text-zinc-300 text-sm leading-relaxed mb-3">
+                    Uses pi's extension system.
+                    <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup pi</code>
+                    installs an extension at <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.pi/extensions/residue.ts</code>
+                    that calls <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session start</code> and
+                    <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session end</code> directly.
+                </p>
+                <pre class="bg-zinc-950 rounded p-3 font-mono text-sm overflow-x-auto"><code class="text-zinc-300">residue setup pi</code></pre>
+            </div>
+        </div>
+
+        <p class="text-zinc-400 text-sm mt-4">
+            Both adapters store hook state in <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.residue/hooks/</code> within the project root.
+        </p>
+    </div>
+
+    <!-- Search -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Search</h2>
+        <p class="text-zinc-300 text-sm leading-relaxed mb-4">
+            Search is powered by <strong>Cloudflare AI Search</strong>, configured to
+            index the <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">search/</code> prefix in the R2 bucket.
+            Raw session files are too large and noisy for embedding models, so the CLI
+            generates a lightweight <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.txt</code> file per session at sync time.
+        </p>
+        <p class="text-zinc-300 text-sm leading-relaxed mb-4">
+            These text files contain a metadata header (session ID, agent, commits, branch, repo)
+            followed by conversation lines tagged by role. Thinking blocks, tool output,
+            token metadata, and other noise are stripped.
+        </p>
+        <pre class="bg-zinc-950 rounded p-3 font-mono text-xs overflow-x-auto mb-4"><code class="text-zinc-400">Session: abc-123
+Agent: claude-code
+Commits: abc1234, def5678
+Branch: feature-auth
+Repo: my-team/my-app
+
+[human] how do we fix the auth redirect
+[assistant] I'll update the middleware...
+[tool] edit packages/worker/src/middleware/auth.ts
+[tool] bash git diff --staged</code></pre>
+        <p class="text-zinc-400 text-sm">
+            Two search endpoints are available:
+            <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">GET /api/search?q=...</code> for vector search results, and
+            <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">GET /api/search/ai?q=...</code> for AI-generated answers with citations.
+        </p>
+    </div>
+
+    <!-- Nav -->
+    <div class="mt-12 pt-8 border-t border-zinc-800 flex items-center justify-between">
+        <a href="/docs" class="text-amber-400 hover:underline text-sm flex items-center gap-1">
+            &larr; Getting Started
+        </a>
+        <a href="/docs/reference" class="text-amber-400 hover:underline text-sm flex items-center gap-1">
+            Reference &rarr;
+        </a>
+    </div>
+</DocsLayout>

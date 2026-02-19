@@ -1,0 +1,90 @@
+---
+import { List, X } from "lucide-astro";
+import DocsSidebar from "../components/DocsSidebar.astro";
+import Layout from "./Layout.astro";
+
+type Props = {
+	title: string;
+	description?: string;
+};
+
+const { title, description } = Astro.props;
+const currentPath = Astro.url.pathname;
+---
+
+<Layout title={title} description={description}>
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <!-- Mobile sidebar toggle -->
+        <div class="lg:hidden py-3 border-b border-zinc-800">
+            <button
+                id="docs-menu-toggle"
+                class="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+                aria-label="Toggle navigation"
+            >
+                <List class="w-4 h-4" />
+                <span>Menu</span>
+            </button>
+        </div>
+
+        <!-- Mobile sidebar overlay -->
+        <div
+            id="docs-menu-overlay"
+            class="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-40 hidden lg:hidden"
+        >
+        </div>
+
+        <!-- Mobile sidebar drawer -->
+        <div
+            id="docs-menu-drawer"
+            class="fixed top-0 left-0 bottom-0 w-64 bg-zinc-950 border-r border-zinc-800 z-50 p-5 pt-4 -translate-x-full transition-transform duration-200 lg:hidden"
+        >
+            <div class="flex items-center justify-between mb-6">
+                <span class="text-sm font-semibold text-zinc-300">Documentation</span>
+                <button
+                    id="docs-menu-close"
+                    class="text-zinc-500 hover:text-zinc-300 transition-colors"
+                    aria-label="Close navigation"
+                >
+                    <X class="w-4 h-4" />
+                </button>
+            </div>
+            <DocsSidebar currentPath={currentPath} />
+        </div>
+
+        <div class="lg:flex lg:gap-10 py-8 lg:py-12">
+            <!-- Desktop sidebar -->
+            <aside class="hidden lg:block lg:w-52 shrink-0">
+                <div class="sticky top-20">
+                    <p class="text-xs text-zinc-500 uppercase tracking-wider font-semibold mb-3 px-3">Documentation</p>
+                    <DocsSidebar currentPath={currentPath} />
+                </div>
+            </aside>
+
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <slot />
+            </div>
+        </div>
+    </div>
+</Layout>
+
+<script>
+    const toggle = document.getElementById("docs-menu-toggle");
+    const close = document.getElementById("docs-menu-close");
+    const overlay = document.getElementById("docs-menu-overlay");
+    const drawer = document.getElementById("docs-menu-drawer");
+
+    function openMenu() {
+        overlay?.classList.remove("hidden");
+        drawer?.classList.remove("-translate-x-full");
+    }
+
+    function closeMenu() {
+        overlay?.classList.add("hidden");
+        drawer?.classList.add("-translate-x-full");
+    }
+
+    toggle?.addEventListener("click", openMenu);
+    close?.addEventListener("click", closeMenu);
+    overlay?.addEventListener("click", closeMenu);
+</script>
