@@ -70,7 +70,10 @@ function fetchJson<T>(opts: {
 		}).then(async (response) => {
 			if (!response.ok) {
 				const body = await response.text().catch(() => "");
-				throw new Error(`HTTP ${response.status}: ${body}`);
+				throw new CliError({
+					message: `HTTP ${response.status}: ${body}`,
+					code: "NETWORK_ERROR",
+				});
 			}
 			return response.json() as Promise<T>;
 		}),

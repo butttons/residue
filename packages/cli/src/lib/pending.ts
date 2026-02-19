@@ -34,7 +34,10 @@ export function getProjectRoot(): ResultAsync<string, CliError> {
 			});
 			const exitCode = await proc.exited;
 			if (exitCode !== 0) {
-				throw new Error("not a git repository");
+				throw new CliError({
+					message: "not a git repository",
+					code: "GIT_ERROR",
+				});
 			}
 			return (await new Response(proc.stdout).text()).trim();
 		})(),

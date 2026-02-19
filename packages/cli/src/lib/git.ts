@@ -17,7 +17,10 @@ function runGitCommand(opts: {
 			const exitCode = await proc.exited;
 			if (exitCode !== 0) {
 				const stderr = await new Response(proc.stderr).text();
-				throw new Error(stderr.trim() || `exit code ${exitCode}`);
+				throw new CliError({
+					message: stderr.trim() || `exit code ${exitCode}`,
+					code: "GIT_ERROR",
+				});
 			}
 			return (await new Response(proc.stdout).text()).trim();
 		})(),

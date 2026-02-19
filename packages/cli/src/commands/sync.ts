@@ -69,7 +69,10 @@ function requestUploadUrl(opts: {
 			body: JSON.stringify({ session_id: opts.sessionId }),
 		}).then(async (response) => {
 			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}`);
+				throw new CliError({
+					message: `HTTP ${response.status}`,
+					code: "NETWORK_ERROR",
+				});
 			}
 			return response.json() as Promise<UploadUrlResponse>;
 		}),
@@ -91,7 +94,10 @@ function uploadToPresignedUrl(opts: {
 			body: opts.data,
 		}).then((response) => {
 			if (!response.ok) {
-				throw new Error(`R2 upload failed: HTTP ${response.status}`);
+				throw new CliError({
+					message: `R2 upload failed: HTTP ${response.status}`,
+					code: "NETWORK_ERROR",
+				});
 			}
 		}),
 		toCliError({ message: "Direct R2 upload failed", code: "NETWORK_ERROR" }),
@@ -125,7 +131,10 @@ function postSessionMetadata(opts: {
 			}),
 		}).then((response) => {
 			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}`);
+				throw new CliError({
+					message: `HTTP ${response.status}`,
+					code: "NETWORK_ERROR",
+				});
 			}
 		}),
 		toCliError({ message: "Metadata upload failed", code: "NETWORK_ERROR" }),
@@ -312,7 +321,10 @@ function uploadSearchText(opts: {
 			body: opts.data,
 		}).then((response) => {
 			if (!response.ok) {
-				throw new Error(`R2 search upload failed: HTTP ${response.status}`);
+				throw new CliError({
+					message: `R2 search upload failed: HTTP ${response.status}`,
+					code: "NETWORK_ERROR",
+				});
 			}
 		}),
 		toCliError({
