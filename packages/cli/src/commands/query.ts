@@ -1,5 +1,6 @@
 import { err, ok, ResultAsync, safeTry } from "neverthrow";
 import { resolveConfig } from "@/lib/config";
+import { residueFetch } from "@/lib/fetch";
 import { CliError, toCliError } from "@/utils/errors";
 import { createLogger } from "@/utils/logger";
 
@@ -56,7 +57,7 @@ function fetchJson<T>(opts: {
 	token: string;
 }): ResultAsync<T, CliError> {
 	return ResultAsync.fromPromise(
-		fetch(opts.url, {
+		residueFetch(opts.url, {
 			headers: { Authorization: `Bearer ${opts.token}` },
 		}).then(async (response) => {
 			if (!response.ok) {

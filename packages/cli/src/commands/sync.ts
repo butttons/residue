@@ -1,5 +1,6 @@
 import { err, ok, okAsync, ResultAsync, safeTry } from "neverthrow";
 import { resolveConfig } from "@/lib/config";
+import { residueFetch } from "@/lib/fetch";
 import { getCommitMeta, getRemoteUrl, parseRemote } from "@/lib/git";
 import type { CommitRef, PendingSession } from "@/lib/pending";
 import {
@@ -45,7 +46,7 @@ function requestUploadUrl(opts: {
 	sessionId: string;
 }): ResultAsync<UploadUrlResponse, CliError> {
 	return ResultAsync.fromPromise(
-		fetch(`${opts.workerUrl}/api/sessions/upload-url`, {
+		residueFetch(`${opts.workerUrl}/api/sessions/upload-url`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -98,7 +99,7 @@ function postSessionMetadata(opts: {
 	commits: CommitPayload[];
 }): ResultAsync<void, CliError> {
 	return ResultAsync.fromPromise(
-		fetch(`${opts.workerUrl}/api/sessions`, {
+		residueFetch(`${opts.workerUrl}/api/sessions`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",

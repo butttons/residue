@@ -1,5 +1,6 @@
 import { err, ok, ResultAsync, safeTry } from "neverthrow";
 import { resolveConfig } from "@/lib/config";
+import { residueFetch } from "@/lib/fetch";
 import { CliError, toCliError } from "@/utils/errors";
 import { createLogger } from "@/utils/logger";
 
@@ -59,7 +60,7 @@ function fetchSearch(opts: {
 	const url = `${opts.workerUrl}${path}?q=${encodeURIComponent(opts.query)}`;
 
 	return ResultAsync.fromPromise(
-		fetch(url, {
+		residueFetch(url, {
 			headers: { Authorization: `Bearer ${opts.token}` },
 		}).then(async (response) => {
 			if (!response.ok) {
@@ -80,7 +81,7 @@ function fetchSessionCommits(opts: {
 	const url = `${opts.workerUrl}/api/sessions/${opts.sessionId}/commits`;
 
 	return ResultAsync.fromPromise(
-		fetch(url, {
+		residueFetch(url, {
 			headers: { Authorization: `Bearer ${opts.token}` },
 		}).then(async (response) => {
 			if (!response.ok) return [];
@@ -102,7 +103,7 @@ function fetchSessionMetadata(opts: {
 	const url = `${opts.workerUrl}/api/sessions/${opts.sessionId}/metadata`;
 
 	return ResultAsync.fromPromise(
-		fetch(url, {
+		residueFetch(url, {
 			headers: { Authorization: `Bearer ${opts.token}` },
 		}).then(async (response) => {
 			if (!response.ok) return null;
