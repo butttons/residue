@@ -3,6 +3,7 @@
 import { Command } from "commander";
 import { capture } from "@/commands/capture";
 import { clear } from "@/commands/clear";
+import { context } from "@/commands/context";
 import { hookClaudeCode } from "@/commands/hook";
 import { init } from "@/commands/init";
 import { login } from "@/commands/login";
@@ -108,6 +109,11 @@ program
 	.command("push")
 	.description("Upload pending sessions to worker (manual trigger)")
 	.action(wrapCommand(() => push()));
+
+program
+	.command("context")
+	.description("Output agent-facing documentation to stdout")
+	.action(wrapCommand(() => context()));
 
 program
 	.command("read")

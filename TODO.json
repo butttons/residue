@@ -900,5 +900,22 @@
 			6,
 			7
 		]
+	},
+	{
+		"id": 53,
+		"title": "CLI: context command to output agent-facing documentation",
+		"description": "Add a top-level \"residue context\" command that outputs a static markdown document to stdout. The document teaches an AI agent what residue is and how to use every CLI command with examples.\n\nThe content covers:\n- What residue is (one-liner)\n- All query/search/read commands with flags and example invocations\n- Output conventions (stderr for status, stdout for data, --json for structured output)\n- Web UI URL pattern so the agent can construct links\n- Typical workflows: find sessions for a commit, read a transcript, search conversations, list files changed\n\nPurely static text -- no config reads, no network calls. The agent runs this once to learn the CLI surface, then uses the other commands for actual data.\n\nFiles to create/change:\n- packages/cli/src/commands/context.ts -- command implementation (markdown string written to stdout)\n- packages/cli/src/index.ts -- register \"residue context\"\n- packages/cli/test/commands/context.test.ts -- basic test that it outputs markdown to stdout",
+		"tags": [
+			"cli",
+			"command",
+			"feature"
+		],
+		"isDone": true,
+		"tests": [
+			"packages/cli/test/commands/context.test.ts passes"
+		],
+		"dependencies": [
+			7
+		]
 	}
 ]

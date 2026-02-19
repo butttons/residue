@@ -206,6 +206,8 @@ That's it. Commit and push as usual -- conversations are captured and uploaded a
 | `residue status` | Show current residue state for this project |
 | `residue clear` | Remove pending sessions from the local queue. Use `--id` for a specific session |
 | `residue search <query>` | Search session history. Use `--ai` for AI-powered search with generated answers |
+| `residue read <session-id>` | Read a local session transcript to stdout (for piping to other tools or agents) |
+| `residue context` | Output agent-facing documentation to stdout (teaches an AI agent how to use residue) |
 | `residue query sessions` | List sessions (filter by `--agent`, `--repo`, `--branch`, `--since`, `--until`) |
 | `residue query commits` | List commits (filter by `--repo`, `--branch`, `--author`, `--since`, `--until`) |
 | `residue query session <id>` | Get full details for a specific session |
