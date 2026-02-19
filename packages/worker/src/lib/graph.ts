@@ -1,15 +1,5 @@
-import type { CommitWithSessionRow } from "../lib/db";
-
-const LANE_COLORS = [
-	"#60a5fa", // blue-400
-	"#34d399", // emerald-400
-	"#fbbf24", // amber-400
-	"#fb7185", // rose-400
-	"#c084fc", // purple-400
-	"#22d3ee", // cyan-400
-	"#f472b6", // pink-400
-	"#fb923c", // orange-400
-];
+import type { CommitWithSessionRow } from "@/lib/db";
+import { pickSeriesColor } from "@/lib/svg";
 
 type SessionInfo = {
 	sessionId: string;
@@ -151,7 +141,7 @@ const computeGraph = (rows: CommitWithSessionRow[]): GraphData => {
 			sessionId: session.sessionId,
 			agent: session.agent,
 			lane: assignedLane,
-			color: LANE_COLORS[colorIndex % LANE_COLORS.length],
+			color: pickSeriesColor({ index: colorIndex }),
 			startRow: session.startRow,
 			endRow: session.endRow,
 			commitRows: session.commitRows,
@@ -207,5 +197,5 @@ const computeGraph = (rows: CommitWithSessionRow[]): GraphData => {
 	};
 };
 
-export { computeGraph, LANE_COLORS };
+export { computeGraph };
 export type { GraphData, GraphCommit, SessionLane, SessionInfo };
