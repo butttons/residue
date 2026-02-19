@@ -13,6 +13,7 @@ import {
 	querySession,
 	querySessions,
 } from "@/commands/query";
+import { read } from "@/commands/read";
 import { search } from "@/commands/search";
 import { sessionEnd } from "@/commands/session-end";
 import { sessionStart } from "@/commands/session-start";
@@ -107,6 +108,12 @@ program
 	.command("push")
 	.description("Upload pending sessions to worker (manual trigger)")
 	.action(wrapCommand(() => push()));
+
+program
+	.command("read")
+	.description("Read session transcript data to stdout")
+	.argument("<session-id>", "Session ID to read")
+	.action(wrapCommand((sessionId: string) => read({ id: sessionId })));
 
 program
 	.command("clear")

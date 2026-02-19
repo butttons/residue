@@ -882,5 +882,23 @@
 			46,
 			48
 		]
+	},
+	{
+		"id": 52,
+		"title": "CLI: read command to pipe session transcript to stdout",
+		"description": "Add a top-level \"residue read <session-id>\" command that reads a session transcript from disk and writes its raw contents to stdout. This enables AI agents that lack direct filesystem access (e.g. Claude Code sandbox) to consume session data via piping.\n\nLookup flow:\n1. Resolve project root and read .residue/pending.json.\n2. Find the session by ID. If not found, error with \"Session not found in local state.\"\n3. Validate data_path is present and non-empty. If missing, error with \"No data path recorded for session <id>\".\n4. Check the file at data_path exists. If not, error with \"Session data file not found: <path>\".\n5. Read the file and write its full contents to stdout.\n\nLocal-only by design -- no worker API calls. The primary use case is an active agent reading its own (or a recent) session transcript that is still in the pending queue. Already-synced sessions are not covered; the raw data lives in R2 and can be fetched via the worker API separately.\n\nStatus/error messages go to stderr via logger. Stdout is reserved exclusively for the raw file contents (no JSON envelope, no wrapping).\n\nFiles to create/change:\n- packages/cli/src/commands/read.ts -- command implementation\n- packages/cli/src/index.ts -- register \"residue read <session-id>\"\n- packages/cli/test/commands/read.test.ts -- tests",
+		"tags": [
+			"cli",
+			"command",
+			"feature"
+		],
+		"isDone": true,
+		"tests": [
+			"packages/cli/test/commands/read.test.ts passes"
+		],
+		"dependencies": [
+			6,
+			7
+		]
 	}
 ]
