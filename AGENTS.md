@@ -95,27 +95,27 @@ The presigned URL generation uses lightweight AWS SigV4 signing with the Web Cry
 
 **User-facing:**
 
-| Command                       | Description                                                      |
-| ----------------------------- | ---------------------------------------------------------------- |
-| `residue login`               | Save worker URL + auth token to global config                    |
-| `residue init`                | Install git hooks (post-commit, pre-push) in current repo        |
-| `residue setup <agent>`       | Configure an agent adapter for this project (claude-code, pi)    |
-| `residue push`                | Manual trigger to upload pending sessions (alias for sync)       |
+| Command                 | Description                                                   |
+| ----------------------- | ------------------------------------------------------------- |
+| `residue login`         | Save worker URL + auth token to global config                 |
+| `residue init`          | Install git hooks (post-commit, pre-push) in current repo     |
+| `residue setup <agent>` | Configure an agent adapter for this project (claude-code, pi) |
+| `residue push`          | Manual trigger to upload pending sessions (alias for sync)    |
 
 **Hook-invoked (git):**
 
-| Command           | Description                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------------- |
-| `residue capture` | Called by post-commit hook. Tags pending sessions with the current commit SHA and branch     |
+| Command           | Description                                                                                                                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `residue capture` | Called by post-commit hook. Tags pending sessions with the current commit SHA and branch                                                                                                             |
 | `residue sync`    | Called by pre-push hook. Accepts `--remote-url` to derive org/repo. Uploads session data directly to R2 via presigned URL, then POSTs metadata to worker API, clears ended sessions from local state |
 
 **Hook-invoked (agent adapters):**
 
-| Command                    | Description                                                                                                                             |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Command                    | Description                                                                                                                                                                              |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `residue session start`    | Called by agent adapter when a conversation begins. Generates and returns a session ID to stdout. Flags: `--agent <name>` `--data <path-to-raw-session-file>` `--agent-version <semver>` |
-| `residue session end`      | Called by agent adapter when a conversation ends. Marks the session as ended. Flags: `--id <session-id>`                                |
-| `residue hook claude-code` | Specialized handler for Claude Code hooks. Reads JSON from stdin (Claude Code hook protocol). Handles both SessionStart and SessionEnd internally |
+| `residue session end`      | Called by agent adapter when a conversation ends. Marks the session as ended. Flags: `--id <session-id>`                                                                                 |
+| `residue hook claude-code` | Specialized handler for Claude Code hooks. Reads JSON from stdin (Claude Code hook protocol). Handles both SessionStart and SessionEnd internally                                        |
 
 ### Agent Adapters
 
@@ -187,7 +187,7 @@ Pending queue: `.residue/pending.json`
     "agent_version": "0.5.0",
     "status": "open",
     "data_path": "/path/to/raw/session/log",
-    "commits": [{"sha": "abc123", "branch": "feature-auth"}]
+    "commits": [{ "sha": "abc123", "branch": "feature-auth" }]
   }
 ]
 ```
@@ -421,6 +421,7 @@ Three layers:
 3. **Hooks** (`hooks/`) -- layout functions that take raw data and return fully positioned layout objects. Components render what hooks return with zero inline math.
 
 Available hooks:
+
 - `useHeatmapLayout` -- GitHub-style activity grid (cells, month/day labels, dimensions)
 - `useBarChartLayout` -- weekly paired bar chart (groups with bars, grid lines, x-axis labels)
 - `useCommitGraphLayout` -- git-style commit graph (trunk, session lanes, dots, connectors)
@@ -553,11 +554,15 @@ The tmux session is named `residue`. Use `tmux capture-pane -t residue -p` to re
 ```ts
 // Good
 type Session = { id: string; isOpen: boolean; hasCommits: boolean };
-function writePending(opts: { path: string; sessions: PendingSession[] })
+function writePending(opts: { path: string; sessions: PendingSession[] });
 
 // Bad
-interface Session { id: string; open: boolean; commits: boolean };
-function writePending(path: string, sessions: PendingSession[])
+interface Session {
+  id: string;
+  open: boolean;
+  commits: boolean;
+}
+function writePending(path: string, sessions: PendingSession[]);
 ```
 
 ## Versioning
@@ -576,25 +581,7 @@ All packages share the same version. When bumping, update `version` in every `pa
 6. Do not add tests for trivial commands.
 7. Smoke-test by running `bun packages/cli/src/index.ts <name>` from the project root.
 
-## How to use TODO.json
-
-1. When user asks to make changes to the code of plan features, look up the features in the TODO.json file before exploring further to get better context.
-2. Whenever adding a new TODO, you must do a full scan and make sure all dependencies are also updated accordingly.
-3. The `tests` are simple english instructions like `[repo]/test/[util].test.ts passes' to verify that the implementaiton worked.
-4. `isDone` should be marked when tests are passing.
-5. After doing a feature, you must use the `/commit-helper` skill to make a succinct and concise commit
-
-```ts
-type Todo = {
-  id: number;
-  title: string;
-  description: string;
-  tags: string[];
-  isDone: boolean;
-  tests: string[];
-  dependencies: number[]; // ids of other TODOs
-};
-```
+````
 ## Code Exploration with dora
 
 This codebase uses dora for fast code intelligence and architectural analysis.
@@ -674,6 +661,109 @@ dora symbol <query>              # Find symbols (shows documented_in)
 dora refs <symbol>               # Find references
 dora docs                        # List all documentation
 dora docs search <query>         # Search documentation content
-```
+````
 
 For detailed usage and examples, refer to `./dora/docs/SKILL.md`.
+
+## Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd sync
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
+
+bd - Dependency-Aware Issue Tracker
+
+Issues chained together like beads.
+
+GETTING STARTED
+bd init Initialize bd in your project
+Creates .beads/ directory with project-specific database
+Auto-detects prefix from directory name (e.g., myapp-1, myapp-2)
+
+bd init --prefix api Initialize with custom prefix
+Issues will be named: api-<hash> (e.g., api-a3f2dd)
+
+CREATING ISSUES
+bd create "Fix login bug"
+bd create "Add auth" -p 0 -t feature
+bd create "Write tests" -d "Unit tests for auth" --assignee alice
+
+VIEWING ISSUES
+bd list List all issues
+bd list --status open List by status
+bd list --priority 0 List by priority (0-4, 0=highest)
+bd show bd-1 Show issue details
+
+MANAGING DEPENDENCIES
+bd dep add bd-1 bd-2 Add dependency (bd-2 blocks bd-1)
+bd dep tree bd-1 Visualize dependency tree
+bd dep cycles Detect circular dependencies
+
+DEPENDENCY TYPES
+blocks Task B must complete before task A
+related Soft connection, doesn't block progress
+parent-child Epic/subtask hierarchical relationship
+discovered-from Auto-created when AI discovers related work
+
+READY WORK
+bd ready Show issues ready to work on
+Ready = status is 'open' AND no blocking dependencies
+Perfect for agents to claim next work!
+
+UPDATING ISSUES
+bd update bd-1 --status in_progress
+bd update bd-1 --priority 0
+bd update bd-1 --assignee bob
+
+CLOSING ISSUES
+bd close bd-1
+bd close bd-2 bd-3 --reason "Fixed in PR #42"
+
+DATABASE LOCATION
+bd automatically discovers your database: 1. --db /path/to/db.db flag 2. $BEADS_DB environment variable 3. .beads/\*.db in current directory or ancestors 4. ~/.beads/default.db as fallback
+
+AGENT INTEGRATION
+bd is designed for AI-supervised workflows:
+• Agents create issues when discovering new work
+• bd ready shows unblocked work ready to claim
+• Use --json flags for programmatic parsing
+• Dependencies prevent agents from duplicating effort
+
+DATABASE EXTENSION
+Applications can extend bd's SQLite database:
+• Add your own tables (e.g., myapp_executions)
+• Join with issues table for powerful queries
+• See database extension docs for integration patterns:
+https://github.com/steveyegge/beads/blob/main/docs/EXTENDING.md
+
+GIT WORKFLOW (AUTO-SYNC)
+bd automatically keeps git in sync:
+• ✓ Export to JSONL after CRUD operations (5s debounce)
+• ✓ Import from JSONL when newer than DB (after git pull)
+• ✓ Works seamlessly across machines and team members
+• No manual export/import needed!
+Dolt handles sync natively — no manual export/import needed
+
+Ready to start!
+Run bd create "My first issue" to create your first issue.

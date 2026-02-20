@@ -15,3 +15,5 @@ dist/
 .pi/skills/worker-ops/
 wrangler.local.*
 packages/worker/scripts/seed-demo.sh
+
+.pi/plans/*
