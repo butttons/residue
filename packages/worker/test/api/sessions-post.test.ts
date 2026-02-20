@@ -1,6 +1,6 @@
 import { env, SELF } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { DB } from "../../src/lib/db";
+import { createDL } from "../../src/lib/db";
 
 const AUTH_HEADER = { Authorization: `Bearer ${env.AUTH_TOKEN}` };
 
@@ -35,7 +35,7 @@ async function postSession(body: unknown) {
 	});
 }
 
-const db = new DB(env.DB);
+const DL = createDL({ db: env.DB });
 
 describe("POST /api/sessions", () => {
 	it("stores session metadata in D1", async () => {
@@ -46,7 +46,7 @@ describe("POST /api/sessions", () => {
 		expect(body.ok).toBe(true);
 
 		// Verify D1 session
-		const session = await db.getSessionById("test-session-1");
+		const session = (await DL.sessions.getById("test-session-1")).value;
 		expect(session).not.toBeNull();
 		expect(session!.agent).toBe("claude-code");
 		expect(session!.agent_version).toBe("1.2.3");
@@ -54,7 +54,7 @@ describe("POST /api/sessions", () => {
 		expect(session!.r2_key).toBe("sessions/test-session-1.json");
 
 		// Verify D1 commits
-		const commits = await db.getCommitsBySha("abc123");
+		const commits = (await DL.commits.getBySha("abc123")).value;
 		expect(commits).toHaveLength(1);
 		expect(commits[0].org).toBe("my-org");
 		expect(commits[0].repo).toBe("my-repo");
@@ -67,7 +67,7 @@ describe("POST /api/sessions", () => {
 		const res = await postSession(makeBody());
 		expect(res.status).toBe(200);
 
-		const commits = await db.getCommitsBySha("abc123");
+		const commits = (await DL.commits.getBySha("abc123")).value;
 		expect(commits).toHaveLength(1);
 		expect(commits[0].branch).toBe("main");
 	});
@@ -89,7 +89,7 @@ describe("POST /api/sessions", () => {
 		const res = await postSession(payload);
 		expect(res.status).toBe(200);
 
-		const commits = await db.getCommitsBySha("no-branch-sha");
+		const commits = (await DL.commits.getBySha("no-branch-sha")).value;
 		expect(commits).toHaveLength(1);
 		expect(commits[0].branch).toBeNull();
 	});
@@ -121,10 +121,10 @@ describe("POST /api/sessions", () => {
 		const res = await postSession(payload);
 		expect(res.status).toBe(200);
 
-		const commits1 = await db.getCommitsBySha("abc123");
+		const commits1 = (await DL.commits.getBySha("abc123")).value;
 		expect(commits1).toHaveLength(1);
 
-		const commits2 = await db.getCommitsBySha("def456");
+		const commits2 = (await DL.commits.getBySha("def456")).value;
 		expect(commits2).toHaveLength(1);
 	});
 
@@ -132,7 +132,7 @@ describe("POST /api/sessions", () => {
 		const res = await postSession(makeBody({ commits: [] }));
 		expect(res.status).toBe(200);
 
-		const session = await db.getSessionById("test-session-1");
+		const session = (await DL.sessions.getById("test-session-1")).value;
 		expect(session).not.toBeNull();
 	});
 
@@ -143,7 +143,7 @@ describe("POST /api/sessions", () => {
 		const res = await postSession(payload);
 		expect(res.status).toBe(200);
 
-		const session = await db.getSessionById("test-session-1");
+		const session = (await DL.sessions.getById("test-session-1")).value;
 		expect(session).not.toBeNull();
 		expect(session!.ended_at).toBeNull();
 	});
@@ -162,7 +162,7 @@ describe("POST /api/sessions", () => {
 		expect(res.status).toBe(200);
 
 		// D1 should have ended_at set
-		const session = await db.getSessionById("test-session-1");
+		const session = (await DL.sessions.getById("test-session-1")).value;
 		expect(session!.ended_at).not.toBeNull();
 	});
 
@@ -173,7 +173,7 @@ describe("POST /api/sessions", () => {
 
 		expect(res.status).toBe(200);
 
-		const commits = await db.getCommitsBySha("abc123");
+		const commits = (await DL.commits.getBySha("abc123")).value;
 		expect(commits).toHaveLength(1);
 	});
 
@@ -198,7 +198,7 @@ describe("POST /api/sessions", () => {
 		expect(res.status).toBe(200);
 
 		// D1 metadata should be stored
-		const session = await db.getSessionById("presigned-session");
+		const session = (await DL.sessions.getById("presigned-session")).value;
 		expect(session).not.toBeNull();
 		expect(session!.agent).toBe("claude-code");
 		expect(session!.r2_key).toBe("sessions/presigned-session.json");
@@ -242,7 +242,7 @@ describe("POST /api/sessions", () => {
 		const res = await postSession(payload);
 		expect(res.status).toBe(200);
 
-		const files = await db.getCommitFiles("files-test-sha");
+		const files = (await DL.commits.getFiles("files-test-sha")).value;
 		expect(files).toHaveLength(2);
 
 		const authFile = files.find((f) => f.file_path === "src/auth.ts");
@@ -262,7 +262,7 @@ describe("POST /api/sessions", () => {
 		const res = await postSession(makeBody());
 		expect(res.status).toBe(200);
 
-		const files = await db.getCommitFiles("abc123");
+		const files = (await DL.commits.getFiles("abc123")).value;
 		expect(files).toHaveLength(0);
 	});
 
@@ -293,7 +293,7 @@ describe("POST /api/sessions", () => {
 		const res = await postSession(payload);
 		expect(res.status).toBe(200);
 
-		const files = await db.getCommitFiles("dup-files-sha");
+		const files = (await DL.commits.getFiles("dup-files-sha")).value;
 		expect(files).toHaveLength(1);
 	});
 });

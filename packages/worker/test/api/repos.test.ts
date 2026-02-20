@@ -1,13 +1,13 @@
 import { env, SELF } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { DB } from "../../src/lib/db";
+import { createDL } from "../../src/lib/db";
 
 const AUTH_HEADER = { Authorization: `Bearer ${env.AUTH_TOKEN}` };
 
-const db = new DB(env.DB);
+const DL = createDL({ db: env.DB });
 
 async function seedSession(id: string) {
-	await db.upsertSession({
+	await DL.sessions.upsert({
 		id,
 		agent: "claude-code",
 		agentVersion: "1.0.0",
@@ -26,7 +26,7 @@ async function seedCommit(opts: {
 	committedAt: number;
 	branch?: string;
 }) {
-	await db.insertCommit({
+	await DL.commits.insert({
 		commitSha: opts.sha,
 		org: opts.org,
 		repo: opts.repo,

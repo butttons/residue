@@ -1,9 +1,9 @@
 import { env, SELF } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { DB } from "../../src/lib/db";
+import { createDL } from "../../src/lib/db";
 import { sessionCookieHeader } from "../utils";
 
-const db = new DB(env.DB);
+const DL = createDL({ db: env.DB });
 
 describe("POST /app/settings/visibility", () => {
 	it("enables public visibility", async () => {
@@ -23,12 +23,12 @@ describe("POST /app/settings/visibility", () => {
 		expect(location).toContain("success");
 		expect(location).toContain("publicly");
 
-		const isPublic = await db.getIsPublic();
+		const isPublic = (await DL.settings.getIsPublic()).value;
 		expect(isPublic).toBe(true);
 	});
 
 	it("disables public visibility", async () => {
-		await db.setSetting({ key: "is_public", value: "true" });
+		await DL.settings.set({ key: "is_public", value: "true" });
 		const headers = await sessionCookieHeader();
 		const res = await SELF.fetch("https://test.local/app/settings/visibility", {
 			method: "POST",
@@ -43,12 +43,12 @@ describe("POST /app/settings/visibility", () => {
 		const location = res.headers.get("location") ?? "";
 		expect(location).toContain("private");
 
-		const isPublic = await db.getIsPublic();
+		const isPublic = (await DL.settings.getIsPublic()).value;
 		expect(isPublic).toBe(false);
 	});
 
 	it("requires auth even when public", async () => {
-		await db.setSetting({ key: "is_public", value: "true" });
+		await DL.settings.set({ key: "is_public", value: "true" });
 		const res = await SELF.fetch("https://test.local/app/settings/visibility", {
 			method: "POST",
 			headers: {
@@ -64,7 +64,7 @@ describe("POST /app/settings/visibility", () => {
 
 describe("public visibility behavior", () => {
 	it("allows unauthenticated access to app when public", async () => {
-		await db.setSetting({ key: "is_public", value: "true" });
+		await DL.settings.set({ key: "is_public", value: "true" });
 		const res = await SELF.fetch("https://test.local/app");
 		expect(res.status).toBe(200);
 	});
@@ -78,7 +78,7 @@ describe("public visibility behavior", () => {
 	});
 
 	it("blocks unauthenticated access to settings/users when public", async () => {
-		await db.setSetting({ key: "is_public", value: "true" });
+		await DL.settings.set({ key: "is_public", value: "true" });
 		const res = await SELF.fetch("https://test.local/app/settings/users", {
 			redirect: "manual",
 		});
@@ -87,13 +87,13 @@ describe("public visibility behavior", () => {
 	});
 
 	it("allows unauthenticated access to org pages when public", async () => {
-		await db.setSetting({ key: "is_public", value: "true" });
+		await DL.settings.set({ key: "is_public", value: "true" });
 		const res = await SELF.fetch("https://test.local/app/test-org");
 		expect(res.status).not.toBe(302);
 	});
 
 	it("allows unauthenticated access to repo pages when public", async () => {
-		await db.setSetting({ key: "is_public", value: "true" });
+		await DL.settings.set({ key: "is_public", value: "true" });
 		const res = await SELF.fetch("https://test.local/app/test-org/test-repo");
 		expect(res.status).not.toBe(302);
 	});
