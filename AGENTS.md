@@ -507,6 +507,8 @@ The worker repo includes a "Deploy to Cloudflare" button that:
 
 The user gets back a worker URL and a token. That's all they need to run `residue login`.
 
+The public demo at `demo.residue.dev` is deployed via `wrangler.local.demo.jsonc` with `IS_DEMO=true`, which disables the search page. Changes for the demo gate are stashed locally (`git stash list`), not yet committed.
+
 ## Build & Development
 
 ```bash
