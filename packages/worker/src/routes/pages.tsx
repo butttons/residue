@@ -4,6 +4,7 @@ import type { FC } from "hono/jsx";
 import { ActivityGraph } from "../components/ActivityGraph";
 import { AgentBreakdownChart } from "../components/AgentBreakdownChart";
 import { CommitGraph } from "../components/CommitGraph";
+import { Contributors } from "../components/Contributors";
 import type { ContinuationLink } from "../components/Conversation";
 import { Conversation } from "../components/Conversation";
 import { Layout } from "../components/Layout";
@@ -231,14 +232,21 @@ const RecentActivity: FC<{
 pages.get("/", async (c) => {
 	const db = new DB(c.env.DB);
 	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
-	const [orgs, dailyCounts, stats, agentBreakdown, recentCommits] =
-		await Promise.all([
-			db.getOrgList(),
-			db.getDailyActivityCountsGlobal({ since: oneYearAgo }),
-			db.getGlobalStats(),
-			db.getAgentBreakdown(),
-			db.getRecentCommits({ limit: 15 }),
-		]);
+	const [
+		orgs,
+		dailyCounts,
+		stats,
+		agentBreakdown,
+		recentCommits,
+		contributors,
+	] = await Promise.all([
+		db.getOrgList(),
+		db.getDailyActivityCountsGlobal({ since: oneYearAgo }),
+		db.getGlobalStats(),
+		db.getAgentBreakdown(),
+		db.getRecentCommits({ limit: 15 }),
+		db.getContributors({ scope: "global" }),
+	]);
 	const username = c.get("username");
 
 	return c.html(
@@ -262,6 +270,8 @@ pages.get("/", async (c) => {
 					{agentBreakdown.length > 1 && (
 						<AgentBreakdownChart agents={agentBreakdown} />
 					)}
+
+					<Contributors contributors={contributors} />
 
 					<div class="mb-6">
 						<h2 class="text-xs text-zinc-400 mb-3">Organizations</h2>
@@ -508,9 +518,10 @@ pages.get("/:org", async (c) => {
 	const org = c.req.param("org");
 	const db = new DB(c.env.DB);
 	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
-	const [repos, dailyCounts] = await Promise.all([
+	const [repos, dailyCounts, contributors] = await Promise.all([
 		db.getReposByOrg(org),
 		db.getDailyActivityCountsByOrg({ org, since: oneYearAgo }),
+		db.getContributors({ scope: "org", org }),
 	]);
 	const username = c.get("username");
 
@@ -530,6 +541,8 @@ pages.get("/:org", async (c) => {
 			breadcrumbs={[{ label: org }]}
 		>
 			<ActivityGraph dailyCounts={dailyCounts} />
+
+			<Contributors contributors={contributors} />
 
 			<div class="flex flex-col gap-3">
 				{repos.map((repo) => (
@@ -578,9 +591,10 @@ pages.get("/:org/:repo", async (c) => {
 	const commitLimit = 20;
 
 	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
-	const [rows, dailyCounts] = await Promise.all([
+	const [rows, dailyCounts, contributors] = await Promise.all([
 		db.getCommitGraphData({ org, repo, cursor, limit: commitLimit }),
 		db.getDailyActivityCounts({ org, repo, since: oneYearAgo }),
+		db.getContributors({ scope: "repo", org, repo }),
 	]);
 
 	if (rows.length === 0 && !cursorParam) {
@@ -635,6 +649,8 @@ pages.get("/:org/:repo", async (c) => {
 			<ActivityGraph dailyCounts={dailyCounts} org={org} repo={repo} />
 
 			<StatsChart dailyCounts={dailyCounts} />
+
+			<Contributors contributors={contributors} />
 
 			<CommitGraph data={graphData} org={org} repo={repo} />
 

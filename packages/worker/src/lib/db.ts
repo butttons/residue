@@ -207,6 +207,18 @@ type RecentCommitRow = {
 	agent: string;
 };
 
+type ContributorRow = {
+	author: string;
+	commitCount: number;
+	sessionCount: number;
+	lastActive: number | null;
+};
+
+type ContributorScope =
+	| { scope: "global" }
+	| { scope: "org"; org: string }
+	| { scope: "repo"; org: string; repo: string };
+
 export type {
 	SessionRow,
 	CommitRow,
@@ -228,6 +240,7 @@ export type {
 	GlobalStats,
 	AgentBreakdown,
 	RecentCommitRow,
+	ContributorRow,
 };
 
 export class DB {
@@ -900,6 +913,36 @@ export class DB {
 			)
 			.bind(limit)
 			.all<RecentCommitRow>();
+
+		return result.results;
+	}
+
+	async getContributors(opts: ContributorScope): Promise<ContributorRow[]> {
+		let where = "";
+		const bindings: string[] = [];
+
+		if (opts.scope === "org") {
+			where = "WHERE c.org = ?";
+			bindings.push(opts.org);
+		} else if (opts.scope === "repo") {
+			where = "WHERE c.org = ? AND c.repo = ?";
+			bindings.push(opts.org, opts.repo);
+		}
+
+		const result = await this.db
+			.prepare(
+				`SELECT
+           c.author,
+           COUNT(DISTINCT c.commit_sha) as commitCount,
+           COUNT(DISTINCT c.session_id) as sessionCount,
+           MAX(c.committed_at) as lastActive
+         FROM commits c
+         ${where}
+         GROUP BY c.author
+         ORDER BY commitCount DESC`,
+			)
+			.bind(...bindings)
+			.all<ContributorRow>();
 
 		return result.results;
 	}
