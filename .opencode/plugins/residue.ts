@@ -153,6 +153,33 @@ export const ResiduePlugin: Plugin = async ({ client, $, directory }) => {
   // -- Track current opencode session ID --
 
   let currentOpencodeSessionId: string | undefined
+  let isShuttingDown = false
+
+  // End session on process exit since opencode has no shutdown event
+  const handleExit = () => {
+    if (isShuttingDown) return
+    isShuttingDown = true
+
+    const residueSessionId = readStateFile()
+    if (!residueSessionId || !isResidueAvailable) return
+
+    // Synchronous cleanup: end the session via CLI
+    // Data was already dumped on the last session.idle event
+    try {
+      const { execSync } = require("child_process")
+      execSync(`residue session end --id ${residueSessionId}`, {
+        stdio: "ignore",
+        timeout: 5000,
+      })
+    } catch {
+      // best effort
+    }
+    removeStateFile()
+  }
+
+  process.on("exit", handleExit)
+  process.on("SIGINT", () => { handleExit(); process.exit(0) })
+  process.on("SIGTERM", () => { handleExit(); process.exit(0) })
 
   return {
     event: async ({ event }) => {
@@ -179,6 +206,14 @@ export const ResiduePlugin: Plugin = async ({ client, $, directory }) => {
         await endCurrentSession({ opencodeSessionId: sessionId })
         currentOpencodeSessionId = sessionId
         await startResidueSession({ opencodeSessionId: sessionId })
+      }
+
+      // Dump session data whenever the model finishes responding
+      // This keeps the data file fresh so it's up-to-date if the process exits
+      if (event.type === "session.idle" || event.type === "session.status") {
+        if (currentOpencodeSessionId) {
+          await dumpSessionData({ opencodeSessionId: currentOpencodeSessionId })
+        }
       }
     },
   }
