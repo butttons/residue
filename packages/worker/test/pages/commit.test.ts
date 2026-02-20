@@ -1,9 +1,9 @@
 import { env, SELF } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { DB } from "../../src/lib/db";
+import { createDL } from "../../src/lib/db";
 import { sessionCookieHeader } from "../utils";
 
-const db = new DB(env.DB);
+const DL = createDL({ db: env.DB });
 
 const PI_SESSION_DATA = [
 	'{"type":"session","id":"test-session"}',
@@ -21,7 +21,7 @@ async function seedFullCommit(opts: {
 	sessionData?: string;
 }) {
 	const agent = opts.agent ?? "pi";
-	await db.upsertSession({
+	await DL.sessions.upsert({
 		id: opts.sessionId,
 		agent,
 		agentVersion: "1.0.0",
@@ -32,7 +32,7 @@ async function seedFullCommit(opts: {
 		`sessions/${opts.sessionId}.json`,
 		opts.sessionData ?? PI_SESSION_DATA,
 	);
-	await db.insertCommit({
+	await DL.commits.insert({
 		commitSha: opts.sha,
 		org: opts.org,
 		repo: opts.repo,
@@ -67,7 +67,7 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 
 	it("shows continuation links for multi-commit sessions", async () => {
 		const sessionId = "multi-session";
-		await db.upsertSession({
+		await DL.sessions.upsert({
 			id: sessionId,
 			agent: "pi",
 			agentVersion: "1.0.0",
@@ -76,7 +76,7 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 		});
 		await env.BUCKET.put(`sessions/${sessionId}.json`, PI_SESSION_DATA);
 
-		await db.insertCommit({
+		await DL.commits.insert({
 			commitSha: "first-sha",
 			org: "m-org",
 			repo: "m-repo",
@@ -86,7 +86,7 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 			committedAt: 1700000000,
 			branch: null,
 		});
-		await db.insertCommit({
+		await DL.commits.insert({
 			commitSha: "second-sha",
 			org: "m-org",
 			repo: "m-repo",
@@ -116,14 +116,14 @@ describe("GET /app/:org/:repo/:sha (commit page)", () => {
 	});
 
 	it("handles missing R2 data gracefully", async () => {
-		await db.upsertSession({
+		await DL.sessions.upsert({
 			id: "no-r2",
 			agent: "pi",
 			agentVersion: "1.0.0",
 			status: "ended",
 			r2Key: "sessions/no-r2.json",
 		});
-		await db.insertCommit({
+		await DL.commits.insert({
 			commitSha: "no-r2-sha",
 			org: "n-org",
 			repo: "n-repo",

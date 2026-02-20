@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { authMiddleware } from "./middleware/auth";
+import { dlMiddleware } from "./middleware/dl";
 import { sessionMiddleware } from "./middleware/session";
 import { VERSION, versionMiddleware } from "./middleware/version";
 import { auth } from "./routes/auth";
@@ -10,8 +11,11 @@ import { search } from "./routes/search";
 import { sessions } from "./routes/sessions";
 import { settings } from "./routes/settings";
 import { users } from "./routes/users";
+import type { AppEnv } from "./types";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
+
+app.use("*", dlMiddleware);
 
 app.use("/api/*", versionMiddleware);
 app.use("/api/*", authMiddleware);

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { DB } from "../lib/db";
+import type { AppEnv } from "../types";
 
-const repos = new Hono<{ Bindings: Env }>();
+const repos = new Hono<AppEnv>();
 
 repos.get("/:org/:repo", async (c) => {
 	const org = c.req.param("org");
@@ -13,10 +13,18 @@ repos.get("/:org/:repo", async (c) => {
 		return c.json({ error: "Invalid cursor" }, 400);
 	}
 
-	const db = new DB(c.env.DB);
 	const limit = 50;
 
-	const rows = await db.getCommitsWithSessions({ org, repo, cursor, limit });
+	const result = await c.var.DL.commits.getWithSessions({
+		org,
+		repo,
+		cursor,
+		limit,
+	});
+	if (result.isErr) {
+		return c.json({ error: "Failed to fetch commits" }, 500);
+	}
+	const rows = result.value;
 
 	const commitMap = new Map<
 		string,
@@ -68,8 +76,11 @@ repos.get("/:org/:repo/:sha", async (c) => {
 	const repo = c.req.param("repo");
 	const sha = c.req.param("sha");
 
-	const db = new DB(c.env.DB);
-	const rows = await db.getCommitShaDetail({ sha, org, repo });
+	const detailResult = await c.var.DL.commits.getShaDetail({ sha, org, repo });
+	if (detailResult.isErr) {
+		return c.json({ error: "Failed to fetch commit" }, 500);
+	}
+	const rows = detailResult.value;
 
 	if (rows.length === 0) {
 		return c.json({ error: "Commit not found" }, 404);
@@ -84,7 +95,10 @@ repos.get("/:org/:repo/:sha", async (c) => {
 		ended_at: row.session_ended_at,
 	}));
 
-	const files = await db.getCommitFiles(sha);
+	const filesResult = await c.var.DL.commits.getFiles(sha);
+	if (filesResult.isErr) {
+		return c.json({ error: "Failed to fetch commit files" }, 500);
+	}
 
 	return c.json(
 		{
@@ -96,7 +110,7 @@ repos.get("/:org/:repo/:sha", async (c) => {
 				branch: first.branch,
 			},
 			sessions,
-			files: files.map((f) => ({
+			files: filesResult.value.map((f) => ({
 				path: f.file_path,
 				change_type: f.change_type,
 				lines_added: f.lines_added,

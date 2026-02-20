@@ -1,8 +1,8 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
-import { DB } from "../lib/db";
 import { createPresignedPutUrl } from "../lib/presign";
+import type { AppEnv } from "../types";
 
 const commitFileSchema = z.object({
 	path: z.string().min(1),
@@ -35,7 +35,7 @@ const postSessionsSchema = z.object({
 	commits: z.array(commitSchema),
 });
 
-const sessions = new Hono<{ Bindings: Env }>();
+const sessions = new Hono<AppEnv>();
 
 sessions.post(
 	"/",
@@ -54,46 +54,51 @@ sessions.post(
 		// Session data is uploaded directly to R2 via presigned URL before
 		// this metadata-only POST is called. No inline R2 write needed.
 
-		try {
-			const db = new DB(c.env.DB);
+		const { DL } = c.var;
 
-			await db.upsertSession({
-				id: session.id,
-				agent: session.agent,
-				agentVersion: session.agent_version ?? "unknown",
-				status: session.status ?? "open",
-				r2Key,
-				dataPath: session.data_path ?? null,
-				firstMessage: session.first_message ?? null,
-				sessionName: session.session_name ?? null,
+		const sessionResult = await DL.sessions.upsert({
+			id: session.id,
+			agent: session.agent,
+			agentVersion: session.agent_version ?? "unknown",
+			status: session.status ?? "open",
+			r2Key,
+			dataPath: session.data_path ?? null,
+			firstMessage: session.first_message ?? null,
+			sessionName: session.session_name ?? null,
+		});
+		if (sessionResult.isErr) {
+			return c.json({ error: "Failed to write metadata to database" }, 500);
+		}
+
+		for (const commit of commits) {
+			const commitResult = await DL.commits.insert({
+				commitSha: commit.sha,
+				org: commit.org,
+				repo: commit.repo,
+				sessionId: session.id,
+				message: commit.message,
+				author: commit.author,
+				committedAt: commit.committed_at,
+				branch: commit.branch ?? null,
 			});
+			if (commitResult.isErr) {
+				return c.json({ error: "Failed to write metadata to database" }, 500);
+			}
 
-			for (const commit of commits) {
-				await db.insertCommit({
+			if (commit.files && commit.files.length > 0) {
+				const filesResult = await DL.commits.insertFiles({
 					commitSha: commit.sha,
-					org: commit.org,
-					repo: commit.repo,
-					sessionId: session.id,
-					message: commit.message,
-					author: commit.author,
-					committedAt: commit.committed_at,
-					branch: commit.branch ?? null,
+					files: commit.files.map((f) => ({
+						path: f.path,
+						changeType: f.change_type,
+						linesAdded: f.lines_added,
+						linesDeleted: f.lines_deleted,
+					})),
 				});
-
-				if (commit.files && commit.files.length > 0) {
-					await db.insertCommitFiles({
-						commitSha: commit.sha,
-						files: commit.files.map((f) => ({
-							path: f.path,
-							changeType: f.change_type,
-							linesAdded: f.lines_added,
-							linesDeleted: f.lines_deleted,
-						})),
-					});
+				if (filesResult.isErr) {
+					return c.json({ error: "Failed to write metadata to database" }, 500);
 				}
 			}
-		} catch {
-			return c.json({ error: "Failed to write metadata to database" }, 500);
 		}
 
 		return c.json({ ok: true }, 200);
@@ -164,8 +169,11 @@ sessions.post(
 
 sessions.get("/:id/metadata", async (c) => {
 	const id = c.req.param("id");
-	const db = new DB(c.env.DB);
-	const session = await db.getSessionById(id);
+	const result = await c.var.DL.sessions.getById(id);
+	if (result.isErr) {
+		return c.json({ error: "Failed to fetch session" }, 500);
+	}
+	const session = result.value;
 	if (!session) {
 		return c.json({ error: "Session not found" }, 404);
 	}
@@ -188,16 +196,21 @@ sessions.get("/:id/metadata", async (c) => {
 
 sessions.get("/:id/commits", async (c) => {
 	const id = c.req.param("id");
-	const db = new DB(c.env.DB);
-	const commits = await db.getSessionCommits(id);
-	return c.json({ commits }, 200);
+	const result = await c.var.DL.sessions.getCommits(id);
+	if (result.isErr) {
+		return c.json({ error: "Failed to fetch commits" }, 500);
+	}
+	return c.json({ commits: result.value }, 200);
 });
 
 sessions.get("/:id", async (c) => {
 	const id = c.req.param("id");
-	const db = new DB(c.env.DB);
 
-	const session = await db.getSessionById(id);
+	const result = await c.var.DL.sessions.getById(id);
+	if (result.isErr) {
+		return c.json({ error: "Failed to fetch session" }, 500);
+	}
+	const session = result.value;
 	if (!session) {
 		return c.json({ error: "Session not found" }, 404);
 	}

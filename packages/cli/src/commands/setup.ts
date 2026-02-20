@@ -7,6 +7,9 @@ const log = createLogger("setup");
 
 import { mkdir, readFile, stat, writeFile } from "fs/promises";
 import { join } from "path";
+import opencodePluginSource from "../../adapters/opencode/plugin.ts.txt" with {
+	type: "text",
+};
 // Embedded at build time so the binary doesn't need to resolve a file path at runtime
 import piAdapterSource from "../../adapters/pi/extension.ts.txt" with {
 	type: "text",
@@ -129,6 +132,36 @@ function setupPi(projectRoot: string): ResultAsync<void, CliError> {
 	);
 }
 
+function setupOpencode(projectRoot: string): ResultAsync<void, CliError> {
+	const pluginDir = join(projectRoot, ".opencode", "plugins");
+	const targetPath = join(pluginDir, "residue.ts");
+
+	return ResultAsync.fromPromise(
+		(async () => {
+			await mkdir(pluginDir, { recursive: true });
+
+			let isExisting = false;
+			try {
+				await stat(targetPath);
+				isExisting = true;
+			} catch {
+				// does not exist
+			}
+
+			if (isExisting) {
+				log.info(
+					"residue plugin already exists at .opencode/plugins/residue.ts",
+				);
+				return;
+			}
+
+			await writeFile(targetPath, opencodePluginSource);
+			log.info("Installed opencode plugin at .opencode/plugins/residue.ts");
+		})(),
+		toCliError({ message: "Failed to setup opencode", code: "IO_ERROR" }),
+	);
+}
+
 export function setup(opts: { agent: string }): ResultAsync<void, CliError> {
 	return getProjectRoot().andThen((projectRoot) => {
 		switch (opts.agent) {
@@ -136,10 +169,12 @@ export function setup(opts: { agent: string }): ResultAsync<void, CliError> {
 				return setupClaudeCode(projectRoot);
 			case "pi":
 				return setupPi(projectRoot);
+			case "opencode":
+				return setupOpencode(projectRoot);
 			default:
 				return errAsync(
 					new CliError({
-						message: `Unknown agent: ${opts.agent}. Supported: claude-code, pi`,
+						message: `Unknown agent: ${opts.agent}. Supported: claude-code, opencode, pi`,
 						code: "VALIDATION_ERROR",
 					}),
 				);

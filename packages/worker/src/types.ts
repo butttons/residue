@@ -1,3 +1,5 @@
+import type { DataLayer } from "./lib/db";
+
 type ToolCall = {
 	name: string;
 	input: string;
@@ -19,4 +21,12 @@ type Message = {
 
 type Mapper = (raw: string) => Message[];
 
-export type { ToolCall, ThinkingBlock, Message, Mapper };
+type AppEnv = {
+	Bindings: Env;
+	Variables: {
+		DL: DataLayer;
+		username: string;
+	};
+};
+
+export type { ToolCall, ThinkingBlock, Message, Mapper, AppEnv };

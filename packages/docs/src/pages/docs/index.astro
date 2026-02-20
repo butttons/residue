@@ -21,7 +21,7 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
                 <li><strong><a href="https://bun.sh" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">Bun</a></strong> (required runtime for the CLI)</li>
                 <li><strong>Git</strong> (hooks are installed in .git/hooks/)</li>
                 <li><strong>Cloudflare account</strong> (for deploying the worker)</li>
-                <li><strong>A supported AI agent:</strong> Claude Code or pi</li>
+                <li><strong>A supported AI agent:</strong> Claude Code, pi, or OpenCode</li>
             </ul>
         </div>
     </div>
@@ -286,7 +286,7 @@ npx wrangler deploy</code></pre>
                     <div class="text-zinc-500"># Install git hooks (post-commit + pre-push)</div>
                     <div class="text-zinc-300">residue init</div>
                     <div class="text-zinc-300 mt-3"><span class="text-zinc-500"># Set up your agent adapter</span></div>
-                    <div class="text-zinc-300">residue setup claude-code   <span class="text-zinc-500"># or: residue setup pi</span></div>
+                    <div class="text-zinc-300">residue setup claude-code   <span class="text-zinc-500"># or: residue setup pi, residue setup opencode</span></div>
                 </div>
                 <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6 space-y-3">
                     <p class="text-zinc-400 text-sm">
@@ -302,6 +302,10 @@ npx wrangler deploy</code></pre>
                     <p class="text-zinc-400 text-sm">
                         <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup pi</code> --
                         Installs extension at <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.pi/extensions/residue.ts</code>.
+                    </p>
+                    <p class="text-zinc-400 text-sm">
+                        <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup opencode</code> --
+                        Installs plugin at <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.opencode/plugins/residue.ts</code>.
                     </p>
                     <p class="text-zinc-500 text-xs mt-1">
                         That's it. Commit and push as usual -- conversations are captured and uploaded automatically.

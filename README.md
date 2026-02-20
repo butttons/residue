@@ -184,12 +184,13 @@ Run these in any git repo you want to track:
 residue init
 
 # Set up your agent adapter
-residue setup claude-code    # or: residue setup pi
+residue setup claude-code    # or: residue setup pi, residue setup opencode
 ```
 
 - `residue init` -- installs `post-commit` and `pre-push` hooks, adds `.residue/` to `.gitignore`
 - `residue setup claude-code` -- adds hooks to `.claude/settings.json`
 - `residue setup pi` -- installs extension at `.pi/extensions/residue.ts`
+- `residue setup opencode` -- installs plugin at `.opencode/plugins/residue.ts`
 
 That's it. Commit and push as usual -- conversations are captured and uploaded automatically.
 
@@ -201,7 +202,7 @@ That's it. Commit and push as usual -- conversations are captured and uploaded a
 |---|---|
 | `residue login` | Save worker URL + auth token to `~/.residue/config`. Use `--local` for per-project config |
 | `residue init` | Install git hooks in current repo |
-| `residue setup <agent>` | Configure an agent adapter (`claude-code` or `pi`) |
+| `residue setup <agent>` | Configure an agent adapter (`claude-code`, `pi`, or `opencode`) |
 | `residue push` | Manually upload pending sessions |
 | `residue status` | Show current residue state for this project |
 | `residue clear` | Remove pending sessions from the local queue. Use `--id` for a specific session |

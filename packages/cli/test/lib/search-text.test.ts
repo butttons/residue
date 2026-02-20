@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	buildSearchText,
 	extractClaudeCode,
+	extractOpencode,
 	extractPi,
 	getExtractor,
 	getMetadataExtractors,
@@ -263,6 +264,170 @@ describe("search text extractors", () => {
 		});
 	});
 
+	describe("extractOpencode", () => {
+		test("extracts human and assistant messages", () => {
+			const raw = JSON.stringify([
+				{
+					info: {
+						role: "user",
+						id: "m1",
+						sessionID: "s1",
+						time: { created: 1700000000000 },
+					},
+					parts: [
+						{
+							id: "p1",
+							sessionID: "s1",
+							messageID: "m1",
+							type: "text",
+							text: "fix the auth bug",
+						},
+					],
+				},
+				{
+					info: {
+						role: "assistant",
+						id: "m2",
+						sessionID: "s1",
+						time: { created: 1700000001000 },
+						modelID: "claude-sonnet-4-5",
+						providerID: "anthropic",
+						cost: 0.01,
+						tokens: {
+							input: 100,
+							output: 50,
+							reasoning: 0,
+							cache: { read: 0, write: 0 },
+						},
+					},
+					parts: [
+						{
+							id: "p2",
+							sessionID: "s1",
+							messageID: "m2",
+							type: "text",
+							text: "I will update the middleware.",
+						},
+					],
+				},
+			]);
+
+			const lines = extractOpencode(raw);
+			expect(lines).toHaveLength(2);
+			expect(lines[0]).toEqual({ role: "human", text: "fix the auth bug" });
+			expect(lines[1]).toEqual({
+				role: "assistant",
+				text: "I will update the middleware.",
+			});
+		});
+
+		test("extracts tool parts with input summary", () => {
+			const raw = JSON.stringify([
+				{
+					info: {
+						role: "assistant",
+						id: "m1",
+						sessionID: "s1",
+						time: { created: 1700000000000 },
+						modelID: "claude-sonnet-4-5",
+						providerID: "anthropic",
+						cost: 0.01,
+						tokens: {
+							input: 100,
+							output: 50,
+							reasoning: 0,
+							cache: { read: 0, write: 0 },
+						},
+					},
+					parts: [
+						{
+							id: "p1",
+							sessionID: "s1",
+							messageID: "m1",
+							type: "tool",
+							tool: "read",
+							state: {
+								status: "completed",
+								input: { filePath: "src/auth.ts" },
+								output: "file contents",
+								title: "read",
+								metadata: {},
+								time: { start: 0, end: 1 },
+							},
+						},
+					],
+				},
+			]);
+
+			const lines = extractOpencode(raw);
+			expect(lines).toHaveLength(1);
+			expect(lines[0]).toEqual({ role: "tool", text: "read src/auth.ts" });
+		});
+
+		test("skips reasoning, step-start, step-finish, snapshot, patch parts", () => {
+			const raw = JSON.stringify([
+				{
+					info: {
+						role: "assistant",
+						id: "m1",
+						sessionID: "s1",
+						time: { created: 1700000000000 },
+						modelID: "model",
+						providerID: "p",
+						cost: 0,
+						tokens: {
+							input: 0,
+							output: 0,
+							reasoning: 0,
+							cache: { read: 0, write: 0 },
+						},
+					},
+					parts: [
+						{
+							id: "p1",
+							sessionID: "s1",
+							messageID: "m1",
+							type: "reasoning",
+							text: "thinking...",
+						},
+						{ id: "p2", sessionID: "s1", messageID: "m1", type: "step-start" },
+						{
+							id: "p3",
+							sessionID: "s1",
+							messageID: "m1",
+							type: "step-finish",
+							cost: 0.01,
+						},
+						{
+							id: "p4",
+							sessionID: "s1",
+							messageID: "m1",
+							type: "text",
+							text: "actual response",
+						},
+					],
+				},
+			]);
+
+			const lines = extractOpencode(raw);
+			expect(lines).toHaveLength(1);
+			expect(lines[0]).toEqual({ role: "assistant", text: "actual response" });
+		});
+
+		test("handles empty input", () => {
+			expect(extractOpencode("")).toHaveLength(0);
+			expect(extractOpencode("  ")).toHaveLength(0);
+		});
+
+		test("handles invalid JSON", () => {
+			expect(extractOpencode("not json")).toHaveLength(0);
+		});
+
+		test("handles empty array", () => {
+			expect(extractOpencode("[]")).toHaveLength(0);
+		});
+	});
+
 	describe("summarizeToolInput", () => {
 		test("returns tool name when no input", () => {
 			expect(summarizeToolInput("read", undefined)).toBe("read");
@@ -309,6 +474,10 @@ describe("search text extractors", () => {
 	describe("getExtractor", () => {
 		test("returns extractor for claude-code", () => {
 			expect(getExtractor("claude-code")).not.toBeNull();
+		});
+
+		test("returns extractor for opencode", () => {
+			expect(getExtractor("opencode")).not.toBeNull();
 		});
 
 		test("returns extractor for pi", () => {
@@ -407,6 +576,13 @@ describe("search text extractors", () => {
 	describe("getMetadataExtractors", () => {
 		test("returns extractors for claude-code", () => {
 			const ext = getMetadataExtractors("claude-code");
+			expect(ext).not.toBeNull();
+			expect(ext!.extractFirstMessage).toBeFunction();
+			expect(ext!.extractSessionName).toBeFunction();
+		});
+
+		test("returns extractors for opencode", () => {
+			const ext = getMetadataExtractors("opencode");
 			expect(ext).not.toBeNull();
 			expect(ext!.extractFirstMessage).toBeFunction();
 			expect(ext!.extractSessionName).toBeFunction();
@@ -589,6 +765,107 @@ describe("search text extractors", () => {
 						message: { role: "user", content: "hello" },
 					}),
 				].join("\n");
+
+				expect(ext.extractSessionName(raw)).toBeNull();
+			});
+		});
+
+		describe("opencode", () => {
+			const ext = getMetadataExtractors("opencode")!;
+
+			test("extractFirstMessage returns first user text", () => {
+				const raw = JSON.stringify([
+					{
+						info: {
+							role: "user",
+							id: "m1",
+							sessionID: "s1",
+							time: { created: 1700000000000 },
+						},
+						parts: [
+							{
+								id: "p1",
+								sessionID: "s1",
+								messageID: "m1",
+								type: "text",
+								text: "fix the auth redirect",
+							},
+						],
+					},
+					{
+						info: {
+							role: "user",
+							id: "m2",
+							sessionID: "s1",
+							time: { created: 1700000002000 },
+						},
+						parts: [
+							{
+								id: "p2",
+								sessionID: "s1",
+								messageID: "m2",
+								type: "text",
+								text: "second message",
+							},
+						],
+					},
+				]);
+
+				expect(ext.extractFirstMessage(raw)).toBe("fix the auth redirect");
+			});
+
+			test("extractFirstMessage returns null for empty session", () => {
+				expect(ext.extractFirstMessage("")).toBeNull();
+				expect(ext.extractFirstMessage("[]")).toBeNull();
+			});
+
+			test("extractFirstMessage truncates long messages to 200 chars", () => {
+				const longMsg = "x".repeat(300);
+				const raw = JSON.stringify([
+					{
+						info: {
+							role: "user",
+							id: "m1",
+							sessionID: "s1",
+							time: { created: 1700000000000 },
+						},
+						parts: [
+							{
+								id: "p1",
+								sessionID: "s1",
+								messageID: "m1",
+								type: "text",
+								text: longMsg,
+							},
+						],
+					},
+				]);
+
+				const result = ext.extractFirstMessage(raw);
+				expect(result).not.toBeNull();
+				expect(result!.length).toBe(200);
+			});
+
+			test("extractSessionName always returns null", () => {
+				const raw = JSON.stringify([
+					{
+						info: {
+							role: "user",
+							id: "m1",
+							sessionID: "s1",
+							time: { created: 1700000000000 },
+						},
+						parts: [
+							{
+								id: "p1",
+								sessionID: "s1",
+								messageID: "m1",
+								type: "text",
+								text: "hello",
+							},
+						],
+					},
+				]);
 
 				expect(ext.extractSessionName(raw)).toBeNull();
 			});

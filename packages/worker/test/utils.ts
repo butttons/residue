@@ -1,16 +1,17 @@
 import { env } from "cloudflare:test";
 import { createSessionToken, hashPassword } from "../src/lib/auth";
-import { DB } from "../src/lib/db";
+import { createDL } from "../src/lib/db";
+
+const DL = createDL({ db: env.DB });
 
 /**
  * Ensure the test admin user exists in D1 and return a session cookie header.
  */
 export async function sessionCookieHeader(): Promise<Record<string, string>> {
-	const db = new DB(env.DB);
-	const existing = await db.getUserByUsername(env.ADMIN_USERNAME);
+	const existing = (await DL.users.getByUsername(env.ADMIN_USERNAME)).value;
 	if (!existing) {
 		const passwordHash = await hashPassword({ password: env.ADMIN_PASSWORD });
-		await db.createUser({
+		await DL.users.create({
 			id: crypto.randomUUID(),
 			username: env.ADMIN_USERNAME,
 			passwordHash,
@@ -33,11 +34,10 @@ export async function nonAdminSessionCookieHeader({
 }: {
 	username: string;
 }): Promise<Record<string, string>> {
-	const db = new DB(env.DB);
-	const existing = await db.getUserByUsername(username);
+	const existing = (await DL.users.getByUsername(username)).value;
 	if (!existing) {
 		const passwordHash = await hashPassword({ password: "test-password" });
-		await db.createUser({
+		await DL.users.create({
 			id: crypto.randomUUID(),
 			username,
 			passwordHash,
