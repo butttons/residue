@@ -8,6 +8,7 @@ import { Contributors } from "../components/Contributors";
 import type { ContinuationLink } from "../components/Conversation";
 import { Conversation } from "../components/Conversation";
 import { Layout } from "../components/Layout";
+import { Minimap } from "../components/Minimap";
 import { StatsChart } from "../components/StatsChart";
 import type {
 	AgentBreakdown,
@@ -990,11 +991,21 @@ pages.get("/:org/:repo/:sha", async (c) => {
 					{sessionsData[0].messages.length === 0 ? (
 						<p class="text-zinc-500 text-sm">No conversation data available.</p>
 					) : (
-						<Conversation
-							messages={sessionsData[0].messages}
-							continuesFrom={sessionsData[0].continuesFrom}
-							continuesIn={sessionsData[0].continuesIn}
-						/>
+						<>
+							<Conversation
+								messages={sessionsData[0].messages}
+								continuesFrom={sessionsData[0].continuesFrom}
+								continuesIn={sessionsData[0].continuesIn}
+							/>
+							<Minimap
+								sessions={[
+									{
+										id: sessionsData[0].id,
+										messages: sessionsData[0].messages,
+									},
+								]}
+							/>
+						</>
 					)}
 				</div>
 			) : (
@@ -1047,6 +1058,13 @@ pages.get("/:org/:repo/:sha", async (c) => {
 							)}
 						</div>
 					))}
+
+					{/* Minimap for all sessions (switches with tabs) */}
+					<Minimap
+						sessions={sessionsData
+							.filter((s) => s.messages.length > 0)
+							.map((s) => ({ id: s.id, messages: s.messages }))}
+					/>
 
 					{/* Activate tab from URL hash */}
 					{raw(`<script>

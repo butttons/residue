@@ -104,8 +104,11 @@ const Conversation: FC<ConversationProps> = ({
 				</a>
 			)}
 
-			{messages.map((msg) => (
-				<div class="rounded-md bg-zinc-900 border border-zinc-800 p-3">
+			{messages.map((msg, msgIdx) => (
+				<div
+					class="rounded-md bg-zinc-900 border border-zinc-800 p-3"
+					data-msg-index={msgIdx}
+				>
 					<div class="flex items-center gap-2 mb-2">
 						<span
 							class={`text-xs font-semibold uppercase tracking-wide ${roleColor(msg.role)}`}
