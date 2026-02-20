@@ -1,5 +1,12 @@
 # @residue/cli
 
+## 0.0.8
+
+### Patch Changes
+
+- f33521c: Add OpenCode agent support with plugin adapter, session mapper, and search text extractor.
+- f33521c: Add process exit handler and idle data dump to the opencode plugin to prevent data loss.
+
 ## 0.0.7
 
 ### Patch Changes

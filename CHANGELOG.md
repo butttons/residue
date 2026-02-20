@@ -1,5 +1,18 @@
 # residue
 
+## 0.0.8
+
+### @residue/cli
+
+- Add OpenCode agent support with plugin adapter and search text extractor
+- Add process exit handler and idle data dump to the opencode plugin
+
+### @residue/worker
+
+- Add OpenCode agent support with session mapper
+- Add IDE-style conversation minimap to the commit permalink page
+- Style scrollbars across the UI to match the zinc dark theme
+
 ## 0.0.7
 
 ### @residue/cli

@@ -1,5 +1,13 @@
 # @residue/worker
 
+## 0.0.8
+
+### Patch Changes
+
+- f33521c: Add OpenCode agent support with plugin adapter, session mapper, and search text extractor.
+- 195a5d7: Add IDE-style conversation minimap to the commit permalink page for navigating long sessions.
+- 195a5d7: Style scrollbars across the UI to match the zinc dark theme with thin 6px tracks.
+
 ## 0.0.7
 
 ### Patch Changes
