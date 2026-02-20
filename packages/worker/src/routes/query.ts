@@ -1,11 +1,9 @@
 import { Hono } from "hono";
-import { DB } from "../lib/db";
+import type { AppEnv } from "../types";
 
-const query = new Hono<{ Bindings: Env }>();
+const query = new Hono<AppEnv>();
 
 query.get("/sessions", async (c) => {
-	const db = new DB(c.env.DB);
-
 	const agent = c.req.query("agent");
 	const repo = c.req.query("repo");
 	const branch = c.req.query("branch");
@@ -26,7 +24,7 @@ query.get("/sessions", async (c) => {
 		return c.json({ error: "Invalid 'until' parameter" }, 400);
 	}
 
-	const sessions = await db.querySessions({
+	const result = await c.var.DL.sessions.query({
 		agent,
 		repo,
 		branch,
@@ -35,13 +33,14 @@ query.get("/sessions", async (c) => {
 		limit,
 		offset,
 	});
+	if (result.isErr) {
+		return c.json({ error: "Failed to query sessions" }, 500);
+	}
 
-	return c.json({ sessions }, 200);
+	return c.json({ sessions: result.value }, 200);
 });
 
 query.get("/commits", async (c) => {
-	const db = new DB(c.env.DB);
-
 	const repo = c.req.query("repo");
 	const branch = c.req.query("branch");
 	const author = c.req.query("author");
@@ -62,7 +61,7 @@ query.get("/commits", async (c) => {
 		return c.json({ error: "Invalid 'until' parameter" }, 400);
 	}
 
-	const commits = await db.queryCommits({
+	const result = await c.var.DL.commits.query({
 		repo,
 		branch,
 		author,
@@ -71,6 +70,11 @@ query.get("/commits", async (c) => {
 		limit,
 		offset,
 	});
+	if (result.isErr) {
+		return c.json({ error: "Failed to query commits" }, 500);
+	}
+
+	const commits = result.value;
 
 	// Group by commit SHA
 	const commitMap = new Map<
@@ -112,26 +116,30 @@ query.get("/commits", async (c) => {
 
 query.get("/sessions/:id", async (c) => {
 	const id = c.req.param("id");
-	const db = new DB(c.env.DB);
 
-	const detail = await db.getSessionDetail(id);
-	if (!detail) {
+	const result = await c.var.DL.sessions.getDetail(id);
+	if (result.isErr) {
+		return c.json({ error: "Failed to fetch session" }, 500);
+	}
+	if (!result.value) {
 		return c.json({ error: "Session not found" }, 404);
 	}
 
-	return c.json(detail, 200);
+	return c.json(result.value, 200);
 });
 
 query.get("/commits/:sha", async (c) => {
 	const sha = c.req.param("sha");
-	const db = new DB(c.env.DB);
 
-	const detail = await db.getCommitDetail(sha);
-	if (!detail) {
+	const result = await c.var.DL.commits.getDetail(sha);
+	if (result.isErr) {
+		return c.json({ error: "Failed to fetch commit" }, 500);
+	}
+	if (!result.value) {
 		return c.json({ error: "Commit not found" }, 404);
 	}
 
-	return c.json(detail, 200);
+	return c.json(result.value, 200);
 });
 
 export { query };

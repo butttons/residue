@@ -1,14 +1,11 @@
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { verifySessionToken } from "../lib/auth";
-import { DB } from "../lib/db";
+import type { AppEnv } from "../types";
 
 export const SESSION_COOKIE_NAME = "residue_session";
 
-export const sessionMiddleware = createMiddleware<{
-	Bindings: Env;
-	Variables: { username: string };
-}>(async (c, next) => {
+export const sessionMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 	const path = new URL(c.req.url).pathname;
 
 	// Always allow login page
@@ -31,13 +28,8 @@ export const sessionMiddleware = createMiddleware<{
 	}
 
 	// Check if the instance is public
-	const db = new DB(c.env.DB);
-	let isPublic = false;
-	try {
-		isPublic = await db.getIsPublic();
-	} catch {
-		// Settings table may not exist yet (pre-migration), default to private
-	}
+	const result = await c.var.DL.settings.getIsPublic();
+	const isPublic = result.isOk ? result.value : false;
 
 	// Settings pages always require authentication
 	const isSettingsPage = path.startsWith("/app/settings");

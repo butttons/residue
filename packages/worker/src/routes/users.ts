@@ -2,9 +2,9 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
 import { hashPassword } from "../lib/auth";
-import { DB } from "../lib/db";
+import type { AppEnv } from "../types";
 
-const users = new Hono<{ Bindings: Env }>();
+const users = new Hono<AppEnv>();
 
 const createUserSchema = z.object({
 	username: z.string().min(1).max(64),
@@ -23,29 +23,40 @@ users.post(
 	}),
 	async (c) => {
 		const { username, password } = c.req.valid("json");
-		const db = new DB(c.env.DB);
 
-		const existing = await db.getUserByUsername(username);
-		if (existing) {
+		const existingResult = await c.var.DL.users.getByUsername(username);
+		if (existingResult.isErr) {
+			return c.json({ error: "Failed to check existing user" }, 500);
+		}
+		if (existingResult.value) {
 			return c.json({ error: "Username already exists" }, 409);
 		}
 
 		const passwordHash = await hashPassword({ password });
 		const id = crypto.randomUUID();
 
-		await db.createUser({ id, username, passwordHash });
+		const createResult = await c.var.DL.users.create({
+			id,
+			username,
+			passwordHash,
+		});
+		if (createResult.isErr) {
+			return c.json({ error: "Failed to create user" }, 500);
+		}
 
 		return c.json({ id, username }, 201);
 	},
 );
 
 users.get("/", async (c) => {
-	const db = new DB(c.env.DB);
-	const userList = await db.listUsers();
+	const result = await c.var.DL.users.list();
+	if (result.isErr) {
+		return c.json({ error: "Failed to list users" }, 500);
+	}
 
 	return c.json(
 		{
-			users: userList.map((u) => ({
+			users: result.value.map((u) => ({
 				id: u.id,
 				username: u.username,
 				created_at: u.created_at,
@@ -57,10 +68,12 @@ users.get("/", async (c) => {
 
 users.delete("/:id", async (c) => {
 	const id = c.req.param("id");
-	const db = new DB(c.env.DB);
 
-	const isDeleted = await db.deleteUser(id);
-	if (!isDeleted) {
+	const result = await c.var.DL.users.delete(id);
+	if (result.isErr) {
+		return c.json({ error: "Failed to delete user" }, 500);
+	}
+	if (!result.value) {
 		return c.json({ error: "User not found" }, 404);
 	}
 

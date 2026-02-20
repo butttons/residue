@@ -2,8 +2,8 @@ import { Hono } from "hono";
 import type { FC } from "hono/jsx";
 import { Layout } from "../components/Layout";
 import { hashPassword } from "../lib/auth";
-import { DB } from "../lib/db";
 import { formatTimestamp } from "../lib/time";
+import type { AppEnv } from "../types";
 
 type BreadcrumbItem = { label: string; href?: string };
 
@@ -52,13 +52,13 @@ const FlashMessages: FC<FlashProps> = ({ success, error }) => (
 	</>
 );
 
-const settings = new Hono<{ Bindings: Env; Variables: { username: string } }>();
+const settings = new Hono<AppEnv>();
 
 // Settings index
 settings.get("/settings", async (c) => {
 	const username = c.get("username");
-	const db = new DB(c.env.DB);
-	const isPublic = await db.getIsPublic();
+	const isPublicResult = await c.var.DL.settings.getIsPublic();
+	const isPublic = isPublicResult.isOk ? isPublicResult.value : false;
 
 	const success = c.req.query("success");
 	const error = c.req.query("error");
@@ -128,8 +128,10 @@ settings.post("/settings/visibility", async (c) => {
 	const body = await c.req.parseBody();
 	const isPublic = body.is_public === "true";
 
-	const db = new DB(c.env.DB);
-	await db.setSetting({ key: "is_public", value: isPublic ? "true" : "false" });
+	await c.var.DL.settings.set({
+		key: "is_public",
+		value: isPublic ? "true" : "false",
+	});
 
 	const message = isPublic
 		? "Instance is now publicly visible."
@@ -142,8 +144,8 @@ settings.post("/settings/visibility", async (c) => {
 settings.get("/settings/users", async (c) => {
 	const username = c.get("username");
 	const isSuperAdmin = username === c.env.ADMIN_USERNAME;
-	const db = new DB(c.env.DB);
-	const users = await db.listUsers();
+	const usersResult = await c.var.DL.users.list();
+	const users = usersResult.isOk ? usersResult.value : [];
 
 	const success = c.req.query("success");
 	const error = c.req.query("error");
@@ -271,10 +273,8 @@ settings.post("/settings/users", async (c) => {
 		);
 	}
 
-	const db = new DB(c.env.DB);
-
-	const existing = await db.getUserByUsername(newUsername);
-	if (existing) {
+	const existingResult = await c.var.DL.users.getByUsername(newUsername);
+	if (existingResult.isOk && existingResult.value) {
 		return c.redirect(
 			"/app/settings/users?error=" +
 				encodeURIComponent("Username already exists."),
@@ -283,7 +283,7 @@ settings.post("/settings/users", async (c) => {
 
 	const passwordHash = await hashPassword({ password });
 	const id = crypto.randomUUID();
-	await db.createUser({ id, username: newUsername, passwordHash });
+	await c.var.DL.users.create({ id, username: newUsername, passwordHash });
 
 	return c.redirect(
 		"/app/settings/users?success=" +
@@ -302,11 +302,12 @@ settings.post("/settings/users/:id/delete", async (c) => {
 	}
 
 	const id = c.req.param("id");
-	const db = new DB(c.env.DB);
 
 	// Find the target user to check for self-deletion
-	const users = await db.listUsers();
-	const targetUser = users.find((u) => u.id === id);
+	const usersResult = await c.var.DL.users.list();
+	const targetUser = usersResult.isOk
+		? usersResult.value.find((u) => u.id === id)
+		: undefined;
 
 	if (!targetUser) {
 		return c.redirect(
@@ -321,7 +322,7 @@ settings.post("/settings/users/:id/delete", async (c) => {
 		);
 	}
 
-	await db.deleteUser(id);
+	await c.var.DL.users.delete(id);
 
 	return c.redirect(
 		"/app/settings/users?success=" +

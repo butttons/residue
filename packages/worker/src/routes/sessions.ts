@@ -169,8 +169,11 @@ sessions.post(
 
 sessions.get("/:id/metadata", async (c) => {
 	const id = c.req.param("id");
-	const db = new DB(c.env.DB);
-	const session = await db.getSessionById(id);
+	const result = await c.var.DL.sessions.getById(id);
+	if (result.isErr) {
+		return c.json({ error: "Failed to fetch session" }, 500);
+	}
+	const session = result.value;
 	if (!session) {
 		return c.json({ error: "Session not found" }, 404);
 	}
@@ -193,16 +196,21 @@ sessions.get("/:id/metadata", async (c) => {
 
 sessions.get("/:id/commits", async (c) => {
 	const id = c.req.param("id");
-	const db = new DB(c.env.DB);
-	const commits = await db.getSessionCommits(id);
-	return c.json({ commits }, 200);
+	const result = await c.var.DL.sessions.getCommits(id);
+	if (result.isErr) {
+		return c.json({ error: "Failed to fetch commits" }, 500);
+	}
+	return c.json({ commits: result.value }, 200);
 });
 
 sessions.get("/:id", async (c) => {
 	const id = c.req.param("id");
-	const db = new DB(c.env.DB);
 
-	const session = await db.getSessionById(id);
+	const result = await c.var.DL.sessions.getById(id);
+	if (result.isErr) {
+		return c.json({ error: "Failed to fetch session" }, 500);
+	}
+	const session = result.value;
 	if (!session) {
 		return c.json({ error: "Session not found" }, 404);
 	}

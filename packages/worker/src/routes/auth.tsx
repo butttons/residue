@@ -2,10 +2,10 @@ import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { html } from "hono/html";
 import { createSessionToken, SESSION_TTL, verifyPassword } from "../lib/auth";
-import { DB } from "../lib/db";
 import { SESSION_COOKIE_NAME } from "../middleware/session";
+import type { AppEnv } from "../types";
 
-const auth = new Hono<{ Bindings: Env }>();
+const auth = new Hono<AppEnv>();
 
 // --- Login page ---
 
@@ -140,8 +140,6 @@ auth.post("/login", async (c) => {
 		);
 	}
 
-	const db = new DB(c.env.DB);
-
 	let authenticatedUsername: string | null = null;
 
 	// Try admin env vars first
@@ -151,14 +149,14 @@ auth.post("/login", async (c) => {
 
 	// Fall back to DB users
 	if (!authenticatedUsername) {
-		const user = await db.getUserByUsername(username);
-		if (user) {
+		const result = await c.var.DL.users.getByUsername(username);
+		if (result.isOk && result.value) {
 			const isPasswordValid = await verifyPassword({
 				password,
-				storedHash: user.password_hash,
+				storedHash: result.value.password_hash,
 			});
 			if (isPasswordValid) {
-				authenticatedUsername = user.username;
+				authenticatedUsername = result.value.username;
 			}
 		}
 	}

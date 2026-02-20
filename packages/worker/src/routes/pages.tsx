@@ -15,11 +15,11 @@ import type {
 	GlobalStats,
 	RecentCommitRow,
 } from "../lib/db";
-import { DB } from "../lib/db";
 import { computeGraph } from "../lib/graph";
 import { formatTimestamp, relativeTime } from "../lib/time";
 import { urls } from "../lib/urls";
 import { getMapper } from "../mappers";
+import type { AppEnv } from "../types";
 
 // --- Shared sub-components ---
 
@@ -89,7 +89,7 @@ const groupCommits = (rows: CommitWithSessionRow[]): GroupedCommit[] => {
 
 // --- Pages app ---
 
-const pages = new Hono<{ Bindings: Env; Variables: { username: string } }>();
+const pages = new Hono<AppEnv>();
 
 // --- Home page sub-components ---
 
@@ -230,23 +230,42 @@ const RecentActivity: FC<{
 
 // Home page — dashboard
 pages.get("/", async (c) => {
-	const db = new DB(c.env.DB);
+	const { DL } = c.var;
 	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
 	const [
-		orgs,
-		dailyCounts,
-		stats,
-		agentBreakdown,
-		recentCommits,
-		contributors,
+		orgsResult,
+		dailyCountsResult,
+		statsResult,
+		agentBreakdownResult,
+		recentCommitsResult,
+		contributorsResult,
 	] = await Promise.all([
-		db.getOrgList(),
-		db.getDailyActivityCountsGlobal({ since: oneYearAgo }),
-		db.getGlobalStats(),
-		db.getAgentBreakdown(),
-		db.getRecentCommits({ limit: 15 }),
-		db.getContributors({ scope: "global" }),
+		DL.orgs.getList(),
+		DL.stats.getDailyActivityCountsGlobal({ since: oneYearAgo }),
+		DL.stats.getGlobalStats(),
+		DL.stats.getAgentBreakdown(),
+		DL.stats.getRecentCommits({ limit: 15 }),
+		DL.stats.getContributors({ scope: "global" }),
 	]);
+	const orgs = orgsResult.isOk ? orgsResult.value : [];
+	const dailyCounts = dailyCountsResult.isOk ? dailyCountsResult.value : [];
+	const stats: GlobalStats = statsResult.isOk
+		? statsResult.value
+		: {
+				totalSessions: 0,
+				totalCommits: 0,
+				totalRepos: 0,
+				totalFilesChanged: 0,
+				totalLinesAdded: 0,
+				totalLinesDeleted: 0,
+			};
+	const agentBreakdown = agentBreakdownResult.isOk
+		? agentBreakdownResult.value
+		: [];
+	const recentCommits = recentCommitsResult.isOk
+		? recentCommitsResult.value
+		: [];
+	const contributors = contributorsResult.isOk ? contributorsResult.value : [];
 	const username = c.get("username");
 
 	return c.html(
@@ -323,8 +342,6 @@ pages.get("/search", async (c) => {
 		);
 	}
 
-	const db = new DB(c.env.DB);
-
 	type SearchResultData = {
 		sessionId: string;
 		score: number;
@@ -372,7 +389,8 @@ pages.get("/search", async (c) => {
 					(p): p is typeof p & { sessionId: string } => p.sessionId !== null,
 				)
 				.map(async ({ sessionId, score, snippets }) => {
-					const detail = await db.getSessionDetail(sessionId);
+					const detailResult = await c.var.DL.sessions.getDetail(sessionId);
+					const detail = detailResult.isOk ? detailResult.value : null;
 					if (!detail) return null;
 					return {
 						sessionId,
@@ -516,13 +534,17 @@ pages.get("/search", async (c) => {
 // Org page — list repos for an org
 pages.get("/:org", async (c) => {
 	const org = c.req.param("org");
-	const db = new DB(c.env.DB);
+	const { DL } = c.var;
 	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
-	const [repos, dailyCounts, contributors] = await Promise.all([
-		db.getReposByOrg(org),
-		db.getDailyActivityCountsByOrg({ org, since: oneYearAgo }),
-		db.getContributors({ scope: "org", org }),
-	]);
+	const [reposResult, dailyCountsResult, contributorsResult] =
+		await Promise.all([
+			DL.orgs.getReposByOrg(org),
+			DL.stats.getDailyActivityCountsByOrg({ org, since: oneYearAgo }),
+			DL.stats.getContributors({ scope: "org", org }),
+		]);
+	const repos = reposResult.isOk ? reposResult.value : [];
+	const dailyCounts = dailyCountsResult.isOk ? dailyCountsResult.value : [];
+	const contributors = contributorsResult.isOk ? contributorsResult.value : [];
 	const username = c.get("username");
 
 	if (repos.length === 0) {
@@ -587,15 +609,20 @@ pages.get("/:org/:repo", async (c) => {
 	// Parse the prev stack: comma-separated list of previous cursors
 	const prevStack = prevParam ? prevParam.split(",") : [];
 
-	const db = new DB(c.env.DB);
 	const commitLimit = 20;
 
 	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
-	const [rows, dailyCounts, contributors] = await Promise.all([
-		db.getCommitGraphData({ org, repo, cursor, limit: commitLimit }),
-		db.getDailyActivityCounts({ org, repo, since: oneYearAgo }),
-		db.getContributors({ scope: "repo", org, repo }),
-	]);
+	const { DL } = c.var;
+	const [rowsResult, dailyCountsResult, contributorsResult] = await Promise.all(
+		[
+			DL.commits.getGraphData({ org, repo, cursor, limit: commitLimit }),
+			DL.stats.getDailyActivityCounts({ org, repo, since: oneYearAgo }),
+			DL.stats.getContributors({ scope: "repo", org, repo }),
+		],
+	);
+	const rows = rowsResult.isOk ? rowsResult.value : [];
+	const dailyCounts = dailyCountsResult.isOk ? dailyCountsResult.value : [];
+	const contributors = contributorsResult.isOk ? contributorsResult.value : [];
 
 	if (rows.length === 0 && !cursorParam) {
 		return c.html(
@@ -690,9 +717,10 @@ pages.get("/:org/:repo/:sha", async (c) => {
 	const repo = c.req.param("repo");
 	const sha = c.req.param("sha");
 	const username = c.get("username");
+	const { DL } = c.var;
 
-	const db = new DB(c.env.DB);
-	const rows = await db.getCommitShaDetail({ sha, org, repo });
+	const detailResult = await DL.commits.getShaDetail({ sha, org, repo });
+	const rows = detailResult.isOk ? detailResult.value : [];
 
 	if (rows.length === 0) {
 		return c.html(
@@ -711,7 +739,8 @@ pages.get("/:org/:repo/:sha", async (c) => {
 	}
 
 	const first = rows[0];
-	const files = await db.getCommitFiles(sha);
+	const filesResult = await DL.commits.getFiles(sha);
+	const files = filesResult.isOk ? filesResult.value : [];
 
 	// Deduplicate sessions
 	const uniqueSessions = new Map<
@@ -759,7 +788,8 @@ pages.get("/:org/:repo/:sha", async (c) => {
 			let continuesFrom: ContinuationLink | undefined;
 			let continuesIn: ContinuationLink | undefined;
 			try {
-				const sessionCommits = await db.getSessionCommits(session.id);
+				const commitsResult = await DL.sessions.getCommits(session.id);
+				const sessionCommits = commitsResult.isOk ? commitsResult.value : [];
 				const idx = sessionCommits.findIndex((sc) => sc.commit_sha === sha);
 				if (idx > 0) {
 					const prev = sessionCommits[idx - 1];
