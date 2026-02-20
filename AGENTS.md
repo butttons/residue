@@ -99,7 +99,7 @@ The presigned URL generation uses lightweight AWS SigV4 signing with the Web Cry
 | ----------------------- | ------------------------------------------------------------- |
 | `residue login`         | Save worker URL + auth token to global config                 |
 | `residue init`          | Install git hooks (post-commit, pre-push) in current repo     |
-| `residue setup <agent>` | Configure an agent adapter for this project (claude-code, pi) |
+| `residue setup <agent>` | Configure an agent adapter for this project (claude-code, pi, opencode) |
 | `residue push`          | Manual trigger to upload pending sessions (alias for sync)    |
 
 **Hook-invoked (git):**
@@ -125,7 +125,9 @@ Adapters are **not a separate package**. They live inside the CLI or are install
 
 **Pi:** Uses pi's extension system. `residue setup pi` installs an extension file at `.pi/extensions/residue.ts`. The extension source is embedded into the CLI binary at build time from `packages/cli/adapters/pi/extension.ts.txt`. The extension calls `residue session start` and `residue session end` directly via `pi.exec()`.
 
-Both adapters store hook state in `.residue/hooks/` within the project root.
+**OpenCode:** Uses OpenCode's plugin system. `residue setup opencode` installs a plugin file at `.opencode/plugins/residue.ts`. The plugin source is embedded into the CLI binary at build time from `packages/cli/adapters/opencode/plugin.ts.txt`. The plugin calls `residue session start` and `residue session end` directly. Includes a process exit handler and idle data dump to prevent lost sessions.
+
+All adapters store hook state in `.residue/hooks/` within the project root.
 
 ### Search Text Extractors
 
@@ -154,7 +156,7 @@ Repo: my-team/my-app
 [assistant] Committed as abc123.
 ```
 
-Supported agents: `claude-code`, `pi`. Adding a new agent means writing one extractor function and registering it in the `extractors` map.
+Supported agents: `claude-code`, `pi`, `opencode`. Adding a new agent means writing one extractor function and registering it in the `extractors` map.
 
 ### Local State
 

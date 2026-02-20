@@ -127,6 +127,18 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
                 </p>
                 <pre class="bg-zinc-950 rounded p-3 font-mono text-sm overflow-x-auto"><code class="text-zinc-300">residue setup pi</code></pre>
             </div>
+
+            <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6">
+                <h3 class="font-semibold text-zinc-200 mb-3">OpenCode</h3>
+                <p class="text-zinc-300 text-sm leading-relaxed mb-3">
+                    Uses OpenCode's plugin system.
+                    <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue setup opencode</code>
+                    installs a plugin at <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.opencode/plugins/residue.ts</code>
+                    that calls <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session start</code> and
+                    <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue session end</code> directly.
+                </p>
+                <pre class="bg-zinc-950 rounded p-3 font-mono text-sm overflow-x-auto"><code class="text-zinc-300">residue setup opencode</code></pre>
+            </div>
         </div>
 
         <p class="text-zinc-400 text-sm mt-4">
