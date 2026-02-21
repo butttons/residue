@@ -3,9 +3,11 @@
 	"version": "0.0.8",
 	"private": true,
 	"scripts": {
+		"build:assets": "vite build",
 		"build:worker": "cd ../worker && pnpm exec wrangler deploy --dry-run --outdir ../installer/.tmp-build",
-		"build": "pnpm run build:worker && node scripts/build.mjs",
-		"dev": "wrangler dev",
+		"build": "pnpm run build:assets && pnpm run build:worker && node scripts/build.mjs",
+		"dev:assets": "vite build --watch",
+		"dev": "pnpm run build:assets && wrangler dev --port 8790",
 		"deploy": "pnpm run build && wrangler deploy",
 		"typecheck": "tsc --noEmit"
 	},

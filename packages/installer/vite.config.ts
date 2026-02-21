@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	plugins: [tailwindcss()],
+	publicDir: false,
 	build: {
 		rollupOptions: {
 			input: "src/styles.css",
