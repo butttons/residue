@@ -7,7 +7,9 @@
 	"observability": {
 		"enabled": true
 	},
-	// BUILD_SHA is replaced at deploy time via build script
+	"assets": {
+		"directory": "./public"
+	},
 	"vars": {
 		"BUILD_SHA": "dev"
 	}

@@ -13,7 +13,10 @@
 		"hono": "^4.7.0"
 	},
 	"devDependencies": {
+		"@tailwindcss/vite": "^4.2.0",
+		"tailwindcss": "^4.2.0",
 		"typescript": "^5.5.2",
+		"vite": "^7.1.9",
 		"wrangler": "^4.65.0"
 	}
 }
