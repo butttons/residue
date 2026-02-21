@@ -1,0 +1,19 @@
+{
+	"name": "@residue/installer",
+	"version": "0.0.8",
+	"private": true,
+	"scripts": {
+		"build:worker": "cd ../worker && pnpm exec wrangler deploy --dry-run --outdir ../installer/.tmp-build",
+		"build": "pnpm run build:worker && node scripts/build.mjs",
+		"dev": "wrangler dev",
+		"deploy": "pnpm run build && wrangler deploy",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"hono": "^4.7.0"
+	},
+	"devDependencies": {
+		"typescript": "^5.5.2",
+		"wrangler": "^4.65.0"
+	}
+}
