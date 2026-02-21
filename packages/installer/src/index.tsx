@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { api } from "@/routes/api";
-import { Page } from "@/ui/page";
+import { InstallPage } from "@/ui/install";
+import { UpdatePage } from "@/ui/update";
 
 type Env = { Bindings: { BUILD_SHA: string } };
 
@@ -9,8 +10,11 @@ const app = new Hono<Env>();
 app.route("/api", api);
 
 app.get("/", (c) => {
-	const buildSha = c.env.BUILD_SHA || "dev";
-	return c.html(<Page buildSha={buildSha} />);
+	return c.html(<InstallPage buildSha={c.env.BUILD_SHA || "dev"} />);
+});
+
+app.get("/update", (c) => {
+	return c.html(<UpdatePage buildSha={c.env.BUILD_SHA || "dev"} />);
 });
 
 export default app;

@@ -6,8 +6,15 @@ export default defineConfig({
 	publicDir: false,
 	build: {
 		rollupOptions: {
-			input: "src/styles.css",
-			output: { assetFileNames: "[name][extname]" },
+			input: {
+				styles: "src/styles.css",
+				install: "src/client/install.ts",
+				update: "src/client/update.ts",
+			},
+			output: {
+				entryFileNames: "[name].js",
+				assetFileNames: "[name][extname]",
+			},
 		},
 		outDir: "public",
 		emptyOutDir: true,
