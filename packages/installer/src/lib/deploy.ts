@@ -1,7 +1,28 @@
 import type { WorkerAssetFile } from "@/lib/assets";
-import { cfFetch } from "@/lib/cloudflare";
 
 const CF_API = "https://api.cloudflare.com/client/v4";
+
+const CONTENT_TYPES: Record<string, string> = {
+	".html": "text/html",
+	".css": "text/css",
+	".js": "application/javascript",
+	".json": "application/json",
+	".png": "image/png",
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".gif": "image/gif",
+	".svg": "image/svg+xml",
+	".ico": "image/x-icon",
+	".txt": "text/plain",
+	".woff": "font/woff",
+	".woff2": "font/woff2",
+	".webp": "image/webp",
+};
+
+function getContentType({ filePath }: { filePath: string }): string {
+	const ext = filePath.slice(filePath.lastIndexOf(".")).toLowerCase();
+	return CONTENT_TYPES[ext] ?? "application/octet-stream";
+}
 
 type AssetManifest = Record<string, { hash: string; size: number }>;
 
@@ -117,10 +138,11 @@ async function uploadAssetBuckets({
 				throw new Error(`Asset not found for hash: ${fileHash}`);
 			}
 			const base64Data = base64Encode({ buffer: asset.content });
+			const contentType = getContentType({ filePath: asset.path });
 			form.append(
 				fileHash,
 				new File([base64Data], fileHash, {
-					type: "application/octet-stream",
+					type: contentType,
 				}),
 				fileHash,
 			);
@@ -218,10 +240,7 @@ async function deployWorker({
 		new Blob([workerScript], { type: "application/javascript+module" }),
 		"worker.js",
 	);
-	form.append(
-		"metadata",
-		new Blob([JSON.stringify(metadata)], { type: "application/json" }),
-	);
+	form.append("metadata", JSON.stringify(metadata));
 
 	const res = await fetch(
 		`${CF_API}/accounts/${accountId}/workers/scripts/${workerName}`,
