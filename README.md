@@ -34,6 +34,7 @@ A single conversation can span multiple commits. The full session is stored once
 packages/
   cli/              -> "@residue/cli" npm package
   worker/           -> Cloudflare Worker (Hono + JSX)
+  installer/        -> Deployment installer at install.residue.dev
 ```
 
 Monorepo managed with pnpm workspaces. Runtime is bun.
@@ -52,6 +53,8 @@ There are six steps: create the R2 bucket and its S3 API credentials, deploy the
 **One-time setup**
 
 ### Step 1: Create an R2 bucket and S3 API token
+
+> **Using the installer?** The installer at [install.residue.dev](https://install.residue.dev) creates the R2 bucket and S3 API credentials automatically. Skip to step 2.
 
 The CLI uploads session data directly to R2 via presigned PUT URLs. You must set these up before deploying the worker.
 
@@ -72,7 +75,13 @@ Save these values -- you will need them in step 2:
 
 The worker stores commit metadata in D1 and serves the web UI. Session data lives in R2 (set up in step 1).
 
-**Option A: Deploy to Cloudflare**
+**Option A: Installer (recommended)**
+
+The installer at [install.residue.dev](https://install.residue.dev) automates the entire deployment: creates the D1 database, R2 bucket, S3 API credentials, AI Search instance, sets secrets, and deploys the worker.
+
+You only need a Cloudflare API token with the required permissions. The installer walks you through each step.
+
+**Option B: Deploy to Cloudflare**
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/butttons/residue/tree/main/packages/worker)
 
@@ -86,7 +95,7 @@ During deploy, you will be prompted for these secrets:
 
 The R2 vars from step 1 (`R2_ACCESS_KEY_ID`, `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`) go into the worker environment variables.
 
-**Option B: Manual**
+**Option C: Manual**
 
 ```bash
 # Clone the repo and install dependencies
@@ -122,7 +131,7 @@ npx wrangler secret put R2_SECRET_ACCESS_KEY
 npx wrangler deploy
 ```
 
-After either option, note your **worker URL** (e.g. `https://residue.your-subdomain.workers.dev`) and **auth token**.
+After any option, note your **worker URL** (e.g. `https://residue.your-subdomain.workers.dev`) and **auth token**.
 
 ### Step 3: Set up AI Search
 
@@ -170,6 +179,8 @@ Use `--local` to save credentials to `.residue/config` in the current project in
 ```bash
 residue login --url https://residue.your-subdomain.workers.dev --token YOUR_AUTH_TOKEN --local
 ```
+
+> **Updating an existing deployment?** Visit [install.residue.dev/update](https://install.residue.dev/update) to update your worker to the latest version.
 
 ---
 

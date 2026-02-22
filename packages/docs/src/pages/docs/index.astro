@@ -30,9 +30,17 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
     <div id="setup" class="mb-12">
         <h2 class="text-2xl font-bold mb-6 text-amber-400">Setup</h2>
 
-        <p class="text-zinc-300 text-sm leading-relaxed mb-8">
+        <p class="text-zinc-300 text-sm leading-relaxed mb-4">
             Six steps: create the R2 bucket with S3 API credentials, deploy the worker, set up AI Search, install the CLI, then configure your repos.
         </p>
+
+        <div class="bg-amber-500/5 border border-amber-500/20 rounded-lg p-4 mb-8">
+            <p class="text-zinc-300 text-sm leading-relaxed">
+                <strong class="text-amber-400">Fastest path:</strong> The installer at
+                <a href="https://install.residue.dev" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">install.residue.dev</a>
+                automates steps 1-3 (R2 bucket, worker deployment, AI Search). You only need a Cloudflare API token.
+            </p>
+        </div>
 
         <!-- One-time setup label -->
         <div class="flex items-center gap-3 mb-8">
@@ -47,6 +55,15 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
                 <h3 class="text-xl font-semibold mb-3 text-amber-300">
                     1. Create an R2 bucket and S3 API token
                 </h3>
+
+                <div class="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-4">
+                    <p class="text-zinc-400 text-xs">
+                        <strong class="text-amber-400">Using the installer?</strong> Skip this step --
+                        <a href="https://install.residue.dev" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">install.residue.dev</a>
+                        creates the R2 bucket and S3 API credentials automatically.
+                    </p>
+                </div>
+
                 <p class="text-zinc-300 text-sm mb-4 leading-relaxed">
                     The CLI uploads session data directly to R2 via presigned PUT URLs.
                     You must set these up <strong>before</strong> deploying the worker.
@@ -101,8 +118,32 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
                     Session data lives in R2 (set up in step 1).
                 </p>
 
+                <div class="bg-zinc-900/50 border border-amber-500/30 rounded-lg p-4 sm:p-6 mb-4">
+                    <h4 class="font-semibold text-amber-300 text-sm mb-3">Option A: Installer (recommended)</h4>
+                    <p class="text-zinc-300 text-sm leading-relaxed mb-4">
+                        The installer automates the entire deployment: creates the D1 database, R2 bucket, S3 API credentials,
+                        AI Search instance, sets secrets, and deploys the worker. You only need a Cloudflare API token.
+                    </p>
+
+                    <div class="mb-4">
+                        <a
+                            href="https://install.residue.dev"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors inline-flex items-center gap-2 text-sm"
+                        >
+                            Open Installer
+                        </a>
+                    </div>
+
+                    <p class="text-zinc-500 text-xs">
+                        After deploy, the installer displays your worker URL, auth token, and admin credentials.
+                        If you used the installer, skip ahead to step 4.
+                    </p>
+                </div>
+
                 <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6 mb-4">
-                    <h4 class="font-semibold text-zinc-200 text-sm mb-3">Option A: Deploy to Cloudflare</h4>
+                    <h4 class="font-semibold text-zinc-200 text-sm mb-3">Option B: Deploy to Cloudflare</h4>
                     <p class="text-zinc-400 text-sm leading-relaxed mb-4">
                         Click the button below to fork and deploy the worker automatically.
                         You will be prompted for secrets during the deploy process.
@@ -148,7 +189,7 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
                 </div>
 
                 <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6">
-                    <h4 class="font-semibold text-zinc-200 text-sm mb-3">Option B: Manual</h4>
+                    <h4 class="font-semibold text-zinc-200 text-sm mb-3">Option C: Manual</h4>
                     <pre class="bg-zinc-950 rounded p-3 font-mono text-xs overflow-x-auto"><code class="text-zinc-300"><span class="text-zinc-500"># Clone the repo and install dependencies</span>
 git clone https://github.com/butttons/residue.git
 cd residue
@@ -188,6 +229,14 @@ npx wrangler deploy</code></pre>
                 <h3 class="text-xl font-semibold mb-3 text-amber-300">
                     3. Set up AI Search
                 </h3>
+
+                <div class="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-4">
+                    <p class="text-zinc-400 text-xs">
+                        <strong class="text-amber-400">Used the installer?</strong> Skip this step --
+                        the installer creates and configures the AI Search instance automatically.
+                    </p>
+                </div>
+
                 <p class="text-zinc-300 text-sm mb-4 leading-relaxed">
                     Search requires a Cloudflare AI Search instance connected to your R2 bucket.
                     Without this, the <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue search</code> and
