@@ -63,7 +63,7 @@ const Layout: FC<LayoutProps> = ({ buildSha, activeTab, children }) => {
 							built by <a href="https://x.com/AeizeiXY" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-zinc-300 transition-colors">Yash</a>
 						</span>
 						<div class="flex items-center gap-2">
-							<span class="text-[11px] text-zinc-600">${buildSha.slice(0, 7)}</span>
+							<a href="https://github.com/butttons/residue/commit/${buildSha}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-zinc-600 hover:text-zinc-300 transition-colors font-mono">${buildSha.slice(0, 7)}</a>
 							<a href="https://github.com/butttons/residue" target="_blank" rel="noopener noreferrer" class="text-zinc-600 hover:text-zinc-300 transition-colors">
 								<i class="ph ph-github-logo text-base"></i>
 							</a>

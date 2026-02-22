@@ -166,6 +166,37 @@ form?.addEventListener("submit", async (e) => {
 	submitBtn.disabled = false;
 });
 
+function copyBtn({ value }: { value: string }): string {
+	return `<button data-copy="${esc(value)}" class="copy-btn ml-2 text-zinc-600 hover:text-zinc-300 transition-colors flex-shrink-0" title="Copy"><i class="ph ph-copy text-sm"></i></button>`;
+}
+
+function credRow({ label, value }: { label: string; value: string }): string {
+	return (
+		`<div class="flex items-center justify-between gap-2">` +
+		`<span class="text-zinc-500 flex-shrink-0">${esc(label)}</span>` +
+		`<div class="flex items-center min-w-0">` +
+		`<span class="text-zinc-200 break-all truncate">${esc(value)}</span>` +
+		copyBtn({ value }) +
+		`</div>` +
+		`</div>`
+	);
+}
+
+function initCopyButtons({ container }: { container: HTMLElement }) {
+	container.querySelectorAll<HTMLButtonElement>(".copy-btn").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			const val = btn.getAttribute("data-copy") ?? "";
+			navigator.clipboard.writeText(val);
+			const icon = btn.querySelector("i");
+			if (!icon) return;
+			icon.className = "ph ph-check text-sm text-emerald-400";
+			setTimeout(() => {
+				icon.className = "ph ph-copy text-sm";
+			}, 1500);
+		});
+	});
+}
+
 function showInstallResult({
 	data,
 	body,
@@ -178,31 +209,22 @@ function showInstallResult({
 		`<div class="bg-emerald-950/30 border border-emerald-900/50 rounded-md px-3 py-2 mb-4">` +
 		`<span class="text-emerald-400 text-xs font-medium"><i class="ph ph-check-circle mr-0.5"></i> Your residue instance is live.</span>` +
 		`</div>` +
-		`<div class="bg-zinc-900 border border-zinc-800 rounded-md p-3 text-xs space-y-1.5 mb-3">` +
-		`<div class="flex justify-between"><span class="text-zinc-500">Worker URL</span><span class="text-zinc-200">${esc(data.workerUrl ?? "")}</span></div>` +
-		`<div class="flex justify-between"><span class="text-zinc-500">Auth Token</span><span class="text-zinc-200 break-all">${esc(data.authToken ?? "")}</span></div>` +
-		`<div class="flex justify-between"><span class="text-zinc-500">Admin</span><span class="text-zinc-200">${esc(data.adminUsername ?? "")} / ${esc(data.adminPassword ?? "")}</span></div>` +
+		`<div class="bg-zinc-900 border border-zinc-800 rounded-md p-3 text-xs space-y-2 mb-3">` +
+		credRow({ label: "Worker URL", value: data.workerUrl ?? "" }) +
+		credRow({ label: "Auth Token", value: data.authToken ?? "" }) +
+		credRow({
+			label: "Admin",
+			value: `${data.adminUsername ?? ""} / ${data.adminPassword ?? ""}`,
+		}) +
 		`</div>` +
 		`<p class="text-xs text-zinc-400 mb-2">Run this to connect the CLI:</p>` +
-		`<div id="login-cmd" class="bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-xs text-zinc-200 cursor-pointer hover:border-zinc-700 transition-colors relative group">` +
-		`<code>${esc(loginCmd)}</code>` +
-		`<span class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 group-hover:text-zinc-300 text-[10px]">click to copy</span>` +
+		`<div class="bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-xs text-zinc-200 flex items-center justify-between gap-2 group">` +
+		`<code class="break-all">${esc(loginCmd)}</code>` +
+		copyBtn({ value: loginCmd }) +
 		`</div>` +
 		`<p class="text-[11px] text-zinc-500 mt-3 leading-relaxed">Bookmark this page. Use "Update Existing" to deploy new versions without losing your data or secrets.</p>`;
 
-	$id("login-cmd")?.addEventListener("click", function (this: HTMLElement) {
-		navigator.clipboard.writeText(loginCmd);
-		const el = this.querySelector("span");
-		if (!el) return;
-		el.textContent = "copied";
-		el.className =
-			"absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400 text-[10px]";
-		setTimeout(() => {
-			el.textContent = "click to copy";
-			el.className =
-				"absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 group-hover:text-zinc-300 text-[10px]";
-		}, 1500);
-	});
+	initCopyButtons({ container: body });
 }
 
 function showError({ steps, body }: { steps: StepData[]; body: HTMLElement }) {
