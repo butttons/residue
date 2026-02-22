@@ -1,12 +1,12 @@
 ---
 import {
 	BookOpen,
-	Cloud,
 	Download,
 	FolderGit2,
 	GitCommit,
 	Github,
-	LogIn,
+	Key,
+	Rocket,
 	Zap,
 } from "lucide-astro";
 import FlowDiagram from "../components/FlowDiagram.astro";
@@ -64,76 +64,58 @@ import Layout from "../layouts/Layout.astro";
             <FlowDiagram />
         </div>
 
-        <!-- Setup -->
+        <!-- Quick Start -->
         <div class="mb-20 max-w-3xl mx-auto">
-            <h2 class="text-2xl font-bold mb-8 text-center">Setup</h2>
+            <h2 class="text-2xl font-bold mb-8 text-center">Quick Start</h2>
             <div class="space-y-3">
                 <!-- Step 1 -->
-                <div class="bg-zinc-900 border border-zinc-800 rounded-lg px-5 py-4 flex items-center gap-4">
-                    <div class="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
-                        <Cloud class="w-4 h-4 text-amber-400" />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <span class="text-xs text-amber-400/70 font-semibold shrink-0">1</span>
-                            <span class="text-zinc-300 text-sm">Deploy your worker</span>
+                <div class="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 md:px-5 md:py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+                            <Key class="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-400" />
                         </div>
+                        <span class="text-xs text-amber-400/70 font-semibold shrink-0">1</span>
+                        <span class="text-zinc-300 text-sm flex-1">
+                            <a
+                                href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22workers_r2%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22ai_search%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22account_api_tokens%22%2C%22type%22%3A%22edit%22%7D%5D&accountId=*&zoneId=all&name=residue-setup"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="text-amber-400 hover:underline"
+                            >Create a Cloudflare API token</a>
+                        </span>
                     </div>
-                    <a
-                        href="https://deploy.workers.cloudflare.com/?url=https://github.com/butttons/residue/tree/main/packages/worker"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="shrink-0"
-                    >
-                        <img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers" class="h-7" />
-                    </a>
                 </div>
 
                 <!-- Step 2 -->
-                <div class="bg-zinc-900 border border-zinc-800 rounded-lg px-5 py-4 flex items-center gap-4">
-                    <div class="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
-                        <Download class="w-4 h-4 text-amber-400" />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <span class="text-xs text-amber-400/70 font-semibold shrink-0">2</span>
-                            <span class="text-zinc-300 text-sm">Install the CLI</span>
+                <div class="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 md:px-5 md:py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+                            <Rocket class="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-400" />
                         </div>
+                        <span class="text-xs text-amber-400/70 font-semibold shrink-0">2</span>
+                        <span class="text-zinc-300 text-sm flex-1">Deploy at <a href="https://install.residue.dev" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">install.residue.dev</a></span>
                     </div>
-                    <code class="text-zinc-400 text-xs bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 shrink-0">bun add -g @residue/cli</code>
                 </div>
 
                 <!-- Step 3 -->
-                <div class="bg-zinc-900 border border-zinc-800 rounded-lg px-5 py-4 flex items-center gap-4">
-                    <div class="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
-                        <LogIn class="w-4 h-4 text-amber-400" />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <span class="text-xs text-amber-400/70 font-semibold shrink-0">3</span>
-                            <span class="text-zinc-300 text-sm">Connect to your worker</span>
+                <div class="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 md:px-5 md:py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+                            <FolderGit2 class="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-400" />
                         </div>
+                        <span class="text-xs text-amber-400/70 font-semibold shrink-0">3</span>
+                        <span class="text-zinc-300 text-sm flex-1">Install CLI + set up repo</span>
                     </div>
-                    <code class="text-zinc-400 text-xs bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 shrink-0">residue login</code>
-                </div>
-
-                <!-- Step 4 -->
-                <div class="bg-zinc-900 border border-zinc-800 rounded-lg px-5 py-4 flex items-center gap-4">
-                    <div class="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
-                        <FolderGit2 class="w-4 h-4 text-amber-400" />
+                    <div class="mt-2 ml-10 md:ml-11 space-y-1.5">
+                        <code class="text-zinc-400 text-xs bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 inline-block">bun add -g @residue/cli</code>
+                        <br />
+                        <code class="text-zinc-400 text-xs bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 inline-block">residue login && residue init && residue setup &lt;agent&gt;</code>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <span class="text-xs text-amber-400/70 font-semibold shrink-0">4</span>
-                            <span class="text-zinc-300 text-sm">Set up a repo</span>
-                        </div>
-                    </div>
-                    <code class="text-zinc-400 text-xs bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 shrink-0">residue init && residue setup &lt;agent&gt;</code>
                 </div>
             </div>
 
             <p class="text-zinc-500 text-xs text-center mt-6">
-                Full instructions including R2 setup, AI Search, and all options in the <a href="/docs#setup" class="text-amber-400 hover:underline">setup guide</a>.
+                Full instructions including manual deploy, R2 setup, and AI Search in the <a href="/docs#setup" class="text-amber-400 hover:underline">setup guide</a>.
             </p>
         </div>
 

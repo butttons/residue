@@ -1,0 +1,21 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "residue-installer",
+	"main": "src/index.tsx",
+	"compatibility_date": "2025-02-14",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true
+	},
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS"
+	},
+	"vars": {
+		"BUILD_SHA": "dev"
+	},
+	"route": {
+		"pattern": "install.residue.dev",
+		"custom_domain": true
+	}
+}
