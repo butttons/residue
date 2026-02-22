@@ -320,6 +320,26 @@ async function provision({
 				type: "ai",
 				name: "AI",
 			},
+			{
+				type: "plain_text",
+				name: "ADMIN_USERNAME",
+				text: adminUsername,
+			},
+			{
+				type: "plain_text",
+				name: "R2_ACCESS_KEY_ID",
+				text: r2AccessKeyId,
+			},
+			{
+				type: "plain_text",
+				name: "R2_ACCOUNT_ID",
+				text: accountId,
+			},
+			{
+				type: "plain_text",
+				name: "R2_BUCKET_NAME",
+				text: bucketName,
+			},
 		],
 	});
 	if (!deploy.isSuccess) {
@@ -337,15 +357,14 @@ async function provision({
 	);
 
 	// -- 7. Set worker secrets --
+	// Plain text vars (ADMIN_USERNAME, R2_ACCESS_KEY_ID, R2_ACCOUNT_ID,
+	// R2_BUCKET_NAME) are set as bindings in the deploy step above.
+	// Only sensitive values go through the secrets API.
 	const authToken = crypto.randomUUID();
 	const secrets: Record<string, string> = {
 		AUTH_TOKEN: authToken,
-		ADMIN_USERNAME: adminUsername,
 		ADMIN_PASSWORD: adminPassword,
-		R2_ACCESS_KEY_ID: r2AccessKeyId,
 		R2_SECRET_ACCESS_KEY: r2SecretAccessKey,
-		R2_ACCOUNT_ID: accountId,
-		R2_BUCKET_NAME: bucketName,
 	};
 
 	for (const [name, value] of Object.entries(secrets)) {

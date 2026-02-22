@@ -13,5 +13,9 @@
 	},
 	"vars": {
 		"BUILD_SHA": "dev"
+	},
+	"route": {
+		"pattern": "install.residue.dev",
+		"custom_domain": true
 	}
 }

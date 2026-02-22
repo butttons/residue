@@ -36,7 +36,11 @@ const Layout: FC<LayoutProps> = ({ buildSha, activeTab, children }) => {
 				<div class="max-w-4xl mx-auto px-4 py-8 w-full flex-1 flex flex-col items-center">
 					<div class="w-full max-w-lg">
 						<h1 class="text-xl font-semibold mb-1 text-center">Deploy your own instance</h1>
-						<p class="text-sm text-zinc-400 mb-6 text-center">One API token. Fully automated. Your data stays on your Cloudflare account.</p>
+						<p class="text-sm text-zinc-400 mb-1 text-center">One API token. Fully automated. Your data stays on your Cloudflare account.</p>
+						<p class="text-xs text-zinc-500 mb-6 text-center">
+							Open source. Nothing runs on our servers.
+							<a href="https://github.com/butttons/residue" target="_blank" rel="noopener noreferrer" class="text-zinc-400 hover:text-zinc-200 transition-colors underline underline-offset-2">Read the source.</a>
+						</p>
 
 						<div class="flex mb-6 border border-zinc-800 rounded-md overflow-hidden">
 							<a href="/"

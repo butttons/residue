@@ -77,6 +77,7 @@ async function update({
 			name: string;
 			database_id?: string;
 			bucket_name?: string;
+			text?: string;
 		}>;
 	}>({
 		path: `/accounts/${accountId}/workers/scripts/${workerName}/settings`,
@@ -157,6 +158,11 @@ async function update({
 	steps.push(stepOk({ id: "migrate", label: "Run D1 migrations" }));
 
 	// -- 4. Redeploy worker script with same bindings and assets --
+	// Carry forward plain_text bindings from existing settings
+	const plainTextBindings = settings.result.bindings
+		.filter((b) => b.type === "plain_text" && b.text)
+		.map((b) => ({ type: "plain_text", name: b.name, text: b.text }));
+
 	const deploy = await deployWorker({
 		accountId,
 		token,
@@ -178,6 +184,7 @@ async function update({
 				type: "ai",
 				name: "AI",
 			},
+			...plainTextBindings,
 		],
 	});
 	if (!deploy.isSuccess) {
