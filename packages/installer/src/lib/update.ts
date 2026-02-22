@@ -1,11 +1,15 @@
-import { cfFetch, cfFetchRaw } from "@/lib/cloudflare";
-import { MIGRATION_SQL, WORKER_SCRIPT } from "@/lib/embedded";
+import type { WorkerAssetFile } from "@/lib/assets";
+import { cfFetch } from "@/lib/cloudflare";
+import { deployWorker } from "@/lib/deploy";
 import type { StepResult } from "@/lib/provision";
 
 type UpdateInput = {
 	token: string;
 	accountId: string;
 	workerName: string;
+	workerScript: string;
+	migrationSql: string;
+	workerAssets: WorkerAssetFile[];
 };
 
 type UpdateOutput = {
@@ -43,6 +47,9 @@ async function update({
 	token,
 	accountId,
 	workerName,
+	workerScript,
+	migrationSql,
+	workerAssets,
 }: UpdateInput): Promise<UpdateOutput> {
 	const steps: StepResult[] = [];
 
@@ -110,34 +117,57 @@ async function update({
 		}),
 	);
 
-	// -- 3. Run migrations (idempotent -- uses IF NOT EXISTS / ADD COLUMN) --
-	const migrate = await cfFetch<unknown>({
-		path: `/accounts/${accountId}/d1/database/${d1Binding.database_id}/query`,
-		token,
-		method: "POST",
-		body: { sql: MIGRATION_SQL },
-	});
-	if (!migrate.success) {
-		// Migrations may partially fail if columns already exist, which is fine
+	// -- 3. Run migrations (statement by statement, idempotent) --
+	const statements = migrationSql
+		.split(";")
+		.map((s) => s.trim())
+		.filter((s) => s.length > 0);
+
+	let hasFailedMigration = false;
+	let migrationError = "";
+	for (const sql of statements) {
+		const result = await cfFetch<unknown>({
+			path: `/accounts/${accountId}/d1/database/${d1Binding.database_id}/query`,
+			token,
+			method: "POST",
+			body: { sql: `${sql};` },
+		});
+		if (!result.success) {
+			const msg = result.errors?.[0]?.message ?? "";
+			const isIdempotent =
+				msg.toLowerCase().includes("already exists") ||
+				msg.toLowerCase().includes("duplicate");
+			if (!isIdempotent) {
+				hasFailedMigration = true;
+				migrationError = msg || "Migration failed";
+				break;
+			}
+		}
+	}
+	if (hasFailedMigration) {
 		steps.push(
-			stepOk({
+			stepFail({
 				id: "migrate",
 				label: "Run D1 migrations",
-				detail: "Applied (some statements may have been no-ops)",
+				error: migrationError,
 			}),
 		);
-	} else {
-		steps.push(stepOk({ id: "migrate", label: "Run D1 migrations" }));
+		return { isSuccess: false, steps };
 	}
+	steps.push(stepOk({ id: "migrate", label: "Run D1 migrations" }));
 
-	// -- 4. Redeploy worker script with same bindings --
-	const metadata = {
-		main_module: "worker.js",
+	// -- 4. Redeploy worker script with same bindings and assets --
+	const deploy = await deployWorker({
+		accountId,
+		token,
+		workerName,
+		workerScript,
+		workerAssets,
 		bindings: [
 			{
 				type: "d1",
 				name: "DB",
-				database_id: d1Binding.database_id,
+				id: d1Binding.database_id,
 			},
 			{
 				type: "r2_bucket",
@@ -149,33 +179,13 @@ async function update({
 				name: "AI",
 			},
 		],
-		compatibility_date: "2025-02-14",
-		compatibility_flags: ["nodejs_compat"],
-	};
-
-	const form = new FormData();
-	form.append(
-		"worker.js",
-		new Blob([WORKER_SCRIPT], { type: "application/javascript+module" }),
-		"worker.js",
-	);
-	form.append(
-		"metadata",
-		new Blob([JSON.stringify(metadata)], { type: "application/json" }),
-	);
-
-	const deploy = await cfFetchRaw({
-		path: `/accounts/${accountId}/workers/scripts/${workerName}`,
-		token,
-		body: form,
 	});
-	if (!deploy.ok) {
-		const err = await deploy.text();
+	if (!deploy.isSuccess) {
 		steps.push(
 			stepFail({
 				id: "deploy",
 				label: "Redeploy worker",
-				error: `Deploy failed (${deploy.status}): ${err.substring(0, 200)}`,
+				error: deploy.error ?? "Deploy failed",
 			}),
 		);
 		return { isSuccess: false, steps };

@@ -1,8 +1,9 @@
 import { Hono } from "hono";
+import { loadAssets } from "@/lib/assets";
 import { provision } from "@/lib/provision";
 import { update } from "@/lib/update";
 
-type Env = { Bindings: { BUILD_SHA: string } };
+type Env = { Bindings: { BUILD_SHA: string; ASSETS: Fetcher } };
 
 const api = new Hono<Env>();
 
@@ -23,12 +24,17 @@ api.post("/provision", async (c) => {
 		return c.json({ isSuccess: false, error: "Missing required fields" }, 400);
 	}
 
+	const assets = await loadAssets({ fetcher: c.env.ASSETS });
+
 	const result = await provision({
 		token: body.token,
 		accountId: body.accountId,
 		workerName: body.workerName || "residue",
 		adminUsername: body.adminUsername || "admin",
 		adminPassword: body.adminPassword || crypto.randomUUID().slice(0, 16),
+		workerScript: assets.workerScript,
+		migrationSql: assets.migrationSql,
+		workerAssets: assets.workerAssets,
 	});
 
 	return c.json(result, result.isSuccess ? 200 : 500);
@@ -45,10 +51,15 @@ api.post("/update", async (c) => {
 		return c.json({ isSuccess: false, error: "Missing required fields" }, 400);
 	}
 
+	const assets = await loadAssets({ fetcher: c.env.ASSETS });
+
 	const result = await update({
 		token: body.token,
 		accountId: body.accountId,
 		workerName: body.workerName,
+		workerScript: assets.workerScript,
+		migrationSql: assets.migrationSql,
+		workerAssets: assets.workerAssets,
 	});
 
 	return c.json(result, result.isSuccess ? 200 : 500);

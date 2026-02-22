@@ -1,5 +1,6 @@
-import { cfFetch, cfFetchRaw } from "@/lib/cloudflare";
-import { MIGRATION_SQL, WORKER_SCRIPT } from "@/lib/embedded";
+import type { WorkerAssetFile } from "@/lib/assets";
+import { cfFetch } from "@/lib/cloudflare";
+import { deployWorker } from "@/lib/deploy";
 
 type StepResult = {
 	id: string;
@@ -15,6 +16,9 @@ type ProvisionInput = {
 	workerName: string;
 	adminUsername: string;
 	adminPassword: string;
+	workerScript: string;
+	migrationSql: string;
+	workerAssets: WorkerAssetFile[];
 };
 
 type ProvisionOutput = {
@@ -57,6 +61,9 @@ async function provision({
 	workerName,
 	adminUsername,
 	adminPassword,
+	workerScript,
+	migrationSql,
+	workerAssets,
 }: ProvisionInput): Promise<ProvisionOutput> {
 	const steps: StepResult[] = [];
 	const dbName = `${workerName}-db`;
@@ -79,52 +86,103 @@ async function provision({
 	}
 	steps.push(stepOk({ id: "verify", label: "Validate API token" }));
 
-	// -- 2. Create D1 database --
+	// -- 2. Create D1 database (or reuse existing) --
+	let databaseId: string;
 	const d1 = await cfFetch<{ uuid: string; name: string }>({
 		path: `/accounts/${accountId}/d1/database`,
 		token,
 		method: "POST",
 		body: { name: dbName },
 	});
-	if (!d1.success) {
+	if (d1.success) {
+		databaseId = d1.result.uuid;
 		steps.push(
-			stepFail({
+			stepOk({
 				id: "d1",
 				label: "Create D1 database",
-				error: d1.errors?.[0]?.message ?? "Failed to create D1 database",
+				detail: dbName,
 			}),
 		);
-		return { isSuccess: false, steps };
+	} else {
+		const isAlreadyExists = d1.errors?.some((e) =>
+			e.message.toLowerCase().includes("already exists"),
+		);
+		if (!isAlreadyExists) {
+			steps.push(
+				stepFail({
+					id: "d1",
+					label: "Create D1 database",
+					error: d1.errors?.[0]?.message ?? "Failed to create D1 database",
+				}),
+			);
+			return { isSuccess: false, steps };
+		}
+		// Look up existing database by name
+		const list = await cfFetch<Array<{ uuid: string; name: string }>>({
+			path: `/accounts/${accountId}/d1/database?name=${encodeURIComponent(dbName)}`,
+			token,
+		});
+		const existing = list.result?.find((db) => db.name === dbName);
+		if (!existing) {
+			steps.push(
+				stepFail({
+					id: "d1",
+					label: "Create D1 database",
+					error: "Database exists but could not be found by name",
+				}),
+			);
+			return { isSuccess: false, steps };
+		}
+		databaseId = existing.uuid;
+		steps.push(
+			stepOk({
+				id: "d1",
+				label: "Create D1 database",
+				detail: `${dbName} (existing)`,
+			}),
+		);
 	}
-	const databaseId = d1.result.uuid;
-	steps.push(
-		stepOk({
-			id: "d1",
-			label: "Create D1 database",
-			detail: dbName,
-		}),
-	);
 
-	// -- 3. Run D1 migrations --
-	const migrate = await cfFetch<unknown>({
-		path: `/accounts/${accountId}/d1/database/${databaseId}/query`,
-		token,
-		method: "POST",
-		body: { sql: MIGRATION_SQL },
-	});
-	if (!migrate.success) {
+	// -- 3. Run D1 migrations (statement by statement, idempotent) --
+	const statements = migrationSql
+		.split(";")
+		.map((s) => s.trim())
+		.filter((s) => s.length > 0);
+
+	let hasFailedMigration = false;
+	let migrationError = "";
+	for (const sql of statements) {
+		const result = await cfFetch<unknown>({
+			path: `/accounts/${accountId}/d1/database/${databaseId}/query`,
+			token,
+			method: "POST",
+			body: { sql: `${sql};` },
+		});
+		if (!result.success) {
+			const msg = result.errors?.[0]?.message ?? "";
+			const isIdempotent =
+				msg.toLowerCase().includes("already exists") ||
+				msg.toLowerCase().includes("duplicate");
+			if (!isIdempotent) {
+				hasFailedMigration = true;
+				migrationError = msg || "Migration failed";
+				break;
+			}
+		}
+	}
+	if (hasFailedMigration) {
 		steps.push(
 			stepFail({
 				id: "migrate",
 				label: "Run D1 migrations",
-				error: migrate.errors?.[0]?.message ?? "Migration failed",
+				error: migrationError,
 			}),
 		);
 		return { isSuccess: false, steps };
 	}
 	steps.push(stepOk({ id: "migrate", label: "Run D1 migrations" }));
 
-	// -- 4. Create R2 bucket --
+	// -- 4. Create R2 bucket (or reuse existing) --
 	const r2 = await cfFetch<{ name: string }>({
 		path: `/accounts/${accountId}/r2/buckets`,
 		token,
@@ -132,22 +190,36 @@ async function provision({
 		body: { name: bucketName },
 	});
 	if (!r2.success) {
+		const isAlreadyExists = r2.errors?.some(
+			(e) =>
+				e.message.toLowerCase().includes("already exists") || e.code === 10006,
+		);
+		if (!isAlreadyExists) {
+			steps.push(
+				stepFail({
+					id: "r2",
+					label: "Create R2 bucket",
+					error: r2.errors?.[0]?.message ?? "Failed to create R2 bucket",
+				}),
+			);
+			return { isSuccess: false, steps };
+		}
 		steps.push(
-			stepFail({
+			stepOk({
 				id: "r2",
 				label: "Create R2 bucket",
-				error: r2.errors?.[0]?.message ?? "Failed to create R2 bucket",
+				detail: `${bucketName} (existing)`,
 			}),
 		);
-		return { isSuccess: false, steps };
+	} else {
+		steps.push(
+			stepOk({
+				id: "r2",
+				label: "Create R2 bucket",
+				detail: bucketName,
+			}),
+		);
 	}
-	steps.push(
-		stepOk({
-			id: "r2",
-			label: "Create R2 bucket",
-			detail: bucketName,
-		}),
-	);
 
 	// -- 5. Create scoped R2 S3 API token --
 	const permGroups = await cfFetch<
@@ -219,14 +291,18 @@ async function provision({
 	const r2SecretAccessKey = r2Token.result.value;
 	steps.push(stepOk({ id: "r2token", label: "Create R2 S3 credentials" }));
 
-	// -- 6. Deploy worker --
-	const metadata = {
-		main_module: "worker.js",
+	// -- 6. Deploy worker (with static assets) --
+	const deploy = await deployWorker({
+		accountId,
+		token,
+		workerName,
+		workerScript,
+		workerAssets,
 		bindings: [
 			{
 				type: "d1",
 				name: "DB",
-				database_id: databaseId,
+				id: databaseId,
 			},
 			{
 				type: "r2_bucket",
@@ -238,33 +314,13 @@ async function provision({
 				name: "AI",
 			},
 		],
-		compatibility_date: "2025-02-14",
-		compatibility_flags: ["nodejs_compat"],
-	};
-
-	const form = new FormData();
-	form.append(
-		"worker.js",
-		new Blob([WORKER_SCRIPT], { type: "application/javascript+module" }),
-		"worker.js",
-	);
-	form.append(
-		"metadata",
-		new Blob([JSON.stringify(metadata)], { type: "application/json" }),
-	);
-
-	const deploy = await cfFetchRaw({
-		path: `/accounts/${accountId}/workers/scripts/${workerName}`,
-		token,
-		body: form,
 	});
-	if (!deploy.ok) {
-		const err = await deploy.text();
+	if (!deploy.isSuccess) {
 		steps.push(
 			stepFail({
 				id: "deploy",
 				label: "Deploy worker",
-				error: `Deploy failed (${deploy.status}): ${err.substring(0, 200)}`,
+				error: deploy.error ?? "Deploy failed",
 			}),
 		);
 		return { isSuccess: false, steps };

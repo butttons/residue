@@ -8,7 +8,8 @@
 		"enabled": true
 	},
 	"assets": {
-		"directory": "./public"
+		"directory": "./public",
+		"binding": "ASSETS"
 	},
 	"vars": {
 		"BUILD_SHA": "dev"

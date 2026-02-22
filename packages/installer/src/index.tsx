@@ -3,7 +3,7 @@ import { api } from "@/routes/api";
 import { InstallPage } from "@/ui/install";
 import { UpdatePage } from "@/ui/update";
 
-type Env = { Bindings: { BUILD_SHA: string } };
+type Env = { Bindings: { BUILD_SHA: string; ASSETS: Fetcher } };
 
 const app = new Hono<Env>();
 
