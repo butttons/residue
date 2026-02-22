@@ -423,6 +423,49 @@ async function provision({
 		}),
 	);
 
+	// -- 9. Set up AI Search --
+	// Create a service token, register it, and create an AI Search instance.
+	// This is non-fatal -- search commands won't work without it, but
+	// everything else functions fine.
+	const aiSearchIndexGroup = permGroups.result.find(
+		(g) => g.name === "AI Search Index Engine",
+	);
+	if (!aiSearchIndexGroup) {
+		steps.push(
+			stepOk({
+				id: "aisearch",
+				label: "Set up AI Search",
+				detail: "skipped (permission group not found)",
+			}),
+		);
+	} else {
+		const isAiSearchOk = await setupAiSearch({
+			token,
+			accountId,
+			workerName,
+			bucketName,
+			aiSearchIndexGroupId: aiSearchIndexGroup.id,
+			r2WriteGroupId: r2WriteGroup.id,
+		});
+		if (!isAiSearchOk.isSuccess) {
+			steps.push(
+				stepOk({
+					id: "aisearch",
+					label: "Set up AI Search",
+					detail: `skipped (${isAiSearchOk.error})`,
+				}),
+			);
+		} else {
+			steps.push(
+				stepOk({
+					id: "aisearch",
+					label: "Set up AI Search",
+					detail: isAiSearchOk.detail,
+				}),
+			);
+		}
+	}
+
 	return {
 		isSuccess: true,
 		steps,
@@ -431,6 +474,112 @@ async function provision({
 		adminUsername,
 		adminPassword,
 	};
+}
+
+type AiSearchResult = {
+	isSuccess: boolean;
+	detail?: string;
+	error?: string;
+};
+
+async function setupAiSearch({
+	token,
+	accountId,
+	workerName,
+	bucketName,
+	aiSearchIndexGroupId,
+	r2WriteGroupId,
+}: {
+	token: string;
+	accountId: string;
+	workerName: string;
+	bucketName: string;
+	aiSearchIndexGroupId: string;
+	r2WriteGroupId: string;
+}): Promise<AiSearchResult> {
+	const instanceName = `${workerName}-search`;
+
+	// 1. Create a service API token for AI Search
+	const serviceToken = await cfFetch<{ id: string; value: string }>({
+		path: "/user/tokens",
+		token,
+		method: "POST",
+		body: {
+			name: `${workerName}-ai-search-service`,
+			policies: [
+				{
+					effect: "allow",
+					resources: {
+						[`com.cloudflare.api.account.${accountId}`]: "*",
+					},
+					permission_groups: [
+						{ id: aiSearchIndexGroupId },
+						{ id: r2WriteGroupId },
+					],
+				},
+			],
+		},
+	});
+	if (!serviceToken.success) {
+		return {
+			isSuccess: false,
+			error:
+				serviceToken.errors?.[0]?.message ?? "Failed to create service token",
+		};
+	}
+
+	// 2. Register the service token with AI Search
+	const registerToken = await cfFetch<{ id: string }>({
+		path: `/accounts/${accountId}/ai-search/tokens`,
+		token,
+		method: "POST",
+		body: {
+			cf_api_id: serviceToken.result.id,
+			cf_api_key: serviceToken.result.value,
+			name: `${workerName}-ai-search-service`,
+		},
+	});
+	if (!registerToken.success) {
+		return {
+			isSuccess: false,
+			error:
+				registerToken.errors?.[0]?.message ??
+				"Failed to register service token",
+		};
+	}
+
+	// 3. Create the AI Search instance with path filters
+	const createInstance = await cfFetch<{ id: string }>({
+		path: `/accounts/${accountId}/ai-search/instances`,
+		token,
+		method: "POST",
+		body: {
+			id: instanceName,
+			token_id: registerToken.result.id,
+			type: "r2",
+			source: bucketName,
+			source_params: {
+				include_items: ["search/**"],
+				exclude_items: ["sessions/**"],
+			},
+		},
+	});
+	if (!createInstance.success) {
+		const isAlreadyExists = createInstance.errors?.some(
+			(e) =>
+				e.message.toLowerCase().includes("already exists") ||
+				e.message.toLowerCase().includes("duplicate"),
+		);
+		if (isAlreadyExists) {
+			return { isSuccess: true, detail: `${instanceName} (existing)` };
+		}
+		return {
+			isSuccess: false,
+			error: createInstance.errors?.[0]?.message ?? "Failed to create instance",
+		};
+	}
+
+	return { isSuccess: true, detail: instanceName };
 }
 
 export { provision };

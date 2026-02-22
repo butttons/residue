@@ -12,7 +12,7 @@ const InstallPage: FC<{ buildSha: string }> = ({ buildSha }) => {
 					<p class="text-xs text-zinc-400 mb-2 leading-relaxed">
 						Go to your
 						<a
-							href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22account%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22account%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22workers_r2%22%2C%22type%22%3A%22account%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22api_tokens%22%2C%22type%22%3A%22user%22%2C%22access%22%3A%22edit%22%7D%5D&name=residue-setup"
+							href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22account%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22account%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22workers_r2%22%2C%22type%22%3A%22account%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22api_tokens%22%2C%22type%22%3A%22user%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22ai_search%22%2C%22type%22%3A%22account%22%2C%22access%22%3A%22edit%22%7D%5D&name=residue-setup"
 							target="_blank"
 							rel="noopener"
 							class="text-blue-400 hover:underline"
@@ -23,6 +23,7 @@ const InstallPage: FC<{ buildSha: string }> = ({ buildSha }) => {
 						<div><span class="text-zinc-500">-</span> Account &gt; Workers Scripts &gt; Edit</div>
 						<div><span class="text-zinc-500">-</span> Account &gt; D1 &gt; Edit</div>
 						<div><span class="text-zinc-500">-</span> Account &gt; R2 &gt; Edit</div>
+						<div><span class="text-zinc-500">-</span> Account &gt; AI Search &gt; Edit</div>
 						<div><span class="text-zinc-500">-</span> User &gt; API Tokens &gt; Edit</div>
 					</div>
 				</section>
