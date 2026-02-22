@@ -288,7 +288,14 @@ async function provision({
 		return { isSuccess: false, steps };
 	}
 	const r2AccessKeyId = r2Token.result.id;
-	const r2SecretAccessKey = r2Token.result.value;
+	// R2 S3 API requires the SHA-256 hash of the token value as the secret key,
+	// not the raw token value itself.
+	// See: https://developers.cloudflare.com/r2/api/tokens/#get-s3-api-credentials-from-an-api-token
+	const tokenBytes = new TextEncoder().encode(r2Token.result.value);
+	const hashBuffer = await crypto.subtle.digest("SHA-256", tokenBytes);
+	const r2SecretAccessKey = Array.from(new Uint8Array(hashBuffer))
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("");
 	steps.push(stepOk({ id: "r2token", label: "Create R2 S3 credentials" }));
 
 	// -- 6. Deploy worker (with static assets) --
