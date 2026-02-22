@@ -13,6 +13,7 @@ declare namespace Cloudflare {
 		R2_ACCESS_KEY_ID: "your-r2-access-key-id";
 		R2_ACCOUNT_ID: "your-r2-account-id";
 		R2_BUCKET_NAME: "residue";
+		IS_DEMO: string;
 		AUTH_TOKEN: string;
 		R2_SECRET_ACCESS_KEY: string;
 		R2_TOKEN: string;

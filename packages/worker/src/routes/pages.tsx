@@ -328,6 +328,19 @@ pages.get("/", async (c) => {
 pages.get("/search", async (c) => {
 	const q = c.req.query("q")?.trim();
 	const username = c.get("username");
+	const isDemo = c.env.IS_DEMO === "true";
+
+	if (isDemo) {
+		return c.html(
+			<Layout
+				title="Search — residue"
+				username={username}
+				breadcrumbs={[{ label: "search" }]}
+			>
+				<p class="text-zinc-400 text-sm">Search is disabled on the demo.</p>
+			</Layout>,
+		);
+	}
 
 	if (!q) {
 		return c.html(
