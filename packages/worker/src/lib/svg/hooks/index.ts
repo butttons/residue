@@ -23,8 +23,28 @@ export type {
 } from "@/lib/svg/hooks/useCommitGraphLayout";
 export { useCommitGraphLayout } from "@/lib/svg/hooks/useCommitGraphLayout";
 export type {
+	DayBar,
+	DayOfWeekChartLayout,
+} from "@/lib/svg/hooks/useDayOfWeekChartLayout";
+export { useDayOfWeekChartLayout } from "@/lib/svg/hooks/useDayOfWeekChartLayout";
+export type {
 	HeatmapCell,
 	HeatmapLabel,
 	HeatmapLayout,
 } from "@/lib/svg/hooks/useHeatmapLayout";
 export { useHeatmapLayout } from "@/lib/svg/hooks/useHeatmapLayout";
+export type {
+	HourBandLabel,
+	HourBar,
+	HourChartGridLine,
+	HourChartLayout,
+} from "@/lib/svg/hooks/useHourChartLayout";
+export { useHourChartLayout } from "@/lib/svg/hooks/useHourChartLayout";
+export type {
+	HoverZone,
+	LineChartGridLine,
+	LineChartLayout,
+	LinePoint,
+	LineSeries,
+} from "@/lib/svg/hooks/useLineChartLayout";
+export { useLineChartLayout } from "@/lib/svg/hooks/useLineChartLayout";

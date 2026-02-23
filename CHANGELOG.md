@@ -1,5 +1,20 @@
 # residue
 
+## 0.0.9
+
+### @residue/cli
+
+- Add `residue doctor` command to retroactively link orphaned sessions to commits
+- Extract agent mappers, search extractors, and shared types into `@residue/adapter` package
+- Send first/last message timestamps during sync for accurate session duration tracking
+
+### @residue/worker
+
+- Extract agent mappers, search extractors, and shared types into `@residue/adapter` package
+- Add daily activity line chart to repo dashboard page
+- Add time stats cards, hour-of-day chart, and day-of-week chart to all dashboard pages
+- Track first/last message timestamps for accurate session duration instead of wall-clock time
+
 ## 0.0.8
 
 ### @residue/cli

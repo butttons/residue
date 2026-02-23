@@ -1,6 +1,6 @@
 {
 	"name": "@residue/cli",
-	"version": "0.0.8",
+	"version": "0.0.9",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/butttons/residue",
@@ -17,6 +17,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
+		"@residue/adapter": "workspace:*",
 		"@types/bun": "latest",
 		"@types/debug": "^4.1.12",
 		"typescript": "^5.7.0"

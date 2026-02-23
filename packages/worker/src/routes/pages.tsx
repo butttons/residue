@@ -1,3 +1,4 @@
+import { getMapper } from "@residue/adapter/mappers";
 import { Hono } from "hono";
 import { raw } from "hono/html";
 import type { FC } from "hono/jsx";
@@ -7,20 +8,36 @@ import { CommitGraph } from "../components/CommitGraph";
 import { Contributors } from "../components/Contributors";
 import type { ContinuationLink } from "../components/Conversation";
 import { Conversation } from "../components/Conversation";
+import { DailyChart } from "../components/DailyChart";
+import { DayOfWeekChart } from "../components/DayOfWeekChart";
+import { HourChart } from "../components/HourChart";
 import { Layout } from "../components/Layout";
 import { Minimap } from "../components/Minimap";
 import { StatsChart } from "../components/StatsChart";
+import { TimeStatsCards } from "../components/TimeStatsCards";
 import type {
 	AgentBreakdown,
 	CommitWithSessionRow,
 	GlobalStats,
 	RecentCommitRow,
+	TimeStats,
 } from "../lib/db";
 import { computeGraph } from "../lib/graph";
 import { formatTimestamp, relativeTime } from "../lib/time";
 import { urls } from "../lib/urls";
-import { getMapper } from "../mappers";
 import type { AppEnv } from "../types";
+
+// --- Helpers ---
+
+const computeMedian = ({ values }: { values: number[] }): number => {
+	if (values.length === 0) return 0;
+	const sorted = [...values].sort((a, b) => a - b);
+	const mid = Math.floor(sorted.length / 2);
+	if (sorted.length % 2 === 0) {
+		return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+	}
+	return sorted[mid];
+};
 
 // --- Shared sub-components ---
 
@@ -233,6 +250,7 @@ const RecentActivity: FC<{
 pages.get("/", async (c) => {
 	const { DL } = c.var;
 	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
+	const scope = { scope: "global" } as const;
 	const [
 		orgsResult,
 		dailyCountsResult,
@@ -240,13 +258,21 @@ pages.get("/", async (c) => {
 		agentBreakdownResult,
 		recentCommitsResult,
 		contributorsResult,
+		timeStatsResult,
+		durationsResult,
+		hourDistResult,
+		dowDistResult,
 	] = await Promise.all([
 		DL.orgs.getList(),
 		DL.stats.getDailyActivityCountsGlobal({ since: oneYearAgo }),
 		DL.stats.getGlobalStats(),
 		DL.stats.getAgentBreakdown(),
 		DL.stats.getRecentCommits({ limit: 15 }),
-		DL.stats.getContributors({ scope: "global" }),
+		DL.stats.getContributors(scope),
+		DL.stats.getTimeStats(scope),
+		DL.stats.getSessionDurations(scope),
+		DL.stats.getHourDistribution(scope),
+		DL.stats.getDayOfWeekDistribution(scope),
 	]);
 	const orgs = orgsResult.isOk ? orgsResult.value : [];
 	const dailyCounts = dailyCountsResult.isOk ? dailyCountsResult.value : [];
@@ -267,6 +293,21 @@ pages.get("/", async (c) => {
 		? recentCommitsResult.value
 		: [];
 	const contributors = contributorsResult.isOk ? contributorsResult.value : [];
+	const durations = durationsResult.isOk ? durationsResult.value : [];
+	const timeStats: TimeStats = timeStatsResult.isOk
+		? {
+				...timeStatsResult.value,
+				medianDurationMinutes: computeMedian({ values: durations }),
+			}
+		: {
+				avgDurationMinutes: 0,
+				medianDurationMinutes: 0,
+				longestDurationMinutes: 0,
+				totalHours: 0,
+				totalSessions: 0,
+			};
+	const hourDist = hourDistResult.isOk ? hourDistResult.value : [];
+	const dowDist = dowDistResult.isOk ? dowDistResult.value : [];
 	const username = c.get("username");
 
 	return c.html(
@@ -283,9 +324,18 @@ pages.get("/", async (c) => {
 				<>
 					<StatsBar stats={stats} />
 
+					<TimeStatsCards timeStats={timeStats} />
+
 					<ActivityGraph dailyCounts={dailyCounts} />
 
 					<StatsChart dailyCounts={dailyCounts} />
+
+					<DailyChart dailyCounts={dailyCounts} />
+
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+						<HourChart hours={hourDist} />
+						<DayOfWeekChart days={dowDist} />
+					</div>
 
 					{agentBreakdown.length > 1 && (
 						<AgentBreakdownChart agents={agentBreakdown} />
@@ -537,15 +587,42 @@ pages.get("/:org", async (c) => {
 	const org = c.req.param("org");
 	const { DL } = c.var;
 	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
-	const [reposResult, dailyCountsResult, contributorsResult] =
-		await Promise.all([
-			DL.orgs.getReposByOrg(org),
-			DL.stats.getDailyActivityCountsByOrg({ org, since: oneYearAgo }),
-			DL.stats.getContributors({ scope: "org", org }),
-		]);
+	const scope = { scope: "org", org } as const;
+	const [
+		reposResult,
+		dailyCountsResult,
+		contributorsResult,
+		timeStatsResult,
+		durationsResult,
+		hourDistResult,
+		dowDistResult,
+	] = await Promise.all([
+		DL.orgs.getReposByOrg(org),
+		DL.stats.getDailyActivityCountsByOrg({ org, since: oneYearAgo }),
+		DL.stats.getContributors(scope),
+		DL.stats.getTimeStats(scope),
+		DL.stats.getSessionDurations(scope),
+		DL.stats.getHourDistribution(scope),
+		DL.stats.getDayOfWeekDistribution(scope),
+	]);
 	const repos = reposResult.isOk ? reposResult.value : [];
 	const dailyCounts = dailyCountsResult.isOk ? dailyCountsResult.value : [];
 	const contributors = contributorsResult.isOk ? contributorsResult.value : [];
+	const durations = durationsResult.isOk ? durationsResult.value : [];
+	const timeStats: TimeStats = timeStatsResult.isOk
+		? {
+				...timeStatsResult.value,
+				medianDurationMinutes: computeMedian({ values: durations }),
+			}
+		: {
+				avgDurationMinutes: 0,
+				medianDurationMinutes: 0,
+				longestDurationMinutes: 0,
+				totalHours: 0,
+				totalSessions: 0,
+			};
+	const hourDist = hourDistResult.isOk ? hourDistResult.value : [];
+	const dowDist = dowDistResult.isOk ? dowDistResult.value : [];
 	const username = c.get("username");
 
 	if (repos.length === 0) {
@@ -563,7 +640,16 @@ pages.get("/:org", async (c) => {
 			username={username}
 			breadcrumbs={[{ label: org }]}
 		>
+			<TimeStatsCards timeStats={timeStats} />
+
 			<ActivityGraph dailyCounts={dailyCounts} />
+
+			<DailyChart dailyCounts={dailyCounts} />
+
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+				<HourChart hours={hourDist} />
+				<DayOfWeekChart days={dowDist} />
+			</div>
 
 			<Contributors contributors={contributors} />
 
@@ -614,16 +700,42 @@ pages.get("/:org/:repo", async (c) => {
 
 	const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
 	const { DL } = c.var;
-	const [rowsResult, dailyCountsResult, contributorsResult] = await Promise.all(
-		[
-			DL.commits.getGraphData({ org, repo, cursor, limit: commitLimit }),
-			DL.stats.getDailyActivityCounts({ org, repo, since: oneYearAgo }),
-			DL.stats.getContributors({ scope: "repo", org, repo }),
-		],
-	);
+	const scope = { scope: "repo", org, repo } as const;
+	const [
+		rowsResult,
+		dailyCountsResult,
+		contributorsResult,
+		timeStatsResult,
+		durationsResult,
+		hourDistResult,
+		dowDistResult,
+	] = await Promise.all([
+		DL.commits.getGraphData({ org, repo, cursor, limit: commitLimit }),
+		DL.stats.getDailyActivityCounts({ org, repo, since: oneYearAgo }),
+		DL.stats.getContributors(scope),
+		DL.stats.getTimeStats(scope),
+		DL.stats.getSessionDurations(scope),
+		DL.stats.getHourDistribution(scope),
+		DL.stats.getDayOfWeekDistribution(scope),
+	]);
 	const rows = rowsResult.isOk ? rowsResult.value : [];
 	const dailyCounts = dailyCountsResult.isOk ? dailyCountsResult.value : [];
 	const contributors = contributorsResult.isOk ? contributorsResult.value : [];
+	const durations = durationsResult.isOk ? durationsResult.value : [];
+	const timeStats: TimeStats = timeStatsResult.isOk
+		? {
+				...timeStatsResult.value,
+				medianDurationMinutes: computeMedian({ values: durations }),
+			}
+		: {
+				avgDurationMinutes: 0,
+				medianDurationMinutes: 0,
+				longestDurationMinutes: 0,
+				totalHours: 0,
+				totalSessions: 0,
+			};
+	const hourDist = hourDistResult.isOk ? hourDistResult.value : [];
+	const dowDist = dowDistResult.isOk ? dowDistResult.value : [];
 
 	if (rows.length === 0 && !cursorParam) {
 		return c.html(
@@ -674,9 +786,18 @@ pages.get("/:org/:repo", async (c) => {
 			username={username}
 			breadcrumbs={[{ label: org, href: `/app/${org}` }, { label: repo }]}
 		>
+			<TimeStatsCards timeStats={timeStats} />
+
 			<ActivityGraph dailyCounts={dailyCounts} org={org} repo={repo} />
 
 			<StatsChart dailyCounts={dailyCounts} />
+
+			<DailyChart dailyCounts={dailyCounts} />
+
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+				<HourChart hours={hourDist} />
+				<DayOfWeekChart days={dowDist} />
+			</div>
 
 			<Contributors contributors={contributors} />
 

@@ -15,13 +15,13 @@ const gridTicks = ({ max }: { max: number }): number[] => {
 	}
 	const step =
 		max <= 10 ? 2 : max <= 20 ? 5 : max <= 50 ? 10 : max <= 100 ? 20 : 50;
+	const ceiling = Math.ceil(max / step) * step;
 	const ticks: number[] = [0];
 	let v = step;
-	while (v <= max) {
+	while (v <= ceiling) {
 		ticks.push(v);
 		v += step;
 	}
-	if (ticks[ticks.length - 1] < max) ticks.push(max);
 	return ticks;
 };
 

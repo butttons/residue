@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { extractClaudeCode } from "@residue/adapter/claude-code";
+import { extractOpencode } from "@residue/adapter/opencode";
+import { extractPi } from "@residue/adapter/pi";
 import {
 	buildSearchText,
-	extractClaudeCode,
-	extractOpencode,
-	extractPi,
 	getExtractor,
 	getMetadataExtractors,
-	summarizeToolInput,
-} from "@/lib/search-text";
+} from "@residue/adapter/search";
+import { summarizeToolInput } from "@residue/adapter/shared";
 
 describe("search text extractors", () => {
 	describe("extractClaudeCode", () => {

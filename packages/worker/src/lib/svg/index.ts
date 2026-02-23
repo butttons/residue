@@ -45,15 +45,29 @@ export type {
 	CommitGraphInput,
 	CommitGraphLayout,
 	CommitGraphLine,
+	DayBar,
+	DayOfWeekChartLayout,
 	GridLine,
 	HeatmapCell,
 	HeatmapLabel,
 	HeatmapLayout,
+	HourBandLabel,
+	HourBar,
+	HourChartGridLine,
+	HourChartLayout,
+	HoverZone,
+	LineChartGridLine,
+	LineChartLayout,
+	LinePoint,
+	LineSeries,
 } from "@/lib/svg/hooks";
 export {
 	useBarChartLayout,
 	useCommitGraphLayout,
+	useDayOfWeekChartLayout,
 	useHeatmapLayout,
+	useHourChartLayout,
+	useLineChartLayout,
 } from "@/lib/svg/hooks";
 export {
 	gridTicks,
@@ -64,10 +78,11 @@ export {
 export type {
 	CircleProps,
 	LineProps,
+	PathProps,
 	RectProps,
 	TextProps,
 } from "@/lib/svg/primitives";
-export { Circle, Line, Rect, Text } from "@/lib/svg/primitives";
+export { Circle, Line, Path, Rect, Text } from "@/lib/svg/primitives";
 export { pluralize } from "@/lib/svg/text";
 export type { TooltipProps } from "@/lib/svg/tooltip";
 export { Tooltip } from "@/lib/svg/tooltip";

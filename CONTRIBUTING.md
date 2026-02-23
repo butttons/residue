@@ -26,12 +26,15 @@ cd packages/worker && pnpm exec wrangler d1 migrations apply DB --local
 
 ```
 packages/
+  adapter/  -> @residue/adapter (shared, all agent-specific code)
   cli/      -> @residue/cli (npm package, built with bun)
   worker/   -> @residue/worker (Cloudflare Worker, Hono + JSX)
-  docs/       -> @residue/docs (documentation site)
+  docs/     -> @residue/docs (documentation site)
 ```
 
 Monorepo managed with pnpm workspaces. Runtime is bun.
+
+The **adapter** package is the single source of truth for all agent-specific logic: conversation mappers, search text extractors, shared types, and install-time templates. The CLI and worker import from it via subpath exports and contain zero agent-specific parsing code themselves.
 
 ## Development
 
@@ -56,7 +59,7 @@ pnpm typecheck
 - Boolean variables must be prefixed with `is` or `has`.
 - Functions with 2+ parameters must use a single object parameter.
 - Never use `any` in TypeScript. If unavoidable, add an inline comment explaining why.
-- Use `@/*` path alias (mapped to `src/*`) for all imports. No relative `../` paths.
+- Use `@/*` path alias (mapped to `src/*`) for imports within CLI and worker. The adapter package uses relative imports since its source files are resolved directly by consumer bundlers.
 
 ## Commit Messages
 
@@ -87,15 +90,32 @@ Keep headers under 72 characters. Present tense. Concise.
 
 ## Adding a New Agent
 
-### CLI side
+All agent-specific code lives in `packages/adapter`. No changes to the CLI or worker source are needed.
 
-1. Add a search-text extractor in `packages/cli/src/lib/search-text.ts`.
-2. Add an adapter in `packages/cli/adapters/`.
+1. Create `packages/adapter/src/<agent>/mapper.ts` -- export a `Mapper` function that transforms raw session data into `Message[]`.
+2. Create `packages/adapter/src/<agent>/search.ts` -- export a search extractor (`raw -> SearchLine[]`) and metadata extractors (`extractFirstMessage`, `extractSessionName`).
+3. Create `packages/adapter/src/<agent>/index.ts` -- barrel re-exports.
+4. Register the mapper in `packages/adapter/src/mappers.ts`.
+5. Register the extractor and metadata extractors in `packages/adapter/src/search.ts`.
+6. Add the agent name to the `ExtractorName` union in `packages/adapter/src/types.ts`.
+7. Optionally add a `template.ts.txt` if the agent has an install-time adapter file, and add a subpath export for it in `packages/adapter/package.json`.
 
-### Worker side
+The CLI and worker pick up new agents automatically via the registries.
 
-1. Add a mapper in `packages/worker/src/mappers/` that transforms raw session data into the common `Message[]` format.
-2. Register it in `packages/worker/src/mappers/index.ts`.
+### What lives where
+
+| Concern | Location |
+|---|---|
+| Conversation mappers (`raw -> Message[]`) | `adapter/src/<agent>/mapper.ts` |
+| Search text extractors (`raw -> SearchLine[]`) | `adapter/src/<agent>/search.ts` |
+| Shared types (`Message`, `ToolCall`, `Mapper`, etc.) | `adapter/src/types.ts` |
+| Shared utilities (`summarizeToolInput`, `deriveSessionId`) | `adapter/src/shared.ts` |
+| Mapper registry (`getMapper`) | `adapter/src/mappers.ts` |
+| Search registry (`getExtractor`, `getMetadataExtractors`, `buildSearchText`) | `adapter/src/search.ts` |
+| Install-time templates (pi extension, opencode plugin) | `adapter/src/<agent>/template.ts.txt` |
+| Claude Code hook handler (stdin protocol, pending queue) | `cli/src/commands/hook.ts` |
+
+The Claude Code hook handler is the one exception that stays in the CLI. It manages stdin reading, pending queue state, and spawns `claude --version` -- all CLI-runtime concerns that don't belong in the shared adapter package.
 
 ## License
 
