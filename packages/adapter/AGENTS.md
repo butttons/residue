@@ -4,7 +4,7 @@ Source-of-truth for all agent-specific code. The CLI imports from this package v
 
 Each agent lives in its own directory under `src/` with a mapper, search extractor, and barrel export. Registries in `src/mappers.ts` and `src/search.ts` look up the right implementation by agent name. Exports point to source `.ts` files directly (no build step). Bun resolves through the workspace link and tree-shakes unused code.
 
-The Claude Code hook handler is the one exception -- it lives in the CLI (`src/commands/hook.ts`) because it reads from stdin and manages pending queue state, which are CLI-runtime concerns.
+The Claude Code hook handler is the one exception. It lives in the CLI (`src/commands/hook.ts`) because it reads from stdin and manages pending queue state, which are CLI-runtime concerns.
 
 ## Adding a New Agent
 

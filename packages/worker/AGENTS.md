@@ -1,13 +1,13 @@
 # @residue/worker
 
-Cloudflare Worker serving both the API and UI. Users deploy their own instance -- no multi-tenant backend.
+Cloudflare Worker serving both the API and UI. Users deploy their own instance. No multi-tenant backend.
 
 Run `wrangler types` after changing bindings in `wrangler.jsonc`. Apply D1 migrations locally before running tests.
 
 ## Auth
 
 - **API routes** (`/api/*`): Bearer token via `AUTH_TOKEN` env var.
-- **UI routes** (`/app/*`): HTTP basic auth via `ADMIN_USERNAME` and `ADMIN_PASSWORD` env vars.
+- **UI routes** (`/app/*`): Cookie-based session auth. `ADMIN_USERNAME` is the super admin. Instances can be public or private.
 
 ## Mappers
 

@@ -8,7 +8,7 @@ Commands live in `src/commands/`, each returning `ResultAsync<void, CliError>`, 
 
 Agent-specific code (mappers, extractors, templates) lives in `@residue/adapter`. The CLI imports via subpath exports.
 
-- **Claude Code** - Uses native hook system. `residue setup claude-code` writes hook entries into `.claude/settings.json`. The hook handler in `src/commands/hook.ts` reads JSON from stdin -- this is the one adapter piece that lives in the CLI, not the adapter package.
+- **Claude Code** - Uses native hook system. `residue setup claude-code` writes hook entries into `.claude/settings.json`. The hook handler in `src/commands/hook.ts` reads JSON from stdin. This is the one adapter piece that lives in the CLI, not the adapter package.
 - **Pi** - Uses pi's extension system. Template embedded from `@residue/adapter/pi/template.ts.txt`.
 - **OpenCode** - Uses OpenCode's plugin system. Template embedded from `@residue/adapter/opencode/template.ts.txt`.
 
