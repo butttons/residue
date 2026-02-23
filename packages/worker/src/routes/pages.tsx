@@ -8,6 +8,7 @@ import { CommitGraph } from "../components/CommitGraph";
 import { Contributors } from "../components/Contributors";
 import type { ContinuationLink } from "../components/Conversation";
 import { Conversation } from "../components/Conversation";
+import { DailyChart } from "../components/DailyChart";
 import { Layout } from "../components/Layout";
 import { Minimap } from "../components/Minimap";
 import { StatsChart } from "../components/StatsChart";
@@ -287,6 +288,8 @@ pages.get("/", async (c) => {
 
 					<StatsChart dailyCounts={dailyCounts} />
 
+					<DailyChart dailyCounts={dailyCounts} />
+
 					{agentBreakdown.length > 1 && (
 						<AgentBreakdownChart agents={agentBreakdown} />
 					)}
@@ -565,6 +568,8 @@ pages.get("/:org", async (c) => {
 		>
 			<ActivityGraph dailyCounts={dailyCounts} />
 
+			<DailyChart dailyCounts={dailyCounts} />
+
 			<Contributors contributors={contributors} />
 
 			<div class="flex flex-col gap-3">
@@ -677,6 +682,8 @@ pages.get("/:org/:repo", async (c) => {
 			<ActivityGraph dailyCounts={dailyCounts} org={org} repo={repo} />
 
 			<StatsChart dailyCounts={dailyCounts} />
+
+			<DailyChart dailyCounts={dailyCounts} />
 
 			<Contributors contributors={contributors} />
 

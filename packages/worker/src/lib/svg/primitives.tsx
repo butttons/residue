@@ -129,5 +129,39 @@ const Text: FC<TextProps> = ({ x, y, fill, children, fontSize, anchor }) => {
 	);
 };
 
-export { Rect, Circle, Line, Text };
-export type { RectProps, CircleProps, LineProps, TextProps };
+/**
+ * An SVG path for drawing lines/curves. Supports both stroke and optional fill.
+ */
+type PathProps = {
+	d: string;
+	stroke: string;
+	strokeWidth?: number;
+	strokeOpacity?: number;
+	fill?: string;
+	fillOpacity?: number;
+};
+
+const Path: FC<PathProps> = ({
+	d,
+	stroke,
+	strokeWidth,
+	strokeOpacity,
+	fill,
+	fillOpacity,
+}) => {
+	return (
+		<path
+			d={d}
+			stroke={stroke}
+			stroke-width={strokeWidth ?? 2}
+			stroke-opacity={strokeOpacity}
+			fill={fill ?? "none"}
+			fill-opacity={fillOpacity}
+			stroke-linejoin="round"
+			stroke-linecap="round"
+		/>
+	);
+};
+
+export { Rect, Circle, Line, Text, Path };
+export type { RectProps, CircleProps, LineProps, TextProps, PathProps };

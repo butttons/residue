@@ -28,3 +28,11 @@ export type {
 	HeatmapLayout,
 } from "@/lib/svg/hooks/useHeatmapLayout";
 export { useHeatmapLayout } from "@/lib/svg/hooks/useHeatmapLayout";
+export type {
+	HoverZone,
+	LineChartGridLine,
+	LineChartLayout,
+	LinePoint,
+	LineSeries,
+} from "@/lib/svg/hooks/useLineChartLayout";
+export { useLineChartLayout } from "@/lib/svg/hooks/useLineChartLayout";
