@@ -839,6 +839,7 @@ pages.get("/:org/:repo/:sha", async (c) => {
 	const repo = c.req.param("repo");
 	const sha = c.req.param("sha");
 	const username = c.get("username");
+	const errorFlash = c.req.query("error");
 	const { DL } = c.var;
 
 	const detailResult = await DL.commits.getShaDetail({ sha, org, repo });
@@ -959,6 +960,33 @@ pages.get("/:org/:repo/:sha", async (c) => {
 	const totalToolCalls = sessionsData.reduce((s, d) => s + d.toolCallCount, 0);
 	const allModels = [...new Set(sessionsData.flatMap((d) => d.models))];
 
+	// Fetch recent sessions for the link picker (only for authenticated users)
+	const linkedSessionIds = new Set(sessionsData.map((s) => s.id));
+	let linkableSessions: {
+		id: string;
+		agent: string;
+		firstMessage: string | null;
+		sessionName: string | null;
+		createdAt: number;
+	}[] = [];
+	if (username) {
+		const recentResult = await DL.sessions.query({
+			repo: `${org}/${repo}`,
+			limit: 50,
+		});
+		if (recentResult.isOk) {
+			linkableSessions = recentResult.value
+				.filter((s) => !linkedSessionIds.has(s.id))
+				.map((s) => ({
+					id: s.id,
+					agent: s.agent,
+					firstMessage: s.first_message,
+					sessionName: s.session_name,
+					createdAt: s.created_at,
+				}));
+		}
+	}
+
 	return c.html(
 		<Layout
 			title={`${sha.slice(0, 7)} — ${org}/${repo} — residue`}
@@ -969,6 +997,12 @@ pages.get("/:org/:repo/:sha", async (c) => {
 				{ label: sha.slice(0, 7) },
 			]}
 		>
+			{errorFlash && (
+				<div class="text-red-400 text-sm mb-4 bg-red-950/30 border border-red-900/50 rounded px-3 py-2">
+					{errorFlash}
+				</div>
+			)}
+
 			{/* Commit header */}
 			<div class="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-6">
 				<div class="flex items-center justify-between gap-2 mb-2">
@@ -1090,6 +1124,72 @@ pages.get("/:org/:repo/:sha", async (c) => {
 				</details>
 			)}
 
+			{/* Link session form */}
+			{username && (
+				<details class="mb-4 group">
+					<summary class="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1.5 select-none">
+						<i class="ph ph-plus-circle text-sm" />
+						Link a session to this commit
+					</summary>
+					<div class="mt-2 flex flex-col gap-3">
+						{linkableSessions.length > 0 && (
+							<form
+								method="post"
+								action={`/app/${org}/${repo}/${sha}/link`}
+								class="flex items-center gap-2"
+							>
+								<select
+									name="session_id"
+									required
+									class="bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-100 font-mono focus:outline-none focus:border-blue-500 transition-colors max-w-lg flex-1"
+								>
+									<option value="" disabled selected>
+										Select a session...
+									</option>
+									{linkableSessions.map((s) => {
+										const label =
+											s.sessionName ??
+											s.firstMessage?.slice(0, 80) ??
+											"No message";
+										return (
+											<option value={s.id}>
+												[{s.agent}] {s.id.slice(0, 8)} -- {label}
+											</option>
+										);
+									})}
+								</select>
+								<button
+									type="submit"
+									class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium py-1.5 px-3 rounded transition-colors whitespace-nowrap"
+								>
+									Link
+								</button>
+							</form>
+						)}
+						<form
+							method="post"
+							action={`/app/${org}/${repo}/${sha}/link`}
+							class="flex items-center gap-2"
+						>
+							<input
+								type="text"
+								name="session_id"
+								placeholder="Paste session ID"
+								required
+								autocomplete="off"
+								class="bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-100 font-mono focus:outline-none focus:border-blue-500 transition-colors w-80"
+							/>
+							<button
+								type="submit"
+								class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium py-1.5 px-3 rounded transition-colors whitespace-nowrap"
+							>
+								Link by ID
+							</button>
+						</form>
+					</div>
+				</details>
+			)}
+
 			{/* Sessions - tabbed if multiple */}
 			{sessionsData.length === 1 ? (
 				<div id={`session-${sessionsData[0].id}`}>
@@ -1102,12 +1202,39 @@ pages.get("/:org/:repo/:sha", async (c) => {
 								v{sessionsData[0].agent_version}
 							</span>
 						)}
-						<a
-							href={`#session-${sessionsData[0].id}`}
-							class="text-xs text-zinc-600 font-mono hover:text-zinc-400 transition-colors"
+						<button
+							type="button"
+							class="text-xs text-zinc-600 font-mono hover:text-zinc-400 transition-colors flex items-center gap-1 group"
+							title={`Copy session ID: ${sessionsData[0].id}`}
+							onclick={`navigator.clipboard.writeText('${sessionsData[0].id}');var el=this.querySelector('.copy-ok');el.classList.remove('hidden');setTimeout(function(){el.classList.add('hidden')},1500)`}
 						>
-							{sessionsData[0].id.slice(0, 8)}
-						</a>
+							{sessionsData[0].id}
+							<i class="ph ph-copy text-[10px] opacity-0 group-hover:opacity-100 transition-opacity" />
+							<span class="copy-ok hidden text-emerald-500 text-[10px]">
+								copied
+							</span>
+						</button>
+						{username && (
+							<form
+								method="post"
+								action={`/app/${org}/${repo}/${sha}/unlink`}
+								onsubmit="return confirm('Unlink this session from the commit?')"
+								class="ml-auto"
+							>
+								<input
+									type="hidden"
+									name="session_id"
+									value={sessionsData[0].id}
+								/>
+								<button
+									type="submit"
+									class="text-zinc-600 hover:text-red-400 transition-colors"
+									title="Unlink session from this commit"
+								>
+									<i class="ph ph-x-circle text-sm" />
+								</button>
+							</form>
+						)}
 					</div>
 					{sessionsData[0].messages.length === 0 ? (
 						<p class="text-zinc-500 text-sm">No conversation data available.</p>
@@ -1134,9 +1261,8 @@ pages.get("/:org/:repo/:sha", async (c) => {
 					{/* Tab bar */}
 					<div class="flex border-b border-zinc-800 mb-6 pb-0 gap-0 overflow-x-auto">
 						{sessionsData.map((session, i) => (
-							<a
-								href={`#session-${session.id}`}
-								class={`session-tab px-3 py-1.5 text-xs whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
+							<span
+								class={`session-tab flex items-center gap-1 px-3 py-1.5 text-xs whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
 									i === 0
 										? "border-blue-500 text-zinc-100"
 										: "border-transparent text-zinc-500 hover:text-zinc-300"
@@ -1156,7 +1282,25 @@ pages.get("/:org/:repo/:sha", async (c) => {
 							>
 								{session.agent}{" "}
 								<span class="text-zinc-600">{session.id.slice(0, 8)}</span>
-							</a>
+								{username && (
+									<form
+										method="post"
+										action={`/app/${org}/${repo}/${sha}/unlink`}
+										onsubmit="event.stopPropagation(); return confirm('Unlink this session from the commit?')"
+										onclick="event.stopPropagation()"
+										class="inline-flex ml-1"
+									>
+										<input type="hidden" name="session_id" value={session.id} />
+										<button
+											type="submit"
+											class="text-zinc-600 hover:text-red-400 transition-colors"
+											title="Unlink session"
+										>
+											<i class="ph ph-x-circle text-xs" />
+										</button>
+									</form>
+								)}
+							</span>
 						))}
 					</div>
 
@@ -1166,6 +1310,21 @@ pages.get("/:org/:repo/:sha", async (c) => {
 							id={`session-panel-${i}`}
 							class={`session-panel ${i !== 0 ? "hidden" : ""}`}
 						>
+							<div class="flex items-center gap-2 mb-3">
+								<button
+									type="button"
+									class="text-xs text-zinc-600 font-mono hover:text-zinc-400 transition-colors flex items-center gap-1 group"
+									title={`Copy session ID: ${session.id}`}
+									onclick={`navigator.clipboard.writeText('${session.id}');var el=this.querySelector('.copy-ok');el.classList.remove('hidden');setTimeout(function(){el.classList.add('hidden')},1500)`}
+								>
+									<i class="ph ph-identification-badge text-sm text-zinc-500" />
+									{session.id}
+									<i class="ph ph-copy text-[10px] opacity-0 group-hover:opacity-100 transition-opacity" />
+									<span class="copy-ok hidden text-emerald-500 text-[10px]">
+										copied
+									</span>
+								</button>
+							</div>
 							{session.messages.length === 0 ? (
 								<p class="text-zinc-500 text-sm">
 									No conversation data available.
@@ -1202,4 +1361,109 @@ pages.get("/:org/:repo/:sha", async (c) => {
 		</Layout>,
 	);
 });
+// Unlink a session from a commit
+pages.post("/:org/:repo/:sha/unlink", async (c) => {
+	const username = c.get("username");
+	if (!username) {
+		return c.redirect("/app/login");
+	}
+
+	const org = c.req.param("org");
+	const repo = c.req.param("repo");
+	const sha = c.req.param("sha");
+	const body = await c.req.parseBody();
+	const sessionId = typeof body.session_id === "string" ? body.session_id : "";
+
+	if (!sessionId) {
+		return c.redirect(
+			`/app/${org}/${repo}/${sha}?error=${encodeURIComponent("Session ID is required.")}`,
+		);
+	}
+
+	const result = await c.var.DL.commits.unlinkSession({
+		commitSha: sha,
+		sessionId,
+	});
+
+	if (result.isErr || !result.value.isDeleted) {
+		return c.redirect(
+			`/app/${org}/${repo}/${sha}?error=${encodeURIComponent("Failed to unlink session.")}`,
+		);
+	}
+
+	// Check if the commit still has any sessions linked
+	const remaining = await c.var.DL.commits.getBySha(sha);
+	const hasRemaining = remaining.isOk && remaining.value.length > 0;
+
+	if (hasRemaining) {
+		return c.redirect(`/app/${org}/${repo}/${sha}`);
+	}
+
+	// No sessions left on this commit -- go back to the repo page
+	return c.redirect(`/app/${org}/${repo}`);
+});
+
+// Link a session to a commit
+pages.post("/:org/:repo/:sha/link", async (c) => {
+	const username = c.get("username");
+	if (!username) {
+		return c.redirect("/app/login");
+	}
+
+	const org = c.req.param("org");
+	const repo = c.req.param("repo");
+	const sha = c.req.param("sha");
+	const body = await c.req.parseBody();
+	const sessionId =
+		typeof body.session_id === "string" ? body.session_id.trim() : "";
+
+	if (!sessionId) {
+		return c.redirect(
+			`/app/${org}/${repo}/${sha}?error=${encodeURIComponent("Session ID is required.")}`,
+		);
+	}
+
+	// Verify the session exists
+	const sessionResult = await c.var.DL.sessions.getById(sessionId);
+	if (sessionResult.isErr || !sessionResult.value) {
+		return c.redirect(
+			`/app/${org}/${repo}/${sha}?error=${encodeURIComponent("Session not found.")}`,
+		);
+	}
+
+	// Try to pull commit metadata from an existing row for this SHA
+	let message: string | null = null;
+	let author: string | null = null;
+	let committedAt: number | null = null;
+	let branch: string | null = null;
+
+	const existingResult = await c.var.DL.commits.getBySha(sha);
+	if (existingResult.isOk && existingResult.value.length > 0) {
+		const existing = existingResult.value[0];
+		message = existing.message;
+		author = existing.author;
+		committedAt = existing.committed_at;
+		branch = existing.branch;
+	}
+
+	const result = await c.var.DL.commits.linkSession({
+		commitSha: sha,
+		sessionId,
+		org,
+		repo,
+		message,
+		author,
+		committedAt,
+		branch,
+	});
+
+	if (result.isErr) {
+		return c.redirect(
+			`/app/${org}/${repo}/${sha}?error=${encodeURIComponent("Failed to link session.")}`,
+		);
+	}
+
+	return c.redirect(`/app/${org}/${repo}/${sha}`);
+});
+
 export { pages };

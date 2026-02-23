@@ -292,6 +292,58 @@ class CommitDataLayer extends BaseDataLayer {
 		});
 	}
 
+	unlinkSession(opts: {
+		commitSha: string;
+		sessionId: string;
+	}): Promise<Result<{ isDeleted: boolean }, DBError>> {
+		return this.run({
+			promise: this.db
+				.prepare("DELETE FROM commits WHERE commit_sha = ? AND session_id = ?")
+				.bind(opts.commitSha, opts.sessionId)
+				.run()
+				.then((r) => ({ isDeleted: (r.meta?.changes ?? 0) > 0 })),
+			source: "dl.commits.unlinkSession",
+			code: "DELETE_FAILED",
+		});
+	}
+
+	linkSession(opts: {
+		commitSha: string;
+		sessionId: string;
+		org: string;
+		repo: string;
+		message: string | null;
+		author: string | null;
+		committedAt: number | null;
+		branch: string | null;
+	}): Promise<Result<void, DBError>> {
+		const now = Math.floor(Date.now() / 1000);
+
+		return this.run({
+			promise: this.db
+				.prepare(
+					`INSERT INTO commits (commit_sha, repo, org, session_id, message, author, committed_at, created_at, branch)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(commit_sha, session_id) DO NOTHING`,
+				)
+				.bind(
+					opts.commitSha,
+					opts.repo,
+					opts.org,
+					opts.sessionId,
+					opts.message,
+					opts.author,
+					opts.committedAt,
+					now,
+					opts.branch,
+				)
+				.run()
+				.then(() => undefined),
+			source: "dl.commits.linkSession",
+			code: "CREATE_FAILED",
+		});
+	}
+
 	getDetail(sha: string): Promise<Result<CommitDetailResult | null, DBError>> {
 		return this.run({
 			promise: (async () => {
