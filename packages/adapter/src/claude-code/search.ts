@@ -1,5 +1,5 @@
-import { summarizeToolInput } from "@/shared";
-import type { SearchLine } from "@/types";
+import { summarizeToolInput } from "../shared";
+import type { SearchLine } from "../types";
 
 /**
  * Claude Code search text extractor.

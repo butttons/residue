@@ -1,7 +1,7 @@
-import { claudeCodeMapper } from "@/claude-code/mapper";
-import { opencodeMapper } from "@/opencode/mapper";
-import { piMapper } from "@/pi/mapper";
-import type { Mapper } from "@/types";
+import { claudeCodeMapper } from "./claude-code/mapper";
+import { opencodeMapper } from "./opencode/mapper";
+import { piMapper } from "./pi/mapper";
+import type { Mapper } from "./types";
 
 const mapperRegistry: Record<string, Mapper> = {
 	"claude-code": claudeCodeMapper,

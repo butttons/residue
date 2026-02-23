@@ -2,23 +2,23 @@ import {
 	extractClaudeCode,
 	extractFirstMessage as extractFirstMessageClaudeCode,
 	extractSessionName as extractSessionNameClaudeCode,
-} from "@/claude-code/search";
+} from "./claude-code/search";
 import {
 	extractFirstMessage as extractFirstMessageOpencode,
 	extractOpencode,
 	extractSessionName as extractSessionNameOpencode,
-} from "@/opencode/search";
+} from "./opencode/search";
 import {
 	extractFirstMessage as extractFirstMessagePi,
 	extractPi,
 	extractSessionName as extractSessionNamePi,
-} from "@/pi/search";
+} from "./pi/search";
 import type {
 	ExtractorName,
 	MetadataExtractors,
 	SearchLine,
 	SearchTextMetadata,
-} from "@/types";
+} from "./types";
 
 /**
  * Build the final search document from metadata + extracted lines.

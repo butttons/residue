@@ -1,6 +1,6 @@
+import { getMapper } from "@residue/adapter/mappers";
+import { piMapper } from "@residue/adapter/pi";
 import { describe, expect, it } from "vitest";
-import { getMapper } from "../../src/mappers";
-import { piMapper } from "../../src/mappers/pi";
 
 const makeSession = (lines: Record<string, unknown>[]): string => {
 	return lines.map((l) => JSON.stringify(l)).join("\n");

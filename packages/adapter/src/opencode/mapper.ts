@@ -1,4 +1,4 @@
-import type { Mapper, Message, ThinkingBlock, ToolCall } from "@/types";
+import type { Mapper, Message, ThinkingBlock, ToolCall } from "../types";
 
 type OpenCodeToolState =
 	| {

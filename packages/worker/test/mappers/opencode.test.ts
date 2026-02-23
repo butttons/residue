@@ -1,6 +1,6 @@
+import { getMapper } from "@residue/adapter/mappers";
+import { opencodeMapper } from "@residue/adapter/opencode";
 import { describe, expect, it } from "vitest";
-import { getMapper } from "../../src/mappers";
-import { opencodeMapper } from "../../src/mappers/opencode";
 
 const makeSession = (messages: Record<string, unknown>[]): string => {
 	return JSON.stringify(messages);

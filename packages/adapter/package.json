@@ -11,7 +11,7 @@
 		"./mappers": "./src/mappers.ts",
 		"./search": "./src/search.ts",
 		"./shared": "./src/shared.ts",
-		"./pi/template": "./src/pi/template.ts.txt",
-		"./opencode/template": "./src/opencode/template.ts.txt"
+		"./pi/template.ts.txt": "./src/pi/template.ts.txt",
+		"./opencode/template.ts.txt": "./src/opencode/template.ts.txt"
 	}
 }

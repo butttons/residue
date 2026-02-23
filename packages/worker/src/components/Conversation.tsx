@@ -1,6 +1,6 @@
+import type { Message } from "@residue/adapter";
 import { raw } from "hono/html";
 import type { FC } from "hono/jsx";
-import type { Message } from "../types";
 
 type ContinuationLink = {
 	sha: string;

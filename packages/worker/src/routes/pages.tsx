@@ -1,3 +1,4 @@
+import { getMapper } from "@residue/adapter/mappers";
 import { Hono } from "hono";
 import { raw } from "hono/html";
 import type { FC } from "hono/jsx";
@@ -19,7 +20,6 @@ import type {
 import { computeGraph } from "../lib/graph";
 import { formatTimestamp, relativeTime } from "../lib/time";
 import { urls } from "../lib/urls";
-import { getMapper } from "../mappers";
 import type { AppEnv } from "../types";
 
 // --- Shared sub-components ---

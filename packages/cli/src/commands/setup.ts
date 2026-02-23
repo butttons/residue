@@ -5,11 +5,11 @@ import { createLogger } from "@/utils/logger";
 
 const log = createLogger("setup");
 
-import opencodePluginSource from "@residue/adapter/opencode/template" with {
+import opencodePluginSource from "@residue/adapter/opencode/template.ts.txt" with {
 	type: "text",
 };
 // Embedded at build time so the binary doesn't need to resolve a file path at runtime
-import piAdapterSource from "@residue/adapter/pi/template" with {
+import piAdapterSource from "@residue/adapter/pi/template.ts.txt" with {
 	type: "text",
 };
 import { mkdir, readFile, stat, writeFile } from "fs/promises";

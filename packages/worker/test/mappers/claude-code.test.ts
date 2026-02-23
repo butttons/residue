@@ -1,6 +1,6 @@
+import { claudeCodeMapper } from "@residue/adapter/claude-code";
+import { getMapper } from "@residue/adapter/mappers";
 import { describe, expect, it } from "vitest";
-import { getMapper } from "../../src/mappers";
-import { claudeCodeMapper } from "../../src/mappers/claude-code";
 
 const makeSession = (lines: Record<string, unknown>[]): string => {
 	return lines.map((l) => JSON.stringify(l)).join("\n");
