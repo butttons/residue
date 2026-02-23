@@ -1,34 +1,22 @@
-# Cloudflare Workers
+# @residue/worker
 
-STOP. Your knowledge of Cloudflare Workers APIs and limits may be outdated. Always retrieve current documentation before any Workers, KV, R2, D1, Durable Objects, Queues, Vectorize, AI, or Agents SDK task.
+Cloudflare Worker serving both the API and UI. Users deploy their own instance -- no multi-tenant backend.
 
-## Docs
+Run `wrangler types` after changing bindings in `wrangler.jsonc`. Apply D1 migrations locally before running tests.
 
-- https://developers.cloudflare.com/workers/
-- MCP: `https://docs.mcp.cloudflare.com/mcp`
+## Auth
 
-For all limits and quotas, retrieve from the product's `/platform/limits/` page. eg. `/workers/platform/limits`
+- **API routes** (`/api/*`): Bearer token via `AUTH_TOKEN` env var.
+- **UI routes** (`/app/*`): HTTP basic auth via `ADMIN_USERNAME` and `ADMIN_PASSWORD` env vars.
 
-## Commands
+## Mappers
 
-| Command | Purpose |
-|---------|---------|
-| `npx wrangler dev` | Local development |
-| `npx wrangler deploy` | Deploy to Cloudflare |
-| `npx wrangler types` | Generate TypeScript types |
+Conversation mappers in `src/mappers/` are copies from `@residue/adapter` (the adapter is the source-of-truth). Each file has a JSDoc comment referencing its source. When updating a mapper, update the adapter first, then sync the copy here.
 
-Run `wrangler types` after changing bindings in wrangler.jsonc.
+## Search
 
-## Node.js Compatibility
+Cloudflare AI Search indexes only the `search/` R2 prefix. The lightweight text files there are uploaded by the CLI, not the worker.
 
-https://developers.cloudflare.com/workers/runtime-apis/nodejs/
+## Demo
 
-## Errors
-
-- **Error 1102** (CPU/Memory exceeded): Retrieve limits from `/workers/platform/limits/`
-- **All errors**: https://developers.cloudflare.com/workers/observability/errors/
-
-## Product Docs
-
-Retrieve API references and limits from:
-`/kv/` · `/r2/` · `/d1/` · `/durable-objects/` · `/queues/` · `/vectorize/` · `/workers-ai/` · `/agents/`
+The demo instance at `demo.residue.dev` uses `wrangler.local.demo.jsonc` with `IS_DEMO=true` on the `release/demo` branch.
