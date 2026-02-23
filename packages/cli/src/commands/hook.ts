@@ -1,3 +1,4 @@
+import { deriveSessionId } from "@residue/adapter/shared";
 import { ok, okAsync, Result, ResultAsync, safeTry } from "neverthrow";
 import {
 	addSession,
@@ -9,7 +10,6 @@ import {
 } from "@/lib/pending";
 import { type CliError, toCliError } from "@/utils/errors";
 import { createLogger } from "@/utils/logger";
-import { deriveSessionId } from "@/utils/session-id";
 
 const log = createLogger("hook");
 

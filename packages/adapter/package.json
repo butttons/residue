@@ -1,0 +1,17 @@
+{
+	"name": "@residue/adapter",
+	"version": "0.0.8",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/types.ts",
+		"./claude-code": "./src/claude-code/index.ts",
+		"./pi": "./src/pi/index.ts",
+		"./opencode": "./src/opencode/index.ts",
+		"./mappers": "./src/mappers.ts",
+		"./search": "./src/search.ts",
+		"./shared": "./src/shared.ts",
+		"./pi/template": "./src/pi/template.ts.txt",
+		"./opencode/template": "./src/opencode/template.ts.txt"
+	}
+}

@@ -1,3 +1,8 @@
+import {
+	buildSearchText,
+	getExtractor,
+	getMetadataExtractors,
+} from "@residue/adapter/search";
 import { err, ok, okAsync, ResultAsync, safeTry } from "neverthrow";
 import { resolveConfig } from "@/lib/config";
 import { residueFetch } from "@/lib/fetch";
@@ -15,11 +20,6 @@ import {
 	readPending,
 	writePending,
 } from "@/lib/pending";
-import {
-	buildSearchText,
-	getExtractor,
-	getMetadataExtractors,
-} from "@/lib/search-text";
 import { CliError, toCliError } from "@/utils/errors";
 import { createLogger } from "@/utils/logger";
 

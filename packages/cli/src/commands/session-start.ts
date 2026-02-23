@@ -1,3 +1,4 @@
+import { deriveSessionId } from "@residue/adapter/shared";
 import type { ResultAsync } from "neverthrow";
 import { ok, safeTry } from "neverthrow";
 import {
@@ -9,7 +10,6 @@ import {
 } from "@/lib/pending";
 import type { CliError } from "@/utils/errors";
 import { createLogger } from "@/utils/logger";
-import { deriveSessionId } from "@/utils/session-id";
 
 const log = createLogger("session");
 

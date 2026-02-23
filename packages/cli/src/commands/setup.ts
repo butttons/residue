@@ -5,15 +5,15 @@ import { createLogger } from "@/utils/logger";
 
 const log = createLogger("setup");
 
-import { mkdir, readFile, stat, writeFile } from "fs/promises";
-import { join } from "path";
-import opencodePluginSource from "../../adapters/opencode/plugin.ts.txt" with {
+import opencodePluginSource from "@residue/adapter/opencode/template" with {
 	type: "text",
 };
 // Embedded at build time so the binary doesn't need to resolve a file path at runtime
-import piAdapterSource from "../../adapters/pi/extension.ts.txt" with {
+import piAdapterSource from "@residue/adapter/pi/template" with {
 	type: "text",
 };
+import { mkdir, readFile, stat, writeFile } from "fs/promises";
+import { join } from "path";
 
 type HookHandler = {
 	type: string;
