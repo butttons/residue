@@ -31,6 +31,8 @@ const postSessionsSchema = z.object({
 		data_path: z.string().optional(),
 		first_message: z.string().optional(),
 		session_name: z.string().optional(),
+		first_message_at: z.number().int().optional(),
+		last_message_at: z.number().int().optional(),
 	}),
 	commits: z.array(commitSchema),
 });
@@ -65,6 +67,8 @@ sessions.post(
 			dataPath: session.data_path ?? null,
 			firstMessage: session.first_message ?? null,
 			sessionName: session.session_name ?? null,
+			firstMessageAt: session.first_message_at ?? null,
+			lastMessageAt: session.last_message_at ?? null,
 		});
 		if (sessionResult.isErr) {
 			return c.json({ error: "Failed to write metadata to database" }, 500);
@@ -188,6 +192,8 @@ sessions.get("/:id/metadata", async (c) => {
 				data_path: session.data_path,
 				first_message: session.first_message,
 				session_name: session.session_name,
+				first_message_at: session.first_message_at,
+				last_message_at: session.last_message_at,
 			},
 		},
 		200,
@@ -233,6 +239,8 @@ sessions.get("/:id", async (c) => {
 				data_path: session.data_path,
 				first_message: session.first_message,
 				session_name: session.session_name,
+				first_message_at: session.first_message_at,
+				last_message_at: session.last_message_at,
 			},
 			data,
 		},

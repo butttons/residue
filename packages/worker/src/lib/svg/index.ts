@@ -45,10 +45,16 @@ export type {
 	CommitGraphInput,
 	CommitGraphLayout,
 	CommitGraphLine,
+	DayBar,
+	DayOfWeekChartLayout,
 	GridLine,
 	HeatmapCell,
 	HeatmapLabel,
 	HeatmapLayout,
+	HourBandLabel,
+	HourBar,
+	HourChartGridLine,
+	HourChartLayout,
 	HoverZone,
 	LineChartGridLine,
 	LineChartLayout,
@@ -58,7 +64,9 @@ export type {
 export {
 	useBarChartLayout,
 	useCommitGraphLayout,
+	useDayOfWeekChartLayout,
 	useHeatmapLayout,
+	useHourChartLayout,
 	useLineChartLayout,
 } from "@/lib/svg/hooks";
 export {

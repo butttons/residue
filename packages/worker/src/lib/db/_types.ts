@@ -7,6 +7,8 @@ type UpsertSessionParams = {
 	dataPath?: string | null;
 	firstMessage?: string | null;
 	sessionName?: string | null;
+	firstMessageAt?: number | null;
+	lastMessageAt?: number | null;
 };
 
 type InsertCommitParams = {
@@ -30,6 +32,8 @@ type SessionRow = {
 	data_path: string | null;
 	first_message: string | null;
 	session_name: string | null;
+	first_message_at: number | null;
+	last_message_at: number | null;
 };
 
 type CommitRow = {
@@ -219,6 +223,24 @@ type ContributorScope =
 	| { scope: "org"; org: string }
 	| { scope: "repo"; org: string; repo: string };
 
+type TimeStats = {
+	avgDurationMinutes: number;
+	medianDurationMinutes: number;
+	longestDurationMinutes: number;
+	totalHours: number;
+	totalSessions: number;
+};
+
+type HourDistribution = {
+	hour: number;
+	sessionCount: number;
+};
+
+type DayOfWeekDistribution = {
+	dayOfWeek: number;
+	sessionCount: number;
+};
+
 export type {
 	UpsertSessionParams,
 	InsertCommitParams,
@@ -244,4 +266,7 @@ export type {
 	RecentCommitRow,
 	ContributorRow,
 	ContributorScope,
+	TimeStats,
+	HourDistribution,
+	DayOfWeekDistribution,
 };

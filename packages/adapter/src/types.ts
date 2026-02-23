@@ -42,6 +42,11 @@ type MetadataExtractors = {
 
 type ExtractorName = "claude-code" | "opencode" | "pi";
 
+type TimestampRange = {
+	firstMessageAt: number | null;
+	lastMessageAt: number | null;
+};
+
 export type {
 	ToolCall,
 	ThinkingBlock,
@@ -51,4 +56,5 @@ export type {
 	SearchTextMetadata,
 	MetadataExtractors,
 	ExtractorName,
+	TimestampRange,
 };

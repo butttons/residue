@@ -1,5 +1,6 @@
 import {
 	buildSearchText,
+	extractTimestamps,
 	getExtractor,
 	getMetadataExtractors,
 } from "@residue/adapter/search";
@@ -115,6 +116,8 @@ function postSessionMetadata(opts: {
 		data_path?: string;
 		first_message?: string;
 		session_name?: string;
+		first_message_at?: number;
+		last_message_at?: number;
 	};
 	commits: CommitPayload[];
 }): ResultAsync<void, CliError> {
@@ -249,6 +252,8 @@ function closeStaleOpenSessions(opts: {
 type SessionMetadataFields = {
 	firstMessage: string | null;
 	sessionName: string | null;
+	firstMessageAt: number | null;
+	lastMessageAt: number | null;
 };
 
 function extractSessionMetadata(opts: {
@@ -256,10 +261,23 @@ function extractSessionMetadata(opts: {
 	rawData: string;
 }): SessionMetadataFields {
 	const ext = getMetadataExtractors(opts.agent);
-	if (!ext) return { firstMessage: null, sessionName: null };
+	const timestamps = extractTimestamps({
+		agent: opts.agent,
+		raw: opts.rawData,
+	});
+	if (!ext) {
+		return {
+			firstMessage: null,
+			sessionName: null,
+			firstMessageAt: timestamps.firstMessageAt,
+			lastMessageAt: timestamps.lastMessageAt,
+		};
+	}
 	return {
 		firstMessage: ext.extractFirstMessage(opts.rawData),
 		sessionName: ext.extractSessionName(opts.rawData),
+		firstMessageAt: timestamps.firstMessageAt,
+		lastMessageAt: timestamps.lastMessageAt,
 	};
 }
 
@@ -452,6 +470,8 @@ function syncSessions(opts: {
 						data_path: session.data_path,
 						first_message: sessionMeta.firstMessage ?? undefined,
 						session_name: sessionMeta.sessionName ?? undefined,
+						first_message_at: sessionMeta.firstMessageAt ?? undefined,
+						last_message_at: sessionMeta.lastMessageAt ?? undefined,
 					},
 					commits: commitsResult.value,
 				});

@@ -38,7 +38,9 @@ export type {
 	ContributorScope,
 	DailyActivityCount,
 	DailySessionCount,
+	DayOfWeekDistribution,
 	GlobalStats,
+	HourDistribution,
 	InsertCommitParams,
 	OrgListItem,
 	QueryCommitResult,
@@ -50,6 +52,7 @@ export type {
 	SessionCommitRow,
 	SessionDetailResult,
 	SessionRow,
+	TimeStats,
 	UpsertSessionParams,
 	UserRow,
 } from "./_types";

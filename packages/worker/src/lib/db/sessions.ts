@@ -18,14 +18,16 @@ class SessionDataLayer extends BaseDataLayer {
 		return this.run({
 			promise: this.db
 				.prepare(
-					`INSERT INTO sessions (id, agent, agent_version, created_at, ended_at, r2_key, data_path, first_message, session_name)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+					`INSERT INTO sessions (id, agent, agent_version, created_at, ended_at, r2_key, data_path, first_message, session_name, first_message_at, last_message_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            ended_at = COALESCE(excluded.ended_at, sessions.ended_at),
            r2_key = excluded.r2_key,
            data_path = COALESCE(excluded.data_path, sessions.data_path),
            first_message = COALESCE(excluded.first_message, sessions.first_message),
-           session_name = COALESCE(excluded.session_name, sessions.session_name)`,
+           session_name = COALESCE(excluded.session_name, sessions.session_name),
+           first_message_at = COALESCE(excluded.first_message_at, sessions.first_message_at),
+           last_message_at = COALESCE(excluded.last_message_at, sessions.last_message_at)`,
 				)
 				.bind(
 					params.id,
@@ -37,6 +39,8 @@ class SessionDataLayer extends BaseDataLayer {
 					params.dataPath ?? null,
 					params.firstMessage ?? null,
 					params.sessionName ?? null,
+					params.firstMessageAt ?? null,
+					params.lastMessageAt ?? null,
 				)
 				.run()
 				.then(() => undefined),

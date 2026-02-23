@@ -3,6 +3,7 @@ import {
 	extractFirstMessage as extractFirstMessageClaudeCode,
 	extractSessionName as extractSessionNameClaudeCode,
 } from "./claude-code/search";
+import { getMapper } from "./mappers";
 import {
 	extractFirstMessage as extractFirstMessageOpencode,
 	extractOpencode,
@@ -18,6 +19,7 @@ import type {
 	MetadataExtractors,
 	SearchLine,
 	SearchTextMetadata,
+	TimestampRange,
 } from "./types";
 
 /**
@@ -86,4 +88,45 @@ function getMetadataExtractors(agent: string): MetadataExtractors | null {
 	return metadataExtractors[agent as ExtractorName] ?? null;
 }
 
-export { buildSearchText, getExtractor, getMetadataExtractors };
+// -- Timestamp extraction ----------------------------------------------------
+
+/**
+ * Run the agent's mapper to get Message[], then extract the first and last
+ * message timestamps as unix epoch seconds. Returns null for either value
+ * if no valid timestamps are found.
+ */
+function extractTimestamps(opts: {
+	agent: string;
+	raw: string;
+}): TimestampRange {
+	const mapper = getMapper(opts.agent);
+	if (!mapper) return { firstMessageAt: null, lastMessageAt: null };
+
+	const messages = mapper(opts.raw);
+	if (messages.length === 0)
+		return { firstMessageAt: null, lastMessageAt: null };
+
+	let firstMs: number | null = null;
+	let lastMs: number | null = null;
+
+	for (const msg of messages) {
+		if (!msg.timestamp) continue;
+		const ms = new Date(msg.timestamp).getTime();
+		if (Number.isNaN(ms)) continue;
+
+		if (firstMs === null || ms < firstMs) firstMs = ms;
+		if (lastMs === null || ms > lastMs) lastMs = ms;
+	}
+
+	return {
+		firstMessageAt: firstMs !== null ? Math.floor(firstMs / 1000) : null,
+		lastMessageAt: lastMs !== null ? Math.floor(lastMs / 1000) : null,
+	};
+}
+
+export {
+	buildSearchText,
+	extractTimestamps,
+	getExtractor,
+	getMetadataExtractors,
+};
