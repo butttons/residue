@@ -8,9 +8,8 @@ An open-source CLI + self-hosted backend that captures AI agent conversations an
 
 ```
 packages/
+  adapter/            → "@residue/adapter" shared package, all agent-specific code
   cli/                → "@residue/cli" npm package, built with bun
-    adapters/
-      pi/             → pi coding agent extension (embedded at build time)
   worker/             → Cloudflare Worker (Hono + JSX), one-click deploy template
 ```
 
@@ -77,11 +76,68 @@ The presigned URL generation uses lightweight AWS SigV4 signing with the Web Cry
 
 **Org and repo are inferred from the git remote.** `git@github.com:my-team/my-app.git` -> org is `my-team`, repo is `my-app`. No manual configuration needed.
 
-**No data normalization at rest.** Raw agent session data is stored as-is in R2. The worker's mappers transform it into a common format at render time. Adding a new agent means writing a mapper, not changing the storage schema.
+**No data normalization at rest.** Raw agent session data is stored as-is in R2. Mappers in `@residue/adapter` transform it into a common format at render time. Adding a new agent means writing a mapper, not changing the storage schema.
 
 **Search uses lightweight text files.** Raw session files are too large and noisy for embedding models. At sync time, the CLI generates a second, lightweight `.txt` file per session under `search/<id>.txt` in R2. These contain only human messages, assistant text, and tool name summaries -- no thinking blocks, tool output, token metadata, or signatures. Cloudflare AI Search indexes only the `search/` prefix.
 
 **Users deploy their own worker.** No multi-tenant backend. Each user/team deploys their own Cloudflare Worker via a one-click deploy button. This eliminates auth complexity, data privacy concerns, and hosting costs for us.
+
+## Adapter (`packages/adapter`)
+
+All agent-specific code lives here. The CLI and worker import from `@residue/adapter` via subpath exports. Neither package contains agent-specific parsing or data format knowledge.
+
+### Structure
+
+```
+packages/adapter/
+  src/
+    types.ts                          # Message, ToolCall, ThinkingBlock, Mapper, SearchLine, etc.
+    shared.ts                         # summarizeToolInput, deriveSessionId
+    mappers.ts                        # getMapper() registry
+    search.ts                         # buildSearchText, getExtractor, getMetadataExtractors registries
+    claude-code/
+      index.ts                        # barrel re-exports
+      mapper.ts                       # raw JSONL -> Message[] for rendering
+      search.ts                       # raw JSONL -> SearchLine[] for indexing + metadata extractors
+    pi/
+      index.ts
+      mapper.ts
+      search.ts
+      template.ts.txt                 # extension installed by `residue setup pi`
+    opencode/
+      index.ts
+      mapper.ts
+      search.ts
+      template.ts.txt                 # plugin installed by `residue setup opencode`
+```
+
+### Subpath Exports
+
+```
+@residue/adapter                      # shared types (Message, ToolCall, etc.)
+@residue/adapter/mappers              # getMapper() registry (worker uses this)
+@residue/adapter/search               # buildSearchText, getExtractor, getMetadataExtractors (CLI uses this)
+@residue/adapter/shared               # summarizeToolInput, deriveSessionId
+@residue/adapter/claude-code          # claude-code mapper + search extractor
+@residue/adapter/pi                   # pi mapper + search extractor
+@residue/adapter/opencode             # opencode mapper + search extractor
+@residue/adapter/pi/template.ts.txt   # pi extension template (text import)
+@residue/adapter/opencode/template.ts.txt  # opencode plugin template (text import)
+```
+
+Exports point to source `.ts` files directly (no build step). Bundlers in both consumers (bun for CLI, wrangler for worker) resolve through the workspace link and tree-shake unused code.
+
+### Adding a New Agent
+
+1. Create `packages/adapter/src/<agent>/mapper.ts` -- export a `Mapper` function
+2. Create `packages/adapter/src/<agent>/search.ts` -- export an extractor + metadata extractors
+3. Create `packages/adapter/src/<agent>/index.ts` -- barrel re-exports
+4. Register the mapper in `packages/adapter/src/mappers.ts`
+5. Register the extractor + metadata extractors in `packages/adapter/src/search.ts`
+6. Add the agent name to the `ExtractorName` union in `packages/adapter/src/types.ts`
+7. Optionally add a `template.ts.txt` if the agent has an install-time adapter file
+
+No changes to the CLI or worker are needed -- they pick up new agents automatically via the registries.
 
 ## CLI (`packages/cli`)
 
@@ -119,19 +175,21 @@ The presigned URL generation uses lightweight AWS SigV4 signing with the Web Cry
 
 ### Agent Adapters
 
-Adapters are **not a separate package**. They live inside the CLI or are installed into projects by `residue setup`.
+All agent-specific code lives in `packages/adapter` (`@residue/adapter`). This includes conversation mappers, search text extractors, shared types, and install-time templates. The CLI and worker both import from this package via subpath exports -- neither contains agent-specific parsing logic.
+
+**One exception:** the Claude Code hook handler (`cli/src/commands/hook.ts`) remains in the CLI. It reads JSON from stdin, manages pending queue state, and spawns `claude --version` -- all CLI-runtime concerns. It does import `deriveSessionId` from `@residue/adapter/shared`.
 
 **Claude Code:** Uses Claude Code's native hook system. `residue setup claude-code` writes hook entries into `.claude/settings.json` that pipe session lifecycle events (as JSON on stdin) to `residue hook claude-code`. The hook command internally manages session start/end and maps Claude's `session_id` to residue's session ID via state files in `.residue/hooks/`.
 
-**Pi:** Uses pi's extension system. `residue setup pi` installs an extension file at `.pi/extensions/residue.ts`. The extension source is embedded into the CLI binary at build time from `packages/cli/adapters/pi/extension.ts.txt`. The extension calls `residue session start` and `residue session end` directly via `pi.exec()`.
+**Pi:** Uses pi's extension system. `residue setup pi` installs an extension file at `.pi/extensions/residue.ts`. The extension source is embedded into the CLI binary at build time from `packages/adapter/src/pi/template.ts.txt`. The extension calls `residue session start` and `residue session end` directly via `pi.exec()`.
 
-**OpenCode:** Uses OpenCode's plugin system. `residue setup opencode` installs a plugin file at `.opencode/plugins/residue.ts`. The plugin source is embedded into the CLI binary at build time from `packages/cli/adapters/opencode/plugin.ts.txt`. The plugin calls `residue session start` and `residue session end` directly. Includes a process exit handler and idle data dump to prevent lost sessions.
+**OpenCode:** Uses OpenCode's plugin system. `residue setup opencode` installs a plugin file at `.opencode/plugins/residue.ts`. The plugin source is embedded into the CLI binary at build time from `packages/adapter/src/opencode/template.ts.txt`. The plugin calls `residue session start` and `residue session end` directly. Includes a process exit handler and idle data dump to prevent lost sessions.
 
 All adapters store hook state in `.residue/hooks/` within the project root.
 
 ### Search Text Extractors
 
-The CLI generates lightweight text summaries of session data for search indexing. These live in `packages/cli/src/lib/search-text.ts`.
+The CLI generates lightweight text summaries of session data for search indexing. Extractors live in `packages/adapter/src/<agent>/search.ts`, with registries in `packages/adapter/src/search.ts`.
 
 Each agent has a simple extractor function (not the full worker-side mapper) that parses the raw session file and produces `SearchLine[]` entries tagged by role. The extractor is looked up by agent name via `getExtractor()`.
 
@@ -156,7 +214,7 @@ Repo: my-team/my-app
 [assistant] Committed as abc123.
 ```
 
-Supported agents: `claude-code`, `pi`, `opencode`. Adding a new agent means writing one extractor function and registering it in the `extractors` map.
+Supported agents: `claude-code`, `pi`, `opencode`. Adding a new agent means writing a mapper and search extractor in `packages/adapter/src/<agent>/` and registering them in the corresponding registry files.
 
 ### Local State
 
@@ -379,7 +437,7 @@ There is **one generic UI component** that renders all conversations. It takes a
 - Markdown rendering in message content
 - "Continues from / continues in" links for sessions spanning multiple commits
 
-Each agent gets a **mapper** -- a pure function that transforms the agent's raw session data into the common format. The mapper is the only agent-specific code. Everything else is shared.
+Each agent gets a **mapper** -- a pure function that transforms the agent's raw session data into the common format. Mappers live in `packages/adapter`, not in the worker. The worker imports them via `@residue/adapter/mappers`.
 
 ```ts
 type ToolCall = {
@@ -399,16 +457,17 @@ type Message = {
 type Mapper = (raw: string) => Message[];
 ```
 
-Mappers live in the worker:
+Mappers live in the adapter package:
 
 ```
-worker/src/mappers/
-  claude-code.ts
-  pi.ts
-  index.ts          -> registry, getMapper(agent) lookup
+adapter/src/
+  claude-code/mapper.ts
+  pi/mapper.ts
+  opencode/mapper.ts
+  mappers.ts          -> registry, getMapper(agent) lookup
 ```
 
-The worker reads `agent` from D1, picks the right mapper via `getMapper()`, transforms the raw R2 blob, and passes `Message[]` to the JSX template. Adding a new agent means writing one mapper function and registering it.
+The worker reads `agent` from D1, picks the right mapper via `getMapper()`, transforms the raw R2 blob, and passes `Message[]` to the JSX template. Adding a new agent means writing one mapper function in `packages/adapter/src/<agent>/mapper.ts` and registering it.
 
 ### SVG Chart Library (`lib/svg/`)
 
