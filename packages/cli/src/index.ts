@@ -4,6 +4,7 @@ import { Command } from "commander";
 import { capture } from "@/commands/capture";
 import { clear } from "@/commands/clear";
 import { context } from "@/commands/context";
+import { doctor } from "@/commands/doctor";
 import { hookClaudeCode } from "@/commands/hook";
 import { init } from "@/commands/init";
 import { login } from "@/commands/login";
@@ -131,6 +132,13 @@ program
 	.command("status")
 	.description("Show current residue state for this project")
 	.action(wrapCommand(() => status()));
+
+program
+	.command("doctor")
+	.description(
+		"Retroactively link orphaned sessions to commits by matching timestamps",
+	)
+	.action(wrapCommand(() => doctor()));
 
 program
 	.command("search")
