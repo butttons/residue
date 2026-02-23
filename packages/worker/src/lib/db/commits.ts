@@ -249,8 +249,14 @@ class CommitDataLayer extends BaseDataLayer {
 		const bindings: unknown[] = [];
 
 		if (filter.repo) {
-			conditions.push("c.org || '/' || c.repo = ?");
-			bindings.push(filter.repo);
+			const slashIdx = filter.repo.indexOf("/");
+			if (slashIdx !== -1) {
+				conditions.push("c.org = ? AND c.repo = ?");
+				bindings.push(
+					filter.repo.slice(0, slashIdx),
+					filter.repo.slice(slashIdx + 1),
+				);
+			}
 		}
 		if (filter.branch) {
 			conditions.push("c.branch = ?");

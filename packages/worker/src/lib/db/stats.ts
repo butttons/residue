@@ -120,8 +120,8 @@ class StatsDataLayer extends BaseDataLayer {
 					`SELECT
            (SELECT COUNT(*) FROM sessions) as totalSessions,
            (SELECT COUNT(DISTINCT commit_sha) FROM commits) as totalCommits,
-           (SELECT COUNT(DISTINCT org || '/' || repo) FROM commits) as totalRepos,
-           (SELECT COUNT(DISTINCT commit_sha || '/' || file_path) FROM commit_files) as totalFilesChanged,
+           (SELECT COUNT(*) FROM (SELECT 1 FROM commits GROUP BY org, repo)) as totalRepos,
+           (SELECT COUNT(*) FROM commit_files) as totalFilesChanged,
            (SELECT COALESCE(SUM(lines_added), 0) FROM commit_files) as totalLinesAdded,
            (SELECT COALESCE(SUM(lines_deleted), 0) FROM commit_files) as totalLinesDeleted`,
 				)

@@ -88,10 +88,16 @@ class SessionDataLayer extends BaseDataLayer {
 			bindings.push(filter.agent);
 		}
 		if (filter.repo) {
-			conditions.push(
-				"s.id IN (SELECT DISTINCT session_id FROM commits WHERE org || '/' || repo = ?)",
-			);
-			bindings.push(filter.repo);
+			const slashIdx = filter.repo.indexOf("/");
+			if (slashIdx !== -1) {
+				conditions.push(
+					"s.id IN (SELECT DISTINCT session_id FROM commits WHERE org = ? AND repo = ?)",
+				);
+				bindings.push(
+					filter.repo.slice(0, slashIdx),
+					filter.repo.slice(slashIdx + 1),
+				);
+			}
 		}
 		if (filter.branch) {
 			conditions.push(
