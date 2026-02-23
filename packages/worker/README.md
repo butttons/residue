@@ -248,6 +248,9 @@ Each agent's raw session data gets transformed into a common `Message[]` format 
 |-------|------|
 | `claude-code` | `claude-code.ts` |
 | `pi` | `pi.ts` |
+| `opencode` | `opencode.ts` |
+
+These are copied from the adapter package (`packages/adapter/src/<agent>/mapper.ts`) so the worker can deploy standalone without workspace dependencies. Each file has a JSDoc comment referencing its source. When updating a mapper, update the adapter first, then sync the copy here.
 
 Adding a new agent means writing one mapper function and registering it in `index.ts`. No storage schema changes needed.
 
