@@ -1,5 +1,11 @@
 # @residue/worker
 
+## 0.0.11
+
+### Patch Changes
+
+- Add API endpoints to manually link and unlink sessions from commits.
+
 ## 0.0.9
 
 ### Patch Changes

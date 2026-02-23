@@ -249,8 +249,14 @@ class CommitDataLayer extends BaseDataLayer {
 		const bindings: unknown[] = [];
 
 		if (filter.repo) {
-			conditions.push("c.org || '/' || c.repo = ?");
-			bindings.push(filter.repo);
+			const slashIdx = filter.repo.indexOf("/");
+			if (slashIdx !== -1) {
+				conditions.push("c.org = ? AND c.repo = ?");
+				bindings.push(
+					filter.repo.slice(0, slashIdx),
+					filter.repo.slice(slashIdx + 1),
+				);
+			}
 		}
 		if (filter.branch) {
 			conditions.push("c.branch = ?");
@@ -289,6 +295,58 @@ class CommitDataLayer extends BaseDataLayer {
 				.then((r) => r.results),
 			source: "dl.commits.query",
 			code: "GET_FAILED",
+		});
+	}
+
+	unlinkSession(opts: {
+		commitSha: string;
+		sessionId: string;
+	}): Promise<Result<{ isDeleted: boolean }, DBError>> {
+		return this.run({
+			promise: this.db
+				.prepare("DELETE FROM commits WHERE commit_sha = ? AND session_id = ?")
+				.bind(opts.commitSha, opts.sessionId)
+				.run()
+				.then((r) => ({ isDeleted: (r.meta?.changes ?? 0) > 0 })),
+			source: "dl.commits.unlinkSession",
+			code: "DELETE_FAILED",
+		});
+	}
+
+	linkSession(opts: {
+		commitSha: string;
+		sessionId: string;
+		org: string;
+		repo: string;
+		message: string | null;
+		author: string | null;
+		committedAt: number | null;
+		branch: string | null;
+	}): Promise<Result<void, DBError>> {
+		const now = Math.floor(Date.now() / 1000);
+
+		return this.run({
+			promise: this.db
+				.prepare(
+					`INSERT INTO commits (commit_sha, repo, org, session_id, message, author, committed_at, created_at, branch)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(commit_sha, session_id) DO NOTHING`,
+				)
+				.bind(
+					opts.commitSha,
+					opts.repo,
+					opts.org,
+					opts.sessionId,
+					opts.message,
+					opts.author,
+					opts.committedAt,
+					now,
+					opts.branch,
+				)
+				.run()
+				.then(() => undefined),
+			source: "dl.commits.linkSession",
+			code: "CREATE_FAILED",
 		});
 	}
 

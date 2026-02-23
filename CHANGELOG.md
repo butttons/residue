@@ -1,5 +1,11 @@
 # residue
 
+## 0.0.11
+
+### @residue/worker
+
+- Add API endpoints to manually link and unlink sessions from commits
+
 ## 0.0.10
 
 ### @residue/worker

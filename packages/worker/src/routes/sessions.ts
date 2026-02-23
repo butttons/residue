@@ -248,4 +248,104 @@ sessions.get("/:id", async (c) => {
 	);
 });
 
+sessions.delete("/:id/commits/:sha", async (c) => {
+	const sessionId = c.req.param("id");
+	const commitSha = c.req.param("sha");
+
+	const result = await c.var.DL.commits.unlinkSession({
+		commitSha,
+		sessionId,
+	});
+	if (result.isErr) {
+		return c.json({ error: "Failed to unlink session from commit" }, 500);
+	}
+	if (!result.value.isDeleted) {
+		return c.json({ error: "Link not found" }, 404);
+	}
+
+	return c.json({ ok: true }, 200);
+});
+
+const linkCommitSchema = z.object({
+	org: z.string().min(1).optional(),
+	repo: z.string().min(1).optional(),
+	message: z.string().nullable().optional(),
+	author: z.string().nullable().optional(),
+	committed_at: z.number().nullable().optional(),
+	branch: z.string().nullable().optional(),
+});
+
+sessions.post(
+	"/:id/commits/:sha",
+	zValidator("json", linkCommitSchema, (result, c) => {
+		if (!result.success) {
+			return c.json(
+				{ error: "Validation failed", details: result.error.issues },
+				400,
+			);
+		}
+	}),
+	async (c) => {
+		const sessionId = c.req.param("id");
+		const commitSha = c.req.param("sha");
+		const body = c.req.valid("json");
+
+		// Verify the session exists
+		const sessionResult = await c.var.DL.sessions.getById(sessionId);
+		if (sessionResult.isErr) {
+			return c.json({ error: "Failed to verify session" }, 500);
+		}
+		if (!sessionResult.value) {
+			return c.json({ error: "Session not found" }, 404);
+		}
+
+		// If org/repo not provided, try to fill from an existing commit row for this SHA
+		let org = body.org ?? null;
+		let repo = body.repo ?? null;
+		let message = body.message ?? null;
+		let author = body.author ?? null;
+		let committedAt = body.committed_at ?? null;
+		let branch = body.branch ?? null;
+
+		if (!org || !repo) {
+			const existingResult = await c.var.DL.commits.getBySha(commitSha);
+			if (existingResult.isOk && existingResult.value.length > 0) {
+				const existing = existingResult.value[0];
+				org = org ?? existing.org;
+				repo = repo ?? existing.repo;
+				message = message ?? existing.message;
+				author = author ?? existing.author;
+				committedAt = committedAt ?? existing.committed_at;
+				branch = branch ?? existing.branch;
+			}
+		}
+
+		if (!org || !repo) {
+			return c.json(
+				{
+					error:
+						"org and repo are required when linking to a commit that does not yet exist in the database",
+				},
+				400,
+			);
+		}
+
+		const result = await c.var.DL.commits.linkSession({
+			commitSha,
+			sessionId,
+			org,
+			repo,
+			message,
+			author,
+			committedAt,
+			branch,
+		});
+		if (result.isErr) {
+			return c.json({ error: "Failed to link session to commit" }, 500);
+		}
+
+		return c.json({ ok: true }, 200);
+	},
+);
+
 export { sessions };
