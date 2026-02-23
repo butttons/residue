@@ -1,5 +1,12 @@
 # residue
 
+## 0.0.10
+
+### @residue/worker
+
+- Remove `@residue/adapter` workspace dependency so the worker deploys standalone
+- Copy mappers into `src/mappers/` with source references back to the adapter package
+
 ## 0.0.9
 
 ### @residue/cli
