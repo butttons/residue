@@ -1,7 +1,7 @@
-import { getMapper } from "@residue/adapter/mappers";
 import { Hono } from "hono";
 import { raw } from "hono/html";
 import type { FC } from "hono/jsx";
+import { getMapper } from "@/mappers";
 import { ActivityGraph } from "../components/ActivityGraph";
 import { AgentBreakdownChart } from "../components/AgentBreakdownChart";
 import { CommitGraph } from "../components/CommitGraph";
