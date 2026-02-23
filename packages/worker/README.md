@@ -1,159 +1,37 @@
-# residue worker
+# @residue/worker
 
-Cloudflare Worker that serves as the backend for residue. Stores AI session data in R2, indexes commits in D1, and serves a browsable UI.
+Cloudflare Worker that serves as the backend for residue. Stores session data in R2, indexes commits in D1, and serves a browsable web UI.
 
-## Stack
+Part of [residue](https://residue.dev). See the [main README](../../README.md) for full setup and deployment instructions.
 
-- **Runtime:** Cloudflare Workers
-- **Framework:** Hono + JSX (server-rendered)
-- **Database:** Cloudflare D1 (SQLite)
-- **Storage:** Cloudflare R2 (session blobs + search text, uploaded directly via presigned URLs)
-- **Search:** Cloudflare AI Search (indexes lightweight text files in R2 `search/` prefix)
-- **Styling:** Tailwind CSS (CDN), JetBrains Mono, Phosphor Icons
+## Deploy
 
-## Setup
+The easiest way is the installer at [install.residue.dev](https://install.residue.dev), which automates everything: D1 database, R2 bucket, S3 credentials, AI Search, secrets, and deployment.
 
-### Prerequisites
+For manual deployment or the Deploy to Cloudflare button, see the [main README](../../README.md#step-2-deploy-the-worker).
 
-- Node.js 18+
-- Wrangler CLI: `bun add -g wrangler`
-- Cloudflare account: `wrangler login`
-- **R2 bucket with S3 API credentials** (see below)
+## Auth
 
-### Step 1: Create an R2 bucket and S3 API token
-
-The CLI uploads session data directly to R2 via presigned PUT URLs. You need to create the bucket and an S3 API token before deploying.
-
-Create an R2 bucket: [dash.cloudflare.com/?to=/:account/r2/new](https://dash.cloudflare.com/?to=/:account/r2/new)
-
-Create an S3 API token with read/write access to your bucket: [dash.cloudflare.com/?to=/:account/r2/api-tokens](https://dash.cloudflare.com/?to=/:account/r2/api-tokens)
-
-Save these values -- you will need them in step 2:
-
-| Value | Source |
-|---|---|
-| `R2_ACCESS_KEY_ID` | from the API token |
-| `R2_SECRET_ACCESS_KEY` | from the API token |
-| `R2_ACCOUNT_ID` | your Cloudflare account ID |
-| `R2_BUCKET_NAME` | the bucket you just created |
-
-### Step 2: Deploy
-
-**Option A: Deploy to Cloudflare**
-
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/butttons/residue/tree/main/packages/worker)
-
-During deploy, you will be prompted for these secrets:
-
-| Secret | Value |
-|---|---|
-| `AUTH_TOKEN` | generate a random string -- this is your CLI auth token |
-| `R2_SECRET_ACCESS_KEY` | from step 1 |
-| `ADMIN_PASSWORD` | password for the web UI |
-
-The R2 vars from step 1 (`R2_ACCESS_KEY_ID`, `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`) go into the worker environment variables.
-
-**Option B: Manual**
-
-```bash
-# Create D1 database
-wrangler d1 create residue-db
-# Copy the database_id into wrangler.jsonc
-
-# Run migrations
-wrangler d1 execute residue-db --remote --file=migrations/0001_init.sql
-
-# Set secrets
-echo "your-secret-token" | wrangler secret put AUTH_TOKEN
-wrangler secret put ADMIN_PASSWORD
-wrangler secret put R2_SECRET_ACCESS_KEY
-```
-
-Update `wrangler.jsonc`:
-
-```jsonc
-{
-  "vars": {
-    "ADMIN_USERNAME": "admin",
-    "R2_ACCESS_KEY_ID": "<from step 1>",
-    "R2_ACCOUNT_ID": "<from step 1>",
-    "R2_BUCKET_NAME": "<from step 1>"
-  },
-  "d1_databases": [
-    {
-      "database_id": "<your D1 database ID>"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "bucket_name": "<your bucket name>"
-    }
-  ]
-}
-```
-
-Deploy:
-
-```bash
-wrangler deploy
-```
-
-### Step 3: Configure the CLI
-
-```bash
-residue login --url https://your-worker.workers.dev --token <token>
-```
-
-## Updating
-
-When a new version of residue is released, update your worker to match the CLI version.
-
-1. Go to your worker repo on GitHub
-2. Navigate to **Actions** > **Update Worker**
-3. Click **Run workflow**
-4. Optionally enter a specific version tag (e.g. `v0.0.5`), or leave empty for the latest release
-5. The workflow downloads the latest worker code, preserves your `wrangler.jsonc`, and commits the update
-6. The Cloudflare deploy workflow then picks up the commit and redeploys automatically
-
-Your `wrangler.jsonc` is never overwritten -- all your D1 database IDs, R2 bucket config, and other settings are preserved.
-
-## Configuration Reference
-
-### wrangler.jsonc vars
-
-| Var | Description | Where it comes from |
-|-----|-------------|---------------------|
-| `ADMIN_USERNAME` | Username for Basic Auth on the `/app` UI | You choose it |
-| `R2_ACCESS_KEY_ID` | R2 S3 API access key | Cloudflare R2 API Tokens page |
-| `R2_ACCOUNT_ID` | Your Cloudflare account ID | Cloudflare dashboard |
-| `R2_BUCKET_NAME` | Name of the R2 bucket | You chose it when creating the bucket |
-
-### Secrets (set via `wrangler secret put`)
-
-| Secret | Description |
-|--------|-------------|
-| `AUTH_TOKEN` | Bearer token for CLI-to-worker API auth |
-| `ADMIN_PASSWORD` | Password for Basic Auth on the `/app` UI |
-| `R2_SECRET_ACCESS_KEY` | R2 S3 API secret key (from the R2 API Tokens page) |
+- **API routes** (`/api/*`): Bearer token via `AUTH_TOKEN` secret.
+- **UI routes** (`/app/*`): Cookie-based session auth. The `ADMIN_USERNAME` user is the super admin who can manage other users via `/app/settings`.
+- Instances can be set to **public** (anyone can view) or **private** (login required) mode.
 
 ## Local Development
 
 ```bash
-# Install dependencies
 pnpm install
 
-# Apply D1 migrations locally (required before running tests)
+# Apply D1 migrations locally (required before tests)
 pnpm exec wrangler d1 migrations apply DB --local
 
-# Start dev server
+# Start dev server at http://localhost:8787
 pnpm dev
-# -> http://localhost:8787
 
 # Run tests
 pnpm test
 ```
 
-Create a `.dev.vars` file for local development:
+Create a `.dev.vars` file for local secrets:
 
 ```
 AUTH_TOKEN=your-local-dev-token
@@ -162,115 +40,10 @@ ADMIN_PASSWORD=admin
 R2_SECRET_ACCESS_KEY=your-r2-secret-key
 ```
 
-The `R2_ACCESS_KEY_ID`, `R2_ACCOUNT_ID`, and `R2_BUCKET_NAME` vars are read from `wrangler.jsonc` during local dev. Only the secret access key needs to go in `.dev.vars`.
+## Updating
 
-## API
+Visit [install.residue.dev/update](https://install.residue.dev/update) to update an existing deployment to the latest version.
 
-All API routes require `Authorization: Bearer <token>` header.
+## License
 
-| Method | Route | Description |
-|--------|-------|-------------|
-| `POST` | `/api/sessions/upload-url` | Generate presigned R2 PUT URLs for direct upload (raw + search) |
-| `POST` | `/api/sessions` | Upload session metadata + commit mappings (no session data) |
-| `GET` | `/api/sessions/:id` | Fetch session metadata + raw data from R2 |
-| `GET` | `/api/repos/:org/:repo` | List commits with sessions (paginated via `?cursor=`) |
-| `GET` | `/api/repos/:org/:repo/:sha` | Get sessions for a specific commit |
-| `GET` | `/api/search?q=...` | Search sessions via Cloudflare AI Search |
-| `GET` | `/api/search/ai?q=...` | AI-powered search with generated answer |
-
-### POST /api/sessions/upload-url
-
-Request presigned PUT URLs for uploading session data and search text directly to R2.
-
-```json
-{
-  "session_id": "session-uuid-1"
-}
-```
-
-Response:
-
-```json
-{
-  "url": "<presigned PUT URL>",
-  "r2_key": "sessions/session-uuid-1.json",
-  "search_url": "<presigned PUT URL>",
-  "search_r2_key": "search/session-uuid-1.txt"
-}
-```
-
-The CLI PUTs the raw session data to `url` and a lightweight text summary to `search_url`. The worker never sees the session payload. The search text file is used by Cloudflare AI Search for indexing.
-
-### POST /api/sessions
-
-Upload session metadata and commit mappings. Session data must already be in R2 (via the presigned URL above).
-
-```json
-{
-  "session": {
-    "id": "session-uuid",
-    "agent": "claude-code",
-    "agent_version": "2.1.42",
-    "status": "ended"
-  },
-  "commits": [
-    {
-      "sha": "abc123",
-      "org": "my-team",
-      "repo": "my-app",
-      "message": "fix auth redirect",
-      "author": "jane",
-      "committed_at": 1700000000,
-      "branch": "main"
-    }
-  ]
-}
-```
-
-## UI
-
-The UI is protected by HTTP Basic Auth (`ADMIN_USERNAME` + `ADMIN_PASSWORD`). Served under `/app`:
-
-| Route | Page |
-|-------|------|
-| `/app` | Home -- list of orgs |
-| `/app/:org` | Org -- list of repos |
-| `/app/:org/:repo` | Repo -- commit timeline with linked sessions |
-| `/app/:org/:repo/:sha` | Commit -- permalink with full conversation |
-
-The root `/` redirects to `/app`.
-
-## Mappers
-
-Each agent's raw session data gets transformed into a common `Message[]` format for rendering. Mappers live in `src/mappers/`:
-
-| Agent | File |
-|-------|------|
-| `claude-code` | `claude-code.ts` |
-| `pi` | `pi.ts` |
-| `opencode` | `opencode.ts` |
-
-These are copied from the adapter package (`packages/adapter/src/<agent>/mapper.ts`) so the worker can deploy standalone without workspace dependencies. Each file has a JSDoc comment referencing its source. When updating a mapper, update the adapter first, then sync the copy here.
-
-Adding a new agent means writing one mapper function and registering it in `index.ts`. No storage schema changes needed.
-
-## Search
-
-Search is powered by Cloudflare AI Search, configured to index the `search/` prefix in the R2 bucket. The CLI generates lightweight `.txt` files at sync time containing human messages, assistant text, and tool summaries (no thinking blocks, tool output, or metadata noise).
-
-Two endpoints are available:
-
-- `GET /api/search?q=...` -- vector search returning ranked results with scores and source chunks
-- `GET /api/search/ai?q=...` -- AI-powered search returning a generated answer with citations
-
-The AI binding is configured in `wrangler.jsonc`:
-
-```jsonc
-{
-  "ai": {
-    "binding": "AI"
-  }
-}
-```
-
-The AI Search instance is named `residue-search` and must be created in the Cloudflare dashboard, pointed at the R2 bucket with the `search/` prefix filter.
+MIT

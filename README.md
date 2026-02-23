@@ -23,8 +23,8 @@ flowchart TD
 1. Adapter calls `residue session start` when a conversation begins
 2. User works with the AI agent, making code changes
 3. Adapter calls `residue session end` when the conversation ends
-4. User commits -- `post-commit` hook tags all pending sessions with the commit SHA
-5. User pushes -- `pre-push` hook uploads session data + commit mappings to the worker
+4. User commits. The `post-commit` hook tags all pending sessions with the commit SHA
+5. User pushes. The `pre-push` hook uploads session data + commit mappings to the worker
 
 A single conversation can span multiple commits. The full session is stored once and multiple commits reference it.
 
@@ -41,7 +41,7 @@ Monorepo managed with pnpm workspaces. Runtime is bun.
 
 ## Prerequisites
 
-- [bun](https://bun.sh) -- runtime for the CLI
+- [bun](https://bun.sh). Runtime for the CLI.
 - A [Cloudflare](https://dash.cloudflare.com) account
 
 ## Setup
@@ -62,7 +62,7 @@ Create an R2 bucket: [dash.cloudflare.com/?to=/:account/r2/new](https://dash.clo
 
 Create an S3 API token with read/write access to your bucket: [dash.cloudflare.com/?to=/:account/r2/api-tokens](https://dash.cloudflare.com/?to=/:account/r2/api-tokens)
 
-Save these values -- you will need them in step 2:
+Save these values. You will need them in step 2:
 
 | Value | Source |
 |---|---|
@@ -89,7 +89,7 @@ During deploy, you will be prompted for these secrets:
 
 | Secret | Value |
 |---|---|
-| `AUTH_TOKEN` | generate a random string -- this is your CLI auth token |
+| `AUTH_TOKEN` | generate a random string. This is your CLI auth token |
 | `R2_SECRET_ACCESS_KEY` | from step 1 |
 | `ADMIN_PASSWORD` | password for the web UI |
 
@@ -198,12 +198,12 @@ residue init
 residue setup claude-code    # or: residue setup pi, residue setup opencode
 ```
 
-- `residue init` -- installs `post-commit` and `pre-push` hooks, adds `.residue/` to `.gitignore`
-- `residue setup claude-code` -- adds hooks to `.claude/settings.json`
-- `residue setup pi` -- installs extension at `.pi/extensions/residue.ts`
-- `residue setup opencode` -- installs plugin at `.opencode/plugins/residue.ts`
+- `residue init`: installs `post-commit` and `pre-push` hooks, adds `.residue/` to `.gitignore`
+- `residue setup claude-code`: adds hooks to `.claude/settings.json`
+- `residue setup pi`: installs extension at `.pi/extensions/residue.ts`
+- `residue setup opencode`: installs plugin at `.opencode/plugins/residue.ts`
 
-That's it. Commit and push as usual -- conversations are captured and uploaded automatically.
+That's it. Commit and push as usual. Conversations are captured and uploaded automatically.
 
 ## CLI Commands
 
