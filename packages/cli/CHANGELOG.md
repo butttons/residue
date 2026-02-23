@@ -1,5 +1,13 @@
 # @residue/cli
 
+## 0.0.9
+
+### Patch Changes
+
+- f31ce64: Add `residue doctor` command to retroactively link orphaned sessions to commits.
+- f31ce64: Extract agent mappers, search extractors, and shared types into `@residue/adapter` package.
+- f31ce64: Add time stats dashboard with hour-of-day, day-of-week charts and duration cards. Track first/last message timestamps for accurate session duration instead of wall-clock time.
+
 ## 0.0.8
 
 ### Patch Changes
