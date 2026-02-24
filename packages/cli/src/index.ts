@@ -16,7 +16,6 @@ import {
 	querySessions,
 } from "@/commands/query";
 import { read } from "@/commands/read";
-import { search } from "@/commands/search";
 import { sessionEnd } from "@/commands/session-end";
 import { sessionStart } from "@/commands/session-start";
 import { setup } from "@/commands/setup";
@@ -139,17 +138,6 @@ program
 		"Retroactively link orphaned sessions to commits by matching timestamps",
 	)
 	.action(wrapCommand(() => doctor()));
-
-program
-	.command("search")
-	.description("Search session history")
-	.argument("<query>", "Search query")
-	.option("--ai", "Use AI-powered search (generates an answer with citations)")
-	.action(
-		wrapCommand((query: string, opts: { ai?: boolean }) =>
-			search({ query, isAi: opts.ai }),
-		),
-	);
 
 const queryCmd = program
 	.command("query")
