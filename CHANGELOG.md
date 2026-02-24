@@ -1,5 +1,20 @@
 # residue
 
+## 0.0.12
+
+### @residue/cli
+
+- Remove `residue search` command and AI search integration
+
+### @residue/worker
+
+- Remove AutoRAG search API routes and search UI from nav bar
+- Remove AI binding from worker configuration
+
+### @residue/installer
+
+- Remove AI Search provisioning step from deploy wizard
+
 ## 0.0.11
 
 ### @residue/worker
