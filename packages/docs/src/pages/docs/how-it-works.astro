@@ -146,21 +146,20 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
         </p>
     </div>
 
-    <!-- Search -->
+    <!-- Search Text Pipeline -->
     <div class="mb-12">
-        <h2 class="text-2xl font-bold mb-6 text-amber-400">Search</h2>
+        <h2 class="text-2xl font-bold mb-6 text-amber-400">Search Text Pipeline</h2>
         <p class="text-zinc-300 text-sm leading-relaxed mb-4">
-            Search is powered by <strong>Cloudflare AI Search</strong>, configured to
-            index the <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">search/</code> prefix in the R2 bucket.
-            Raw session files are too large and noisy for embedding models, so the CLI
-            generates a lightweight <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.txt</code> file per session at sync time.
+            Raw session files are too large for search. At sync time, the CLI generates a
+            lightweight <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">.txt</code> file per session
+            under the <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">search/</code> prefix in R2.
         </p>
         <p class="text-zinc-300 text-sm leading-relaxed mb-4">
             These text files contain a metadata header (session ID, agent, commits, branch, repo)
             followed by conversation lines tagged by role. Thinking blocks, tool output,
             token metadata, and other noise are stripped.
         </p>
-        <pre class="bg-zinc-950 rounded p-3 font-mono text-xs overflow-x-auto mb-4"><code class="text-zinc-400">Session: abc-123
+        <pre class="bg-zinc-950 rounded p-3 font-mono text-xs overflow-x-auto"><code class="text-zinc-400">Session: abc-123
 Agent: claude-code
 Commits: abc1234, def5678
 Branch: feature-auth
@@ -170,11 +169,6 @@ Repo: my-team/my-app
 [assistant] I'll update the middleware...
 [tool] edit packages/worker/src/middleware/auth.ts
 [tool] bash git diff --staged</code></pre>
-        <p class="text-zinc-400 text-sm">
-            Two search endpoints are available:
-            <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">GET /api/search?q=...</code> for vector search results, and
-            <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">GET /api/search/ai?q=...</code> for AI-generated answers with citations.
-        </p>
     </div>
 
     <!-- Nav -->
