@@ -31,14 +31,14 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
         <h2 class="text-2xl font-bold mb-6 text-amber-400">Setup</h2>
 
         <p class="text-zinc-300 text-sm leading-relaxed mb-4">
-            Six steps: create the R2 bucket with S3 API credentials, deploy the worker, set up AI Search, install the CLI, then configure your repos.
+            Five steps: create the R2 bucket with S3 API credentials, deploy the worker, install the CLI, then configure your repos.
         </p>
 
         <div class="bg-amber-500/5 border border-amber-500/20 rounded-lg p-4 mb-8">
             <p class="text-zinc-300 text-sm leading-relaxed">
                 <strong class="text-amber-400">Fastest path:</strong> The installer at
                 <a href="https://install.residue.dev" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">install.residue.dev</a>
-                automates steps 1-3 (R2 bucket, worker deployment, AI Search). You only need a Cloudflare API token.
+                automates steps 1-2 (R2 bucket, worker deployment). You only need a Cloudflare API token.
             </p>
         </div>
 
@@ -122,7 +122,7 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
                     <h4 class="font-semibold text-amber-300 text-sm mb-3">Option A: Installer (recommended)</h4>
                     <p class="text-zinc-300 text-sm leading-relaxed mb-4">
                         The installer automates the entire deployment: creates the D1 database, R2 bucket, S3 API credentials,
-                        AI Search instance, sets secrets, and deploys the worker. You only need a Cloudflare API token.
+                        sets secrets, and deploys the worker. You only need a Cloudflare API token.
                     </p>
 
                     <div class="mb-4">
@@ -138,7 +138,7 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
 
                     <p class="text-zinc-500 text-xs">
                         After deploy, the installer displays your worker URL, auth token, and admin credentials.
-                        If you used the installer, skip ahead to step 4.
+                        If you used the installer, skip ahead to step 3.
                     </p>
                 </div>
 
@@ -224,70 +224,10 @@ npx wrangler deploy</code></pre>
                 </div>
             </div>
 
-            <!-- Step 3: AI Search -->
+            <!-- Step 3: Install CLI -->
             <div>
                 <h3 class="text-xl font-semibold mb-3 text-amber-300">
-                    3. Set up AI Search
-                </h3>
-
-                <div class="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-4">
-                    <p class="text-zinc-400 text-xs">
-                        <strong class="text-amber-400">Used the installer?</strong> Skip this step --
-                        the installer creates and configures the AI Search instance automatically.
-                    </p>
-                </div>
-
-                <p class="text-zinc-300 text-sm mb-4 leading-relaxed">
-                    Search requires a Cloudflare AI Search instance connected to your R2 bucket.
-                    Without this, the <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue search</code> and
-                    <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue query</code> commands will not work.
-                </p>
-
-                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 sm:p-6 space-y-4">
-                    <div>
-                        <p class="text-zinc-400 text-xs mb-2">Go to Compute & AI > AI Search in the Cloudflare dashboard:</p>
-                        <div class="bg-zinc-950 rounded p-3">
-                            <a href="https://dash.cloudflare.com/?to=/:account/ai/ai-search" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline break-all font-mono text-xs sm:text-sm">dash.cloudflare.com/?to=/:account/ai/ai-search</a>
-                        </div>
-                    </div>
-
-                    <ol class="text-zinc-300 text-sm space-y-2 list-decimal list-inside">
-                        <li>Select <strong>Create</strong>, then <strong>Get Started</strong></li>
-                        <li>Choose your R2 bucket as the data source</li>
-                        <li>Leave chunking, embedding, and retrieval settings at their defaults</li>
-                        <li>Name the instance <code class="text-amber-300 bg-zinc-900/50 px-1.5 py-0.5 rounded">residue-search</code></li>
-                        <li>Complete the setup</li>
-                    </ol>
-
-                    <div class="bg-zinc-950 border border-zinc-800 rounded p-4">
-                        <p class="text-zinc-400 text-xs mb-2">After creation, configure path filters so only search-optimized text files are indexed:</p>
-                        <div class="mb-3">
-                            <p class="text-zinc-500 text-xs mb-1">Go to the Settings tab of your instance:</p>
-                            <a href="https://dash.cloudflare.com/?to=/:account/ai/ai-search/instance/residue-search/settings" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline break-all font-mono text-xs">dash.cloudflare.com/?to=/:account/ai/ai-search/instance/residue-search/settings</a>
-                        </div>
-                        <p class="text-zinc-400 text-xs mb-2">Under <strong>Resources > Path Filters</strong>:</p>
-                        <div class="font-mono text-sm space-y-1.5">
-                            <div class="flex items-center gap-2">
-                                <span class="text-zinc-500 w-24 shrink-0">Include</span>
-                                <span class="text-zinc-300">search/**</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-zinc-500 w-24 shrink-0">Exclude</span>
-                                <span class="text-zinc-300">sessions/**</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <p class="text-zinc-500 text-xs">
-                        For more details, see the <a href="https://developers.cloudflare.com/ai-search/get-started/dashboard/" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">Cloudflare AI Search docs</a>.
-                    </p>
-                </div>
-            </div>
-
-            <!-- Step 4: Install CLI -->
-            <div>
-                <h3 class="text-xl font-semibold mb-3 text-amber-300">
-                    4. Install the CLI
+                    3. Install the CLI
                 </h3>
                 <p class="text-zinc-400 text-sm mb-3">
                     Requires <a href="https://bun.sh" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">bun</a> as the runtime. Install bun first if you don't have it.
@@ -297,10 +237,10 @@ npx wrangler deploy</code></pre>
                 </div>
             </div>
 
-            <!-- Step 5: Login -->
+            <!-- Step 4: Login -->
             <div>
                 <h3 class="text-xl font-semibold mb-3 text-amber-300">
-                    5. Login
+                    4. Login
                 </h3>
                 <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-xs sm:text-sm overflow-x-auto mb-3">
                     <div class="text-zinc-300">residue login --url https://residue.your-subdomain.workers.dev --token YOUR_AUTH_TOKEN</div>
@@ -325,10 +265,10 @@ npx wrangler deploy</code></pre>
                 <div class="h-px flex-1 bg-zinc-800"></div>
             </div>
 
-            <!-- Step 6: Configure repo -->
+            <!-- Step 5: Configure repo -->
             <div>
                 <h3 class="text-xl font-semibold mb-3 text-amber-300">
-                    6. Configure a repository
+                    5. Configure a repository
                 </h3>
                 <p class="text-zinc-400 text-sm mb-3">Run these in any git repository you want to track:</p>
                 <div class="bg-zinc-900/50 rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4">

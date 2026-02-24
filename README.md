@@ -46,7 +46,7 @@ Monorepo managed with pnpm workspaces. Runtime is bun.
 
 ## Setup
 
-There are six steps: create the R2 bucket and its S3 API credentials, deploy the worker, set up AI Search, install the CLI, then configure your repos.
+There are five steps: create the R2 bucket and its S3 API credentials, deploy the worker, install the CLI, then configure your repos.
 
 ---
 
@@ -77,7 +77,7 @@ The worker stores commit metadata in D1 and serves the web UI. Session data live
 
 **Option A: Installer (recommended)**
 
-The installer at [install.residue.dev](https://install.residue.dev) automates the entire deployment: creates the D1 database, R2 bucket, S3 API credentials, AI Search instance, sets secrets, and deploys the worker.
+The installer at [install.residue.dev](https://install.residue.dev) automates the entire deployment: creates the D1 database, R2 bucket, S3 API credentials, sets secrets, and deploys the worker.
 
 You only need a Cloudflare API token with the required permissions. The installer walks you through each step.
 
@@ -133,32 +133,7 @@ npx wrangler deploy
 
 After any option, note your **worker URL** (e.g. `https://residue.your-subdomain.workers.dev`) and **auth token**.
 
-### Step 3: Set up AI Search
-
-Search requires a Cloudflare AI Search instance connected to your R2 bucket. Without this, the `residue search` and `residue query` commands will not work.
-
-Go to **Compute & AI > AI Search** in the Cloudflare dashboard: [dash.cloudflare.com/?to=/:account/ai/ai-search](https://dash.cloudflare.com/?to=/:account/ai/ai-search)
-
-1. Select **Create**, then **Get Started**
-2. Choose your R2 bucket as the data source
-3. Leave chunking, embedding, and retrieval settings at their defaults
-4. Name the instance **`residue-search`**
-5. Complete the setup
-
-After creation, configure path filters so only search-optimized text files are indexed (not raw session data):
-
-Go to the **Settings** tab of your instance: [dash.cloudflare.com/?to=/:account/ai/ai-search/instance/residue-search/settings](https://dash.cloudflare.com/?to=/:account/ai/ai-search/instance/residue-search/settings)
-
-Under **Resources > Path Filters**:
-
-| Filter | Value |
-|---|---|
-| **Include** | `search/**` |
-| **Exclude** | `sessions/**` |
-
-For more details, see the [Cloudflare AI Search docs](https://developers.cloudflare.com/ai-search/get-started/dashboard/).
-
-### Step 4: Install the CLI
+### Step 3: Install the CLI
 
 Requires [bun](https://bun.sh) as the runtime. Install bun first if you don't have it.
 
@@ -166,7 +141,7 @@ Requires [bun](https://bun.sh) as the runtime. Install bun first if you don't ha
 bun add -g @residue/cli
 ```
 
-### Step 5: Login
+### Step 4: Login
 
 ```bash
 residue login --url https://residue.your-subdomain.workers.dev --token YOUR_AUTH_TOKEN
@@ -186,7 +161,7 @@ residue login --url https://residue.your-subdomain.workers.dev --token YOUR_AUTH
 
 **Per-project setup**
 
-### Step 6: Configure a repository
+### Step 5: Configure a repository
 
 Run these in any git repo you want to track:
 
@@ -217,7 +192,6 @@ That's it. Commit and push as usual. Conversations are captured and uploaded aut
 | `residue push` | Manually upload pending sessions |
 | `residue status` | Show current residue state for this project |
 | `residue clear` | Remove pending sessions from the local queue. Use `--id` for a specific session |
-| `residue search <query>` | Search session history. Use `--ai` for AI-powered search with generated answers |
 | `residue read <session-id>` | Read a local session transcript to stdout (for piping to other tools or agents) |
 | `residue context` | Output agent-facing documentation to stdout (teaches an AI agent how to use residue) |
 | `residue query sessions` | List sessions (filter by `--agent`, `--repo`, `--branch`, `--since`, `--until`) |
@@ -255,8 +229,6 @@ The worker serves both a JSON API and a server-rendered UI.
 | `GET /api/query/sessions/:id` | Session detail with commits |
 | `GET /api/query/commits` | List commits (filter by repo, branch, author, since, until) |
 | `GET /api/query/commits/:sha` | Commit detail with sessions |
-| `GET /api/search?q=...` | Search sessions via Cloudflare AI Search |
-| `GET /api/search/ai?q=...` | AI-powered search with generated answer |
 | `POST /api/users` | Create a user |
 | `GET /api/users` | List users |
 | `DELETE /api/users/:id` | Delete a user |
@@ -270,7 +242,6 @@ The worker serves both a JSON API and a server-rendered UI.
 | `/app/:org` | List of repos in org |
 | `/app/:org/:repo` | Commit timeline with linked sessions |
 | `/app/:org/:repo/:sha` | Commit permalink with full conversation |
-| `/app/search` | Search conversations |
 | `/app/settings` | Instance settings (visibility, user management) |
 | `/app/settings/users` | Manage user accounts |
 
@@ -299,7 +270,7 @@ pnpm --filter @residue/worker test       # worker tests
 
 - **No data normalization.** Raw agent session data is stored as-is in R2. The UI uses mappers to transform each agent's format into a common message format for rendering.
 - **Direct R2 upload.** Session data is uploaded directly to R2 via presigned PUT URLs, bypassing the worker's request body size limits. The worker only handles lightweight metadata.
-- **Search via lightweight text files.** Raw session files are too large and noisy for embedding models. At sync time, the CLI generates a second `.txt` file per session under `search/` in R2 containing only human messages, assistant text, and tool summaries. Cloudflare AI Search indexes only this prefix.
+- **Search via lightweight text files.** Raw session files are too large for search. At sync time, the CLI generates a second `.txt` file per session under `search/` in R2 containing only human messages, assistant text, and tool summaries.
 - **Self-hosted.** Each user/team deploys their own Cloudflare Worker. No multi-tenant backend, no data privacy concerns.
 - **User management.** The super admin (`ADMIN_USERNAME`) can create additional users via the settings UI or API. Instances can be set to public or private mode.
 - **Never block git.** Hooks exit 0 even on errors. Session capture and sync are best-effort.
