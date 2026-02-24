@@ -10,6 +10,11 @@
 
 - Remove AutoRAG search API routes and search UI from nav bar
 - Remove AI binding from worker configuration
+- Show message timestamps in conversation view
+
+### @residue/docs
+
+- Remove AI search references from README and docs site
 
 ### @residue/installer
 
