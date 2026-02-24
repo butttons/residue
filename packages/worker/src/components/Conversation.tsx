@@ -13,6 +13,18 @@ type ConversationProps = {
 	continuesIn?: ContinuationLink;
 };
 
+const formatTime = (timestamp: string | undefined): string | null => {
+	if (!timestamp) return null;
+	const date = new Date(timestamp);
+	if (Number.isNaN(date.getTime())) return null;
+	const hours = date.getUTCHours();
+	const minutes = date.getUTCMinutes();
+	const ampm = hours >= 12 ? "PM" : "AM";
+	const h = hours % 12 || 12;
+	const m = minutes.toString().padStart(2, "0");
+	return `${h}:${m} ${ampm}`;
+};
+
 const roleColor = (role: string): string => {
 	switch (role) {
 		case "human":
@@ -117,6 +129,11 @@ const Conversation: FC<ConversationProps> = ({
 						</span>
 						{msg.model && (
 							<span class="text-xs text-zinc-500">{msg.model}</span>
+						)}
+						{msg.timestamp && formatTime(msg.timestamp) && (
+							<span class="text-xs text-zinc-600 ml-auto tabular-nums">
+								{formatTime(msg.timestamp)}
+							</span>
 						)}
 					</div>
 
